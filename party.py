@@ -7,9 +7,26 @@ import pyperclip
 
 class PartyBuilder():
     def __init__(self):
+        self.big_font = ImageFont.truetype("assets/basic.ttf", 30)
         self.font = ImageFont.truetype("assets/basic.ttf", 16)
         self.small_font = ImageFont.truetype("assets/basic.ttf", 14)
         self.cache = {}
+        self.colors = {
+            1:(243, 48, 33),
+            2:(50, 159, 222),
+            3:(186, 108, 39),
+            4:(40, 172, 45),
+            5:(253, 216, 67),
+            6:(130, 75, 177),
+        }
+        self.color_strs = {
+            1:"Fire",
+            2:"Water",
+            3:"Earth",
+            4:"Wind",
+            5:"Light",
+            6:"Dark",
+        }
 
     def pasteImage(self, img, file, offset, resize=None):
         buffers = [Image.open(file)]
@@ -142,6 +159,20 @@ class PartyBuilder():
         self.pasteImage(img, "assets/hp.png", (offset[0], offset[1]+25), (22, 13))
         d.text((offset[0]+35, offset[1]+5), "{}".format(export['watk']), fill=(255, 255, 255), font=self.font)
         d.text((offset[0]+35, offset[1]+5+25), "{}".format(export['whp']), fill=(255, 255, 255), font=self.font)
+        # estimated
+        offset = (offset[0]+bsize[0]+5, offset[1]+55)
+        est_width = ((size[0]*3)//2)
+        for i in range(0, 2):
+            self.draw_rect(d, offset[0]+est_width*i , offset[1], est_width-5, 50)
+            d.text((offset[0]+3+est_width*i+1, offset[1]+3), "{}".format(export['est'][i+1]), fill=(0, 0, 0), font=self.big_font)
+            d.text((offset[0]+3+est_width*i, offset[1]+3), "{}".format(export['est'][i+1]), fill=self.colors[export['est'][0]], font=self.big_font)
+            if i == 0:
+                d.text((offset[0]+est_width*i+5 , offset[1]+30), "Estimated", fill=(255, 255, 255), font=self.font)
+            elif i == 1:
+                if export['est'][0] <= 4: vs = (export['est'][0] + 2) % 4 + 1
+                else: vs = (export['est'][0] - 5 + 1) % 2 + 5
+                d.text((offset[0]+est_width*i+5 , offset[1]+30), "vs", fill=(255, 255, 255), font=self.font)
+                d.text((offset[0]+est_width*i+22 , offset[1]+30), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.font)
 
     def make(self):
         print("Instructions:")
@@ -191,7 +222,7 @@ class PartyBuilder():
             if s == "0":
                 self.make()
             elif s == "1":
-                pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#party/index/\")){alert('Please go to a GBF Party screen');return}let obj={p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],c:[],cl:[],cs:[],cp:[],cwr:[],s:[],sl:[],ss:[],sp:[],w:[],wl:[],wsn:[],wll:[],wp:[],wax:[],waxi:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_attack};for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)});Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});let copyListener = event => { document.removeEventListener(\"copy\", copyListener, true); event.preventDefault(); let clipboardData = event.clipboardData; clipboardData.clearData(); clipboardData.setData(\"text/plain\", JSON.stringify(obj)); }; document.addEventListener(\"copy\", copyListener, true); document.execCommand(\"copy\");}())")
+                pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#party/index/\")){alert('Please go to a GBF Party screen');return}let obj={p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],c:[],cl:[],cs:[],cp:[],cwr:[],s:[],sl:[],ss:[],sp:[],w:[],wl:[],wsn:[],wll:[],wp:[],wax:[],waxi:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_attack,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute, window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage, window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage]};for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)});Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});let copyListener = event => { document.removeEventListener(\"copy\", copyListener, true); event.preventDefault(); let clipboardData = event.clipboardData; clipboardData.clearData(); clipboardData.setData(\"text/plain\", JSON.stringify(obj)); }; document.addEventListener(\"copy\", copyListener, true); document.execCommand(\"copy\");}())")
                 print("Bookmarklet copied!")
                 print("To setup on chrome:")
                 print("1) Make a new bookmark (of GBF for example)")
@@ -202,5 +233,5 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.1")
+    print("Granblue Fantasy Party Image Builder v1.2")
     PartyBuilder().run()
