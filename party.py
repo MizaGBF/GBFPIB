@@ -54,6 +54,7 @@ class PartyBuilder():
     def make_party(self, export, img, d, offset):
         csize = (55, 100)
         skill_width = 140
+        self.pasteImage(img, "assets/bg.png", (offset[0]+skill_width-5, offset[1]-5), (csize[0]*6+10, csize[1]+40))
         # mc
         self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/quest/{}.jpg".format(export['pcjs']), (offset[0]+skill_width, offset[1]), csize)
         self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), (offset[0]+skill_width, offset[1]), (24, 20))
@@ -72,14 +73,17 @@ class PartyBuilder():
                 d.text((offset[0]+skill_width+csize[0]*(i+2)-48, offset[1]+csize[1]-22), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
             # level
             self.draw_rect(d, offset[0]+skill_width+csize[0]*(i+1), offset[1]+csize[1], csize[0], 20)
+            self.pasteImage(img, "assets/chara_stat.png", (offset[0]+skill_width+csize[0]*(i+1), offset[1]+csize[1]), (csize[0], 20))
             d.text((offset[0]+skill_width+4+csize[0]*(i+1), offset[1]+csize[1]+2), "Lv{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.font)
         # mc sub skills
+        self.pasteImage(img, "assets/subskills.png", (offset[0], offset[1]), (140, 49))
         for i in range(len(export['ps'])):
-            self.draw_rect(d, offset[0], offset[1]+20*i, skill_width, 20)
-            d.text((offset[0]+1, offset[1]+2+20*i), export['ps'][i], fill=(255, 255, 255), font=self.font)
+            d.text((offset[0]+1, offset[1]+1+16*i), export['ps'][i], fill=(255, 255, 255), font=self.font)
 
     def make_summons(self, export, img, d, offset):
         ssize = (50, 105)
+        # background
+        self.pasteImage(img, "assets/bg.png", (offset[0]-5, offset[1]-5), (ssize[0]*5+10, ssize[1]+60))
         for i in range(0, 5):
             # portraits
             if export['s'][i] is None:
@@ -91,10 +95,12 @@ class PartyBuilder():
             if export['sp'][i] > 0:
                 d.text((offset[0]+ssize[0]*(i+1)-35, offset[1]+ssize[1]-20), "+{}".format(export['sp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
             # level
-            self.draw_rect(d, offset[0]+ssize[0]*i, offset[1]+ssize[1], ssize[0], 20)
+            self.pasteImage(img, "assets/chara_stat.png", (offset[0]+ssize[0]*i, offset[1]+ssize[1]), (ssize[0], 20))
             d.text((offset[0]+2+ssize[0]*i, offset[1]+ssize[1]+3), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.small_font)
         # stats
         self.draw_rect(d, offset[0], offset[1]+ssize[1]+20, ssize[0]*4, 20)
+        self.pasteImage(img, "assets/chara_stat.png", (offset[0], offset[1]+ssize[1]+20), (ssize[0]*2, 20))
+        self.pasteImage(img, "assets/chara_stat.png", (offset[0]+ssize[0]*2, offset[1]+ssize[1]+20), (ssize[0]*2, 20))
         self.pasteImage(img, "assets/atk.png", (offset[0]+3, offset[1]+ssize[1]+20+3), (30, 13))
         self.pasteImage(img, "assets/hp.png", (offset[0]+3+100, offset[1]+ssize[1]+20+3), (22, 13))
         d.text((offset[0]+40, offset[1]+ssize[1]+20+3), "{}".format(export['satk']), fill=(255, 255, 255), font=self.small_font)
@@ -104,22 +110,29 @@ class PartyBuilder():
         skill_box_height = 48
         skill_icon_size = skill_box_height // 2
         ax_separator = 48
+        mh_size = (100, 210)
+        sub_size = (96, 55)
+        # background
+        if len(export['w']) > 10:
+            self.pasteImage(img, "assets/grid_bg.png", (base_offset[0]-5, base_offset[1]-5), (mh_size[0]+4*sub_size[0]+20, 500))
+        else:
+            self.pasteImage(img, "assets/grid_bg.png", (base_offset[0]-5, base_offset[1]-5), (mh_size[0]+3*sub_size[0]+20, 400))
         # weapons
         for i in range(0, len(export['w'])):
             wt = "ls" if i == 0 else "m"
             if i == 0: # mainhand
                 offset = (base_offset[0], base_offset[1])
-                size = (100, 210)
+                size = mh_size
                 bsize = size
             elif i >= 10: # sandbox
                 x = 3
                 y = (i-1) % 3
-                size = (96, 55)
+                size = sub_size
                 offset = (base_offset[0]+bsize[0]+5+size[0]*x, base_offset[1]+(size[1]+skill_box_height)*y)
             else: # others
                 x = (i-1) % 3
                 y = (i-1) // 3
-                size = (96, 55)
+                size = sub_size
                 offset = (base_offset[0]+bsize[0]+5+size[0]*x, base_offset[1]+(size[1]+skill_box_height)*y)
             if export['w'][i] is None:
                 self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), offset, size)
@@ -127,10 +140,9 @@ class PartyBuilder():
             else:
                 self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/{}00.jpg".format(wt, export['w'][i]), offset, size)
             # skill box
+            self.pasteImage(img, "assets/skill.png", (offset[0], offset[1]+size[1]), (size[0], skill_box_height//2))
             if len(export['waxi'][i]) > 0:
-                self.draw_rect(d, offset[0], offset[1]+size[1], size[0], skill_box_height)
-            else:
-                self.draw_rect(d, offset[0], offset[1]+size[1], size[0], skill_box_height // 2)
+                self.pasteImage(img, "assets/skill.png", (offset[0], offset[1]+size[1]+skill_box_height//2), (size[0], skill_box_height//2))
             # plus
             if export['wp'][i] > 0:
                 if i == 0:
@@ -154,16 +166,17 @@ class PartyBuilder():
             self.pasteImage(img, "assets/sandbox.png", (offset[0], base_offset[1]-sandbox[1]), sandbox) # 159 66
         # stats
         offset = (base_offset[0], base_offset[1]+bsize[1]+50)
-        self.draw_rect(d, offset[0], offset[1], bsize[0], 49)
-        self.pasteImage(img, "assets/atk.png", offset, (30, 13))
-        self.pasteImage(img, "assets/hp.png", (offset[0], offset[1]+25), (22, 13))
-        d.text((offset[0]+35, offset[1]+5), "{}".format(export['watk']), fill=(255, 255, 255), font=self.font)
-        d.text((offset[0]+35, offset[1]+5+25), "{}".format(export['whp']), fill=(255, 255, 255), font=self.font)
+        self.pasteImage(img, "assets/skill.png", (offset[0], offset[1]), (bsize[0], 25))
+        self.pasteImage(img, "assets/skill.png", (offset[0], offset[1]+25), (bsize[0], 25))
+        self.pasteImage(img, "assets/atk.png", (offset[0]+3, offset[1]+5), (30, 13))
+        self.pasteImage(img, "assets/hp.png", (offset[0]+3, offset[1]+30), (22, 13))
+        d.text((offset[0]+37, offset[1]+5), "{}".format(export['watk']), fill=(255, 255, 255), font=self.font)
+        d.text((offset[0]+37, offset[1]+5+25), "{}".format(export['whp']), fill=(255, 255, 255), font=self.font)
         # estimated
         offset = (offset[0]+bsize[0]+5, offset[1]+55)
         est_width = ((size[0]*3)//2)
         for i in range(0, 2):
-            self.draw_rect(d, offset[0]+est_width*i , offset[1], est_width-5, 50)
+            self.pasteImage(img, "assets/big_stat.png", (offset[0]+est_width*i , offset[1]), (est_width-5, 50))
             d.text((offset[0]+3+est_width*i+1, offset[1]+3), "{}".format(export['est'][i+1]), fill=(0, 0, 0), font=self.big_font)
             d.text((offset[0]+3+est_width*i, offset[1]+3), "{}".format(export['est'][i+1]), fill=self.colors[export['est'][0]], font=self.big_font)
             if i == 0:
@@ -233,5 +246,5 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.2")
+    print("Granblue Fantasy Party Image Builder v1.3")
     PartyBuilder().run()
