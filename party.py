@@ -31,6 +31,7 @@ class PartyBuilder():
         self.v = {
             '720p' : {
                 'font': [14, 16, 30],
+                'stroke_width': 1,
                 'base': (547, 720),
                 'party_header': (10, 10),
                 'summon_header': (10, 150),
@@ -40,10 +41,13 @@ class PartyBuilder():
                 'summon_pos': (150, 185),
                 'weapon_pos': (10, 355),
                 'chara_size': (55, 100),
+                'chara_size_babyl': (39, 71),
+                'chara_babyl_off': 5,
+                'chara_plus_babyl_offset': (-30, -20),
                 'skill_width': 140,
                 'bg_offset': -5,
                 'bg_end_offset': (10, 40),
-                'bg_end_offset2': (10, 40),
+                'bg_end_offset2': (10, 56),
                 'bg_end_offset3': (20, 400),
                 'bg_end_offset4': (20, 500),
                 'job_size': (24, 20),
@@ -82,6 +86,7 @@ class PartyBuilder():
             },
             '1080p' : {
                 'font': [21, 24, 45],
+                'stroke_width': 2,
                 'base': (820, 1080),
                 'party_header': (15, 15),
                 'summon_header': (15, 225),
@@ -91,10 +96,13 @@ class PartyBuilder():
                 'summon_pos': (225, 277),
                 'weapon_pos': (15, 532),
                 'chara_size': (82, 150),
+                'chara_size_babyl': (58, 106),
+                'chara_babyl_off': 7,
+                'chara_plus_babyl_offset': (-45, -30),
                 'skill_width': 210,
                 'bg_offset': -8,
                 'bg_end_offset': (15, 60),
-                'bg_end_offset2': (15, 60),
+                'bg_end_offset2': (15, 84),
                 'bg_end_offset3': (30, 600),
                 'bg_end_offset4': (30, 750),
                 'job_size': (36, 30),
@@ -130,6 +138,61 @@ class PartyBuilder():
                 'est_text': 5,
                 'est_sub_text': (7, 45),
                 'est_sub_text_ele': 33
+            },
+            '4K' : {
+                'font': [42, 48, 90],
+                'stroke_width': 3,
+                'base': (1641, 2160),
+                'party_header': (30, 30),
+                'summon_header': (30, 450),
+                'weapon_header': (30, 960),
+                'header_size': (276, 75),
+                'party_pos': (30, 135),
+                'summon_pos': (450, 555),
+                'weapon_pos': (30, 1065),
+                'chara_size': (165, 300),
+                'chara_size_babyl': (117, 213),
+                'chara_babyl_off': 15,
+                'chara_plus_babyl_offset': (-150, -60),
+                'skill_width': 420,
+                'bg_offset': -15,
+                'bg_end_offset': (30, 120),
+                'bg_end_offset2': (30, 168),
+                'bg_end_offset3': (60, 1200),
+                'bg_end_offset4': (60, 1500),
+                'job_size': (72, 60),
+                'ring_size': (90, 90),
+                'ring_offset': -6,
+                'chara_plus_offset': (-144, -66),
+                'stat_height': 60,
+                'text_offset': (12, 6),
+                'sub_skill_bg': (420, 147),
+                'sub_skill_text_off': 3,
+                'sub_skill_text_space': 48,
+                'summon_size': (150, 315),
+                'summon_plus_offset': (-105, -60),
+                'sum_level_text_off': (6, 9),
+                'sum_atk_size': (90, 39),
+                'sum_hp_size': (66, 39),
+                'sum_stat_offsets': [9, 90, 120, 300],
+                'skill_box_height': 144,
+                'mh_size': (300, 630),
+                'sub_size': (288, 165),
+                'wpn_separator': 15,
+                'weapon_plus_offset': (-105, -65),
+                'skill_lvl_off': [-51, 15],
+                'ax_text_off': [6, 15],
+                'wpn_stat_off': 150,
+                'wpn_stat_line': 75,
+                'wpn_atk_size': (90, 39),
+                'wpn_hp_size': (66, 39),
+                'wpn_stat_text_off': (9, 15),
+                'wpn_stat_text_off2': (111, 15),
+                'estimate_off': (15, 165),
+                'big_stat': (-15, 150),
+                'est_text': 9,
+                'est_sub_text': (15, 90),
+                'est_sub_text_ele': 66
             }
         }
         self.data = {}
@@ -155,7 +218,7 @@ class PartyBuilder():
         except:
             pass
 
-    def pasteImage(self, img, file, offset, resize=None):
+    def pasteImage(self, img, file, offset, resize=None): # paste and image onto another
         buffers = [Image.open(file)]
         buffers.append(buffers[-1].convert('RGBA'))
         if resize is not None: buffers.append(buffers[-1].resize(resize, Image.LANCZOS))
@@ -163,7 +226,7 @@ class PartyBuilder():
         for buf in buffers: buf.close()
         del buffers
 
-    def dlAndPasteImage(self, img, url, offset, resize=None):
+    def dlAndPasteImage(self, img, url, offset, resize=None): # dl an image and call pasteImage()
         if url not in self.cache:
             req = request.Request(url)
             url_handle = request.urlopen(req)
@@ -172,59 +235,89 @@ class PartyBuilder():
         with BytesIO(self.cache[url]) as file_jpgdata:
             self.pasteImage(img, file_jpgdata, offset, resize)
 
-    def draw_rect(self, d, x, y, w, h):
+    def draw_rect(self, d, x, y, w, h): # to draw placholders
         d.rectangle([(x, y), (x+w-1, y+h-1)], fill=(0, 0, 0, 200))
 
-    def get_uncap_id(self, cs):
+    def get_uncap_id(self, cs): # to get character portraits based on uncap levels
         return {2:'02', 3:'02', 4:'02', 5:'03', 6:'04'}.get(cs, '01')
 
-    def make_party(self, export, img, d, offset):
+    def make_party_babyl(self, export, img, d, offset): # draw the tower of babyl parties
+        Q = self.data.get('quality', '720p')
+        csize = self.v[Q]['chara_size_babyl']
+        # background
+        for i in range(0, 3):
+            self.pasteImage(img, "assets/bg.png", (offset[0]+self.v[Q]['bg_offset']+i*(self.v[Q]['chara_babyl_off']+4*csize[0]), offset[1]+self.v[Q]['bg_offset']), (csize[0]*4+self.v[Q]['bg_end_offset'][0], csize[1]+self.v[Q]['bg_end_offset'][1]+self.v[Q]['bg_offset']))
+        # mc
+        self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/quest/{}.jpg".format(export['pcjs']), (offset[0], offset[1]), csize)
+        self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), (offset[0], offset[1]), self.v[Q]['job_size'])
+        for i in range(0, 11): # npcs
+            pos = (offset[0]+csize[0]*(i+1)+((i+1)//4)*self.v[Q]['chara_babyl_off'], offset[1])
+            # portrait
+            if i >= len(export['c']) or export['c'][i] is None:
+                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/deckcombination/base_empty_npc.jpg", pos, csize)
+                continue
+            else:
+                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/quest/{}000_{}.jpg".format(export['c'][i], self.get_uncap_id(export['cs'][i])), pos, csize)
+            # rings
+            if export['cwr'][i] == True:
+                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", (pos[0]+self.v[Q]['ring_offset'], pos[1]+self.v[Q]['ring_offset']), self.v[Q]['ring_size'])
+            # plus
+            if export['cp'][i] > 0:
+                d.text((pos[0]+csize[0]+self.v[Q]['chara_plus_babyl_offset'][0], pos[1]+csize[1]+self.v[Q]['chara_plus_babyl_offset'][1]), "{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.small_font, stroke_width=self.v[Q]['stroke_width'], stroke_fill=(0, 0, 0))
+            # level
+            self.pasteImage(img, "assets/chara_stat.png", (pos[0], pos[1]+csize[1]), (csize[0], self.v[Q]['stat_height']))
+            d.text((pos[0]+self.v[Q]['text_offset'][0], pos[1]+csize[1]+self.v[Q]['text_offset'][1]), "{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.small_font)
+
+    def make_party(self, export, img, d, offset): # draw the party
         Q = self.data.get('quality', '720p')
         csize = self.v[Q]['chara_size']
         skill_width = self.v[Q]['skill_width']
+        # background
         self.pasteImage(img, "assets/bg.png", (offset[0]+skill_width+self.v[Q]['bg_offset'], offset[1]+self.v[Q]['bg_offset']), (csize[0]*6+self.v[Q]['bg_end_offset'][0], csize[1]+self.v[Q]['bg_end_offset'][1]))
         # mc
         self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/quest/{}.jpg".format(export['pcjs']), (offset[0]+skill_width, offset[1]), csize)
         self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), (offset[0]+skill_width, offset[1]), self.v[Q]['job_size'])
         for i in range(0, 5): # npcs
+            pos = (offset[0]+skill_width+csize[0]*(i+1), offset[1])
             # portrait
             if export['c'][i] is None:
-                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/deckcombination/base_empty_npc.jpg", (offset[0]+skill_width+csize[0]*(i+1), offset[1]), csize)
+                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/deckcombination/base_empty_npc.jpg", pos, csize)
                 continue
             else:
-                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/quest/{}000_{}.jpg".format(export['c'][i], self.get_uncap_id(export['cs'][i])), (offset[0]+skill_width+csize[0]*(i+1), offset[1]), csize)
+                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/quest/{}000_{}.jpg".format(export['c'][i], self.get_uncap_id(export['cs'][i])), pos, csize)
             # rings
             if export['cwr'][i] == True:
-                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", (offset[0]+skill_width+csize[0]*(i+1)+self.v[Q]['ring_offset'], offset[1]+self.v[Q]['ring_offset']), self.v[Q]['ring_size'])
+                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", (pos[0]+self.v[Q]['ring_offset'], pos[1]+self.v[Q]['ring_offset']), self.v[Q]['ring_size'])
             # plus
             if export['cp'][i] > 0:
-                d.text((offset[0]+skill_width+csize[0]*(i+2)+self.v[Q]['chara_plus_offset'][0], offset[1]+csize[1]+self.v[Q]['chara_plus_offset'][1]), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
+                d.text((pos[0]+self.v[Q]['chara_plus_offset'][0], pos[1]+csize[1]+self.v[Q]['chara_plus_offset'][1]), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=self.v[Q]['stroke_width'], stroke_fill=(0, 0, 0))
             # level
-            self.pasteImage(img, "assets/chara_stat.png", (offset[0]+skill_width+csize[0]*(i+1), offset[1]+csize[1]), (csize[0], self.v[Q]['stat_height']))
-            d.text((offset[0]+skill_width+self.v[Q]['text_offset'][0]+csize[0]*(i+1), offset[1]+csize[1]+self.v[Q]['text_offset'][1]), "Lv{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.font)
+            self.pasteImage(img, "assets/chara_stat.png", (pos[0], pos[1]+csize[1]), (csize[0], self.v[Q]['stat_height']))
+            d.text((pos[0]+self.v[Q]['text_offset'][0], pos[1]+csize[1]+self.v[Q]['text_offset'][1]), "Lv{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.font)
         # mc sub skills
         self.pasteImage(img, "assets/subskills.png", (offset[0], offset[1]), self.v[Q]['sub_skill_bg'])
         for i in range(len(export['ps'])):
             d.text((offset[0]+self.v[Q]['sub_skill_text_off'], offset[1]+self.v[Q]['sub_skill_text_off']+self.v[Q]['sub_skill_text_space']*i), export['ps'][i], fill=(255, 255, 255), font=self.font)
 
-    def make_summons(self, export, img, d, offset):
+    def make_summons(self, export, img, d, offset): # draw the summons
         Q = self.data.get('quality', '720p')
         ssize = self.v[Q]['summon_size']
         # background
-        self.pasteImage(img, "assets/bg.png", (offset[0]+self.v[Q]['bg_offset'], offset[1]+self.v[Q]['bg_offset']), (ssize[0]*5+self.v[Q]['bg_end_offset2'][0], ssize[1]+self.v[Q]['bg_end_offset2'][0]))
+        self.pasteImage(img, "assets/bg.png", (offset[0]+self.v[Q]['bg_offset'], offset[1]+self.v[Q]['bg_offset']), (ssize[0]*5+self.v[Q]['bg_end_offset2'][0], ssize[1]+self.v[Q]['bg_end_offset2'][1]))
         for i in range(0, 5):
+            pos = (offset[0]+ssize[0]*i, offset[1])
             # portraits
             if export['s'][i] is None:
-                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/ls/2999999999.jpg", (offset[0]+ssize[0]*i, offset[1]), ssize)
+                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/ls/2999999999.jpg", pos, ssize)
                 continue
             else:
-                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/ls/{}.jpg".format(export['ss'][i]), (offset[0]+ssize[0]*i, offset[1]), ssize)
+                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/ls/{}.jpg".format(export['ss'][i]), pos, ssize)
             # plus
             if export['sp'][i] > 0:
-                d.text((offset[0]+ssize[0]*(i+1)+self.v[Q]['summon_plus_offset'][0], offset[1]+ssize[1]+self.v[Q]['summon_plus_offset'][1]), "+{}".format(export['sp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
+                d.text((pos[0]+ssize[0]+self.v[Q]['summon_plus_offset'][0], pos[1]+ssize[1]+self.v[Q]['summon_plus_offset'][1]), "+{}".format(export['sp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=self.v[Q]['stroke_width'], stroke_fill=(0, 0, 0))
             # level
-            self.pasteImage(img, "assets/chara_stat.png", (offset[0]+ssize[0]*i, offset[1]+ssize[1]), (ssize[0], self.v[Q]['stat_height']))
-            d.text((offset[0]+self.v[Q]['sum_level_text_off'][0]+ssize[0]*i, offset[1]+ssize[1]+self.v[Q]['sum_level_text_off'][1]), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.small_font)
+            self.pasteImage(img, "assets/chara_stat.png", (pos[0], pos[1]+ssize[1]), (ssize[0], self.v[Q]['stat_height']))
+            d.text((pos[0]+self.v[Q]['sum_level_text_off'][0], pos[1]+ssize[1]+self.v[Q]['sum_level_text_off'][1]), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.small_font)
         # stats
         self.pasteImage(img, "assets/chara_stat.png", (offset[0], offset[1]+ssize[1]+self.v[Q]['stat_height']), (ssize[0]*2, self.v[Q]['stat_height']))
         self.pasteImage(img, "assets/chara_stat.png", (offset[0]+ssize[0]*2, offset[1]+ssize[1]+self.v[Q]['stat_height']), (ssize[0]*2, self.v[Q]['stat_height']))
@@ -233,7 +326,7 @@ class PartyBuilder():
         d.text((offset[0]+self.v[Q]['sum_stat_offsets'][2], offset[1]+ssize[1]+self.v[Q]['stat_height']+self.v[Q]['sum_stat_offsets'][0]), "{}".format(export['satk']), fill=(255, 255, 255), font=self.small_font)
         d.text((offset[0]+self.v[Q]['sum_stat_offsets'][3]+self.v[Q]['sum_stat_offsets'][1], offset[1]+ssize[1]+self.v[Q]['stat_height']+self.v[Q]['sum_stat_offsets'][0]), "{}".format(export['shp']), fill=(255, 255, 255), font=self.small_font)
 
-    def make_grid(self, export, img, d, base_offset):
+    def make_grid(self, export, img, d, base_offset): # draw the weapons (sandbox is supported)
         Q = self.data.get('quality', '720p')
         skill_box_height = self.v[Q]['skill_box_height']
         skill_icon_size = skill_box_height // 2
@@ -274,9 +367,9 @@ class PartyBuilder():
             # plus
             if export['wp'][i] > 0:
                 if i == 0:
-                    d.text((offset[0]+size[0]+self.v[Q]['weapon_plus_offset'][0], offset[1]+size[1]+self.v[Q]['weapon_plus_offset'][1]), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
+                    d.text((offset[0]+size[0]+self.v[Q]['weapon_plus_offset'][0], offset[1]+size[1]+self.v[Q]['weapon_plus_offset'][1]), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=self.v[Q]['stroke_width'], stroke_fill=(0, 0, 0))
                 else:
-                    d.text((offset[0]+size[0]+self.v[Q]['weapon_plus_offset'][0], offset[1]+size[1]+self.v[Q]['weapon_plus_offset'][1]), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
+                    d.text((offset[0]+size[0]+self.v[Q]['weapon_plus_offset'][0], offset[1]+size[1]+self.v[Q]['weapon_plus_offset'][1]), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=self.v[Q]['stroke_width'], stroke_fill=(0, 0, 0))
             # skill level
             if export['wl'][i] is not None and export['wl'][i] > 1:
                 d.text((offset[0]+skill_icon_size*3+self.v[Q]['skill_lvl_off'][0], offset[1]+size[1]+self.v[Q]['skill_lvl_off'][1]), "SL {}".format(export['wl'][i]), fill=(255, 255, 255), font=self.small_font)
@@ -338,7 +431,10 @@ class PartyBuilder():
             d = ImageDraw.Draw(img, 'RGBA')
             # party
             self.pasteImage(img, "assets/characters.png", self.v[Q]['party_header'], self.v[Q]['header_size'])
-            self.make_party(export, img, d, self.v[Q]['party_pos'])
+            if len(export['c']) > 5:
+                self.make_party_babyl(export, img, d, self.v[Q]['party_pos'])
+            else:
+                self.make_party(export, img, d, self.v[Q]['party_pos'])
 
             # summons
             self.pasteImage(img, "assets/summons.png", self.v[Q]['summon_header'], self.v[Q]['header_size'])
@@ -347,7 +443,6 @@ class PartyBuilder():
             # grid
             self.pasteImage(img, "assets/weapons.png", self.v[Q]['weapon_header'], self.v[Q]['header_size'])
             self.make_grid(export, img, d, self.v[Q]['weapon_pos'])
-
 
             img.save("party.png", "PNG")
             img.close()
@@ -365,8 +460,8 @@ class PartyBuilder():
             print("[Any] Back")
             s = input()
             if s == "0":
-                v = ({'720p':0, '1080p':1}[self.data.get('quality', '720p')] + 1) % 2
-                self.data['quality'] = {0:'720p', 1:'1080p'}.get(v, 0)
+                v = ({'720p':0, '1080p':1, '4K':2}[self.data.get('quality', '720p')] + 1) % 3
+                self.data['quality'] = {0:'720p', 1:'1080p', 2:'4K'}.get(v, 0)
             else:
                 return
 
@@ -402,5 +497,5 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.4")
+    print("Granblue Fantasy Party Image Builder v1.5")
     PartyBuilder().run()

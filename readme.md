@@ -24,7 +24,6 @@ You are done.
 6. If everything went well, the image should appear beside `party.py` under the name `party.png`.  
 7. If it didn't, something went wrong, probably around the step 2.  
 ### To Do  
-1. Tower of Babyl party support  
 2. More options  
 ### Result  
 ![Example](https://cdn.discordapp.com/attachments/614716155646705676/848306093603028992/party.png)
