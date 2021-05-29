@@ -4,12 +4,13 @@ import json
 from PIL import Image, ImageFont, ImageDraw
 from io import BytesIO
 import pyperclip
+import json
 
 class PartyBuilder():
     def __init__(self):
-        self.big_font = ImageFont.truetype("assets/basic.ttf", 30)
-        self.font = ImageFont.truetype("assets/basic.ttf", 16)
-        self.small_font = ImageFont.truetype("assets/basic.ttf", 14)
+        self.big_font = None
+        self.font = None
+        self.small_font = None
         self.cache = {}
         self.colors = {
             1:(243, 48, 33),
@@ -27,6 +28,132 @@ class PartyBuilder():
             5:"Light",
             6:"Dark",
         }
+        self.v = {
+            '720p' : {
+                'font': [14, 16, 30],
+                'base': (547, 720),
+                'party_header': (10, 10),
+                'summon_header': (10, 150),
+                'weapon_header': (10, 320),
+                'header_size': (92, 25),
+                'party_pos': (10, 45),
+                'summon_pos': (150, 185),
+                'weapon_pos': (10, 355),
+                'chara_size': (55, 100),
+                'skill_width': 140,
+                'bg_offset': -5,
+                'bg_end_offset': (10, 40),
+                'bg_end_offset2': (10, 40),
+                'bg_end_offset3': (20, 400),
+                'bg_end_offset4': (20, 500),
+                'job_size': (24, 20),
+                'ring_size': (30, 30),
+                'ring_offset': -2,
+                'chara_plus_offset': (-48, -22),
+                'stat_height': 20,
+                'text_offset': (4, 2),
+                'sub_skill_bg': (140, 49),
+                'sub_skill_text_off': 1,
+                'sub_skill_text_space': 16,
+                'summon_size': (50, 105),
+                'summon_plus_offset': (-35, -20),
+                'sum_level_text_off': (2, 3),
+                'sum_atk_size': (30, 13),
+                'sum_hp_size': (22, 13),
+                'sum_stat_offsets': [3, 30, 40, 100],
+                'skill_box_height': 48,
+                'mh_size': (100, 210),
+                'sub_size': (96, 55),
+                'wpn_separator': 5,
+                'weapon_plus_offset': (-35, -20),
+                'skill_lvl_off': [-17, 5],
+                'ax_text_off': [2, 5],
+                'wpn_stat_off': 50,
+                'wpn_stat_line': 25,
+                'wpn_atk_size': (30, 13),
+                'wpn_hp_size': (22, 13),
+                'wpn_stat_text_off': (3, 5),
+                'wpn_stat_text_off2': (37, 5),
+                'estimate_off': (5, 55),
+                'big_stat': (-5, 50),
+                'est_text': 3,
+                'est_sub_text': (5, 30),
+                'est_sub_text_ele': 22
+            },
+            '1080p' : {
+                'font': [21, 24, 45],
+                'base': (820, 1080),
+                'party_header': (15, 15),
+                'summon_header': (15, 225),
+                'weapon_header': (15, 480),
+                'header_size': (138, 37),
+                'party_pos': (15, 67),
+                'summon_pos': (225, 277),
+                'weapon_pos': (15, 532),
+                'chara_size': (82, 150),
+                'skill_width': 210,
+                'bg_offset': -8,
+                'bg_end_offset': (15, 60),
+                'bg_end_offset2': (15, 60),
+                'bg_end_offset3': (30, 600),
+                'bg_end_offset4': (30, 750),
+                'job_size': (36, 30),
+                'ring_size': (45, 45),
+                'ring_offset': -3,
+                'chara_plus_offset': (-72, -33),
+                'stat_height': 30,
+                'text_offset': (6, 3),
+                'sub_skill_bg': (210, 72),
+                'sub_skill_text_off': 2,
+                'sub_skill_text_space': 24,
+                'summon_size': (75, 157),
+                'summon_plus_offset': (-47, -30),
+                'sum_level_text_off': (3, 5),
+                'sum_atk_size': (45, 20),
+                'sum_hp_size': (33, 20),
+                'sum_stat_offsets': [5, 45, 60, 150],
+                'skill_box_height': 72,
+                'mh_size': (150, 315),
+                'sub_size': (144, 82),
+                'wpn_separator': 7,
+                'weapon_plus_offset': (-52, -30),
+                'skill_lvl_off': [-25, 7],
+                'ax_text_off': [3, 7],
+                'wpn_stat_off': 75,
+                'wpn_stat_line': 37,
+                'wpn_atk_size': (45, 20),
+                'wpn_hp_size': (33, 20),
+                'wpn_stat_text_off': (5, 7),
+                'wpn_stat_text_off2': (55, 7),
+                'estimate_off': (7, 82),
+                'big_stat': (-7, 75),
+                'est_text': 5,
+                'est_sub_text': (7, 45),
+                'est_sub_text_ele': 33
+            }
+        }
+        self.data = {}
+        self.load()
+
+    def load(self):
+        try:
+            with open('settings.json') as f:
+                self.data = json.load(f)
+        except Exception as e:
+            print("Failed to load settings.json")
+            while True:
+                print("An empty config.json file will be created, continue? (y/n)")
+                i = input()
+                if i.lower() == 'n': exit(0)
+                elif i.lower() == 'y': break
+                self.save()
+
+    def save(self):
+        try:
+            with open('settings.json', 'w') as outfile:
+                json.dump(self.data, outfile)
+        except:
+            pass
 
     def pasteImage(self, img, file, offset, resize=None):
         buffers = [Image.open(file)]
@@ -52,71 +179,72 @@ class PartyBuilder():
         return {2:'02', 3:'02', 4:'02', 5:'03', 6:'04'}.get(cs, '01')
 
     def make_party(self, export, img, d, offset):
-        csize = (55, 100)
-        skill_width = 140
-        self.pasteImage(img, "assets/bg.png", (offset[0]+skill_width-5, offset[1]-5), (csize[0]*6+10, csize[1]+40))
+        Q = self.data.get('quality', '720p')
+        csize = self.v[Q]['chara_size']
+        skill_width = self.v[Q]['skill_width']
+        self.pasteImage(img, "assets/bg.png", (offset[0]+skill_width+self.v[Q]['bg_offset'], offset[1]+self.v[Q]['bg_offset']), (csize[0]*6+self.v[Q]['bg_end_offset'][0], csize[1]+self.v[Q]['bg_end_offset'][1]))
         # mc
         self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/quest/{}.jpg".format(export['pcjs']), (offset[0]+skill_width, offset[1]), csize)
-        self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), (offset[0]+skill_width, offset[1]), (24, 20))
+        self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), (offset[0]+skill_width, offset[1]), self.v[Q]['job_size'])
         for i in range(0, 5): # npcs
             # portrait
             if export['c'][i] is None:
-                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/deckcombination/base_empty_npc.jpg", (offset[0]+skill_width+78*(i+1), offset[1]), csize)
+                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/deckcombination/base_empty_npc.jpg", (offset[0]+skill_width+csize[0]*(i+1), offset[1]), csize)
                 continue
             else:
                 self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/quest/{}000_{}.jpg".format(export['c'][i], self.get_uncap_id(export['cs'][i])), (offset[0]+skill_width+csize[0]*(i+1), offset[1]), csize)
             # rings
             if export['cwr'][i] == True:
-                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", (offset[0]+skill_width+csize[0]*(i+1)-2, offset[1]-2), (30, 30))
+                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", (offset[0]+skill_width+csize[0]*(i+1)+self.v[Q]['ring_offset'], offset[1]+self.v[Q]['ring_offset']), self.v[Q]['ring_size'])
             # plus
             if export['cp'][i] > 0:
-                d.text((offset[0]+skill_width+csize[0]*(i+2)-48, offset[1]+csize[1]-22), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
+                d.text((offset[0]+skill_width+csize[0]*(i+2)+self.v[Q]['chara_plus_offset'][0], offset[1]+csize[1]+self.v[Q]['chara_plus_offset'][1]), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
             # level
-            self.draw_rect(d, offset[0]+skill_width+csize[0]*(i+1), offset[1]+csize[1], csize[0], 20)
-            self.pasteImage(img, "assets/chara_stat.png", (offset[0]+skill_width+csize[0]*(i+1), offset[1]+csize[1]), (csize[0], 20))
-            d.text((offset[0]+skill_width+4+csize[0]*(i+1), offset[1]+csize[1]+2), "Lv{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.font)
+            self.pasteImage(img, "assets/chara_stat.png", (offset[0]+skill_width+csize[0]*(i+1), offset[1]+csize[1]), (csize[0], self.v[Q]['stat_height']))
+            d.text((offset[0]+skill_width+self.v[Q]['text_offset'][0]+csize[0]*(i+1), offset[1]+csize[1]+self.v[Q]['text_offset'][1]), "Lv{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.font)
         # mc sub skills
-        self.pasteImage(img, "assets/subskills.png", (offset[0], offset[1]), (140, 49))
+        self.pasteImage(img, "assets/subskills.png", (offset[0], offset[1]), self.v[Q]['sub_skill_bg'])
         for i in range(len(export['ps'])):
-            d.text((offset[0]+1, offset[1]+1+16*i), export['ps'][i], fill=(255, 255, 255), font=self.font)
+            d.text((offset[0]+self.v[Q]['sub_skill_text_off'], offset[1]+self.v[Q]['sub_skill_text_off']+self.v[Q]['sub_skill_text_space']*i), export['ps'][i], fill=(255, 255, 255), font=self.font)
 
     def make_summons(self, export, img, d, offset):
-        ssize = (50, 105)
+        Q = self.data.get('quality', '720p')
+        ssize = self.v[Q]['summon_size']
         # background
-        self.pasteImage(img, "assets/bg.png", (offset[0]-5, offset[1]-5), (ssize[0]*5+10, ssize[1]+60))
+        self.pasteImage(img, "assets/bg.png", (offset[0]+self.v[Q]['bg_offset'], offset[1]+self.v[Q]['bg_offset']), (ssize[0]*5+self.v[Q]['bg_end_offset2'][0], ssize[1]+self.v[Q]['bg_end_offset2'][0]))
         for i in range(0, 5):
             # portraits
             if export['s'][i] is None:
-                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/ls/2999999999.jpg", (offset[0]+50*i, offset[1]), ssize)
+                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/ls/2999999999.jpg", (offset[0]+ssize[0]*i, offset[1]), ssize)
                 continue
             else:
-                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/ls/{}.jpg".format(export['ss'][i]), (offset[0]+50*i, offset[1]), ssize)
+                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/ls/{}.jpg".format(export['ss'][i]), (offset[0]+ssize[0]*i, offset[1]), ssize)
             # plus
             if export['sp'][i] > 0:
-                d.text((offset[0]+ssize[0]*(i+1)-35, offset[1]+ssize[1]-20), "+{}".format(export['sp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
+                d.text((offset[0]+ssize[0]*(i+1)+self.v[Q]['summon_plus_offset'][0], offset[1]+ssize[1]+self.v[Q]['summon_plus_offset'][1]), "+{}".format(export['sp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
             # level
-            self.pasteImage(img, "assets/chara_stat.png", (offset[0]+ssize[0]*i, offset[1]+ssize[1]), (ssize[0], 20))
-            d.text((offset[0]+2+ssize[0]*i, offset[1]+ssize[1]+3), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.small_font)
+            self.pasteImage(img, "assets/chara_stat.png", (offset[0]+ssize[0]*i, offset[1]+ssize[1]), (ssize[0], self.v[Q]['stat_height']))
+            d.text((offset[0]+self.v[Q]['sum_level_text_off'][0]+ssize[0]*i, offset[1]+ssize[1]+self.v[Q]['sum_level_text_off'][1]), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.small_font)
         # stats
-        self.draw_rect(d, offset[0], offset[1]+ssize[1]+20, ssize[0]*4, 20)
-        self.pasteImage(img, "assets/chara_stat.png", (offset[0], offset[1]+ssize[1]+20), (ssize[0]*2, 20))
-        self.pasteImage(img, "assets/chara_stat.png", (offset[0]+ssize[0]*2, offset[1]+ssize[1]+20), (ssize[0]*2, 20))
-        self.pasteImage(img, "assets/atk.png", (offset[0]+3, offset[1]+ssize[1]+20+3), (30, 13))
-        self.pasteImage(img, "assets/hp.png", (offset[0]+3+100, offset[1]+ssize[1]+20+3), (22, 13))
-        d.text((offset[0]+40, offset[1]+ssize[1]+20+3), "{}".format(export['satk']), fill=(255, 255, 255), font=self.small_font)
-        d.text((offset[0]+100+30, offset[1]+ssize[1]+20+3), "{}".format(export['shp']), fill=(255, 255, 255), font=self.small_font)
+        self.pasteImage(img, "assets/chara_stat.png", (offset[0], offset[1]+ssize[1]+self.v[Q]['stat_height']), (ssize[0]*2, self.v[Q]['stat_height']))
+        self.pasteImage(img, "assets/chara_stat.png", (offset[0]+ssize[0]*2, offset[1]+ssize[1]+self.v[Q]['stat_height']), (ssize[0]*2, self.v[Q]['stat_height']))
+        self.pasteImage(img, "assets/atk.png", (offset[0]+self.v[Q]['sum_stat_offsets'][0], offset[1]+ssize[1]+self.v[Q]['stat_height']+self.v[Q]['sum_stat_offsets'][0]), self.v[Q]['sum_atk_size'])
+        self.pasteImage(img, "assets/hp.png", (offset[0]+self.v[Q]['sum_stat_offsets'][0]+self.v[Q]['sum_stat_offsets'][3], offset[1]+ssize[1]+self.v[Q]['stat_height']+self.v[Q]['sum_stat_offsets'][0]), self.v[Q]['sum_hp_size'])
+        d.text((offset[0]+self.v[Q]['sum_stat_offsets'][2], offset[1]+ssize[1]+self.v[Q]['stat_height']+self.v[Q]['sum_stat_offsets'][0]), "{}".format(export['satk']), fill=(255, 255, 255), font=self.small_font)
+        d.text((offset[0]+self.v[Q]['sum_stat_offsets'][3]+self.v[Q]['sum_stat_offsets'][1], offset[1]+ssize[1]+self.v[Q]['stat_height']+self.v[Q]['sum_stat_offsets'][0]), "{}".format(export['shp']), fill=(255, 255, 255), font=self.small_font)
 
     def make_grid(self, export, img, d, base_offset):
-        skill_box_height = 48
+        Q = self.data.get('quality', '720p')
+        skill_box_height = self.v[Q]['skill_box_height']
         skill_icon_size = skill_box_height // 2
-        ax_separator = 48
-        mh_size = (100, 210)
-        sub_size = (96, 55)
+        ax_separator = skill_box_height
+        mh_size = self.v[Q]['mh_size']
+        sub_size = self.v[Q]['sub_size']
         # background
         if len(export['w']) > 10:
-            self.pasteImage(img, "assets/grid_bg.png", (base_offset[0]-5, base_offset[1]-5), (mh_size[0]+4*sub_size[0]+20, 500))
+            self.pasteImage(img, "assets/grid_bg.png", (base_offset[0]+self.v[Q]['bg_offset'], base_offset[1]+self.v[Q]['bg_offset']), (mh_size[0]+4*sub_size[0]+self.v[Q]['bg_end_offset4'][0], self.v[Q]['bg_end_offset4'][1]))
         else:
-            self.pasteImage(img, "assets/grid_bg.png", (base_offset[0]-5, base_offset[1]-5), (mh_size[0]+3*sub_size[0]+20, 400))
+            self.pasteImage(img, "assets/grid_bg.png", (base_offset[0]+self.v[Q]['bg_offset'], base_offset[1]+self.v[Q]['bg_offset']), (mh_size[0]+3*sub_size[0]+self.v[Q]['bg_end_offset3'][0], self.v[Q]['bg_end_offset3'][1]))
         # weapons
         for i in range(0, len(export['w'])):
             wt = "ls" if i == 0 else "m"
@@ -128,12 +256,12 @@ class PartyBuilder():
                 x = 3
                 y = (i-1) % 3
                 size = sub_size
-                offset = (base_offset[0]+bsize[0]+5+size[0]*x, base_offset[1]+(size[1]+skill_box_height)*y)
+                offset = (base_offset[0]+bsize[0]+self.v[Q]['wpn_separator']+size[0]*x, base_offset[1]+(size[1]+skill_box_height)*y)
             else: # others
                 x = (i-1) % 3
                 y = (i-1) // 3
                 size = sub_size
-                offset = (base_offset[0]+bsize[0]+5+size[0]*x, base_offset[1]+(size[1]+skill_box_height)*y)
+                offset = (base_offset[0]+bsize[0]+self.v[Q]['wpn_separator']+size[0]*x, base_offset[1]+(size[1]+skill_box_height)*y)
             if export['w'][i] is None:
                 self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), offset, size)
                 continue
@@ -146,12 +274,12 @@ class PartyBuilder():
             # plus
             if export['wp'][i] > 0:
                 if i == 0:
-                    d.text((offset[0]+size[0]-30, offset[1]+size[1]-20), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
+                    d.text((offset[0]+size[0]+self.v[Q]['weapon_plus_offset'][0], offset[1]+size[1]+self.v[Q]['weapon_plus_offset'][1]), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
                 else:
-                    d.text((offset[0]+size[0]-30, offset[1]+size[1]-20), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
+                    d.text((offset[0]+size[0]+self.v[Q]['weapon_plus_offset'][0], offset[1]+size[1]+self.v[Q]['weapon_plus_offset'][1]), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=1, stroke_fill=(0, 0, 0))
             # skill level
             if export['wl'][i] is not None and export['wl'][i] > 1:
-                d.text((offset[0]+skill_icon_size*3-17, offset[1]+size[1]+5), "SL {}".format(export['wl'][i]), fill=(255, 255, 255), font=self.small_font)
+                d.text((offset[0]+skill_icon_size*3+self.v[Q]['skill_lvl_off'][0], offset[1]+size[1]+self.v[Q]['skill_lvl_off'][1]), "SL {}".format(export['wl'][i]), fill=(255, 255, 255), font=self.small_font)
             # skill icon
             for j in range(3):
                 if export['wsn'][i][j] is not None:
@@ -159,33 +287,34 @@ class PartyBuilder():
             # ax skills
             for j in range(len(export['waxi'][i])):
                 self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/skill/{}.png".format(export['waxi'][i][j]), (offset[0]+ax_separator*j, offset[1]+size[1]+skill_icon_size), (skill_icon_size, skill_icon_size))
-                d.text((offset[0]+ax_separator*j+skill_icon_size+2, offset[1]+size[1]+skill_icon_size+5), "{}".format(export['wax'][i][0][j]['show_value']).replace('%', '').replace('+', ''), fill=(255, 255, 255), font=self.small_font)
+                d.text((offset[0]+ax_separator*j+skill_icon_size+self.v[Q]['ax_text_off'][0], offset[1]+size[1]+skill_icon_size+self.v[Q]['ax_text_off'][1]), "{}".format(export['wax'][i][0][j]['show_value']).replace('%', '').replace('+', ''), fill=(255, 255, 255), font=self.small_font)
         # sandbox tag
         if len(export['w']) > 10:
             sandbox = (size[0], int(66*size[0]/159))
-            self.pasteImage(img, "assets/sandbox.png", (offset[0], base_offset[1]-sandbox[1]), sandbox) # 159 66
+            self.pasteImage(img, "assets/sandbox.png", (offset[0], base_offset[1]-sandbox[1]), sandbox)
         # stats
-        offset = (base_offset[0], base_offset[1]+bsize[1]+50)
-        self.pasteImage(img, "assets/skill.png", (offset[0], offset[1]), (bsize[0], 25))
-        self.pasteImage(img, "assets/skill.png", (offset[0], offset[1]+25), (bsize[0], 25))
-        self.pasteImage(img, "assets/atk.png", (offset[0]+3, offset[1]+5), (30, 13))
-        self.pasteImage(img, "assets/hp.png", (offset[0]+3, offset[1]+30), (22, 13))
-        d.text((offset[0]+37, offset[1]+5), "{}".format(export['watk']), fill=(255, 255, 255), font=self.font)
-        d.text((offset[0]+37, offset[1]+5+25), "{}".format(export['whp']), fill=(255, 255, 255), font=self.font)
+        offset = (base_offset[0], base_offset[1]+bsize[1]+self.v[Q]['wpn_stat_off'])
+        self.pasteImage(img, "assets/skill.png", (offset[0], offset[1]), (bsize[0], self.v[Q]['wpn_stat_line']))
+        self.pasteImage(img, "assets/skill.png", (offset[0], offset[1]+self.v[Q]['wpn_stat_line']), (bsize[0], self.v[Q]['wpn_stat_line']))
+        self.pasteImage(img, "assets/atk.png", (offset[0]+self.v[Q]['wpn_stat_text_off'][0], offset[1]+self.v[Q]['wpn_stat_text_off'][1]), self.v[Q]['wpn_atk_size'])
+        self.pasteImage(img, "assets/hp.png", (offset[0]+self.v[Q]['wpn_stat_text_off'][0], offset[1]+self.v[Q]['wpn_stat_text_off'][1]+self.v[Q]['wpn_stat_line']), self.v[Q]['wpn_hp_size'])
+        d.text((offset[0]+self.v[Q]['wpn_stat_text_off2'][0], offset[1]+self.v[Q]['wpn_stat_text_off2'][1]), "{}".format(export['watk']), fill=(255, 255, 255), font=self.font)
+        d.text((offset[0]+self.v[Q]['wpn_stat_text_off2'][0], offset[1]+self.v[Q]['wpn_stat_text_off2'][1]+self.v[Q]['wpn_stat_line']), "{}".format(export['whp']), fill=(255, 255, 255), font=self.font)
         # estimated
-        offset = (offset[0]+bsize[0]+5, offset[1]+55)
+        offset = (offset[0]+bsize[0]+self.v[Q]['estimate_off'][0], offset[1]+self.v[Q]['estimate_off'][1])
         est_width = ((size[0]*3)//2)
         for i in range(0, 2):
-            self.pasteImage(img, "assets/big_stat.png", (offset[0]+est_width*i , offset[1]), (est_width-5, 50))
-            d.text((offset[0]+3+est_width*i+1, offset[1]+3), "{}".format(export['est'][i+1]), fill=(0, 0, 0), font=self.big_font)
-            d.text((offset[0]+3+est_width*i, offset[1]+3), "{}".format(export['est'][i+1]), fill=self.colors[export['est'][0]], font=self.big_font)
+            self.pasteImage(img, "assets/big_stat.png", (offset[0]+est_width*i , offset[1]), (est_width+self.v[Q]['big_stat'][0], self.v[Q]['big_stat'][1]))
+            d.text((offset[0]+self.v[Q]['est_text']+est_width*i+1, offset[1]+self.v[Q]['est_text']), "{}".format(export['est'][i+1]), fill=(0, 0, 0), font=self.big_font)
+            d.text((offset[0]+self.v[Q]['est_text']+est_width*i, offset[1]+self.v[Q]['est_text']), "{}".format(export['est'][i+1]), fill=self.colors[export['est'][0]], font=self.big_font)
             if i == 0:
-                d.text((offset[0]+est_width*i+5 , offset[1]+30), "Estimated", fill=(255, 255, 255), font=self.font)
+                d.text((offset[0]+est_width*i+self.v[Q]['est_sub_text'][0] , offset[1]+self.v[Q]['est_sub_text'][1]), "Estimated", fill=(255, 255, 255), font=self.font)
             elif i == 1:
                 if export['est'][0] <= 4: vs = (export['est'][0] + 2) % 4 + 1
                 else: vs = (export['est'][0] - 5 + 1) % 2 + 5
-                d.text((offset[0]+est_width*i+5 , offset[1]+30), "vs", fill=(255, 255, 255), font=self.font)
-                d.text((offset[0]+est_width*i+22 , offset[1]+30), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.font)
+                d.text((offset[0]+est_width*i+self.v[Q]['est_sub_text'][0] , offset[1]+self.v[Q]['est_sub_text'][1]), "vs", fill=(255, 255, 255), font=self.font)
+                d.text((offset[0]+est_width*i+self.v[Q]['est_sub_text_ele'] , offset[1]+self.v[Q]['est_sub_text'][1]), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.font)
+                
 
     def make(self):
         print("Instructions:")
@@ -197,23 +326,27 @@ class PartyBuilder():
             clipboard = pyperclip.paste()
             export = json.loads(clipboard)
             self.cache = {}
+            Q = self.data.get('quality', '720p')
+            self.big_font = ImageFont.truetype("assets/basic.ttf", self.v[Q]['font'][2])
+            self.font = ImageFont.truetype("assets/basic.ttf", self.v[Q]['font'][1])
+            self.small_font = ImageFont.truetype("assets/basic.ttf", self.v[Q]['font'][0])
             
-            img = Image.new('RGB', (547, 720), "black")
+            img = Image.new('RGB', self.v[Q]['base'], "black")
             im_a = Image.new("L", img.size, "black")
             img.putalpha(im_a)
             im_a.close()
             d = ImageDraw.Draw(img, 'RGBA')
             # party
-            self.pasteImage(img, "assets/characters.png", (10, 10), (92, 25))
-            self.make_party(export, img, d, (10, 45))
+            self.pasteImage(img, "assets/characters.png", self.v[Q]['party_header'], self.v[Q]['header_size'])
+            self.make_party(export, img, d, self.v[Q]['party_pos'])
 
             # summons
-            self.pasteImage(img, "assets/summons.png", (10, 150), (92, 25))
-            self.make_summons(export, img, d, (150, 185))
+            self.pasteImage(img, "assets/summons.png", self.v[Q]['summon_header'], self.v[Q]['header_size'])
+            self.make_summons(export, img, d, self.v[Q]['summon_pos'])
 
             # grid
-            self.pasteImage(img, "assets/weapons.png", (10, 320), (92, 25))
-            self.make_grid(export, img, d, (10, 355))
+            self.pasteImage(img, "assets/weapons.png", self.v[Q]['weapon_header'], self.v[Q]['header_size'])
+            self.make_grid(export, img, d, self.v[Q]['weapon_pos'])
 
 
             img.save("party.png", "PNG")
@@ -224,27 +357,50 @@ class PartyBuilder():
             print("exception message:", e)
             print("Did you follow the instructions?")
 
-    def run(self):
+    def settings(self):
         while True:
             print("")
-            print("Main Menu:")
-            print("[0] Generate Image")
-            print("[1] Get Bookmarklet")
-            print("[Any] Exit")
+            print("Settings:")
+            print("[0] Change quality (Current:", self.data.get('quality', '720p'),")")
+            print("[Any] Back")
             s = input()
             if s == "0":
-                self.make()
-            elif s == "1":
-                pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#party/index/\")){alert('Please go to a GBF Party screen');return}let obj={p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],c:[],cl:[],cs:[],cp:[],cwr:[],s:[],sl:[],ss:[],sp:[],w:[],wl:[],wsn:[],wll:[],wp:[],wax:[],waxi:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_attack,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute, window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage, window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage]};for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)});Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});let copyListener = event => { document.removeEventListener(\"copy\", copyListener, true); event.preventDefault(); let clipboardData = event.clipboardData; clipboardData.clearData(); clipboardData.setData(\"text/plain\", JSON.stringify(obj)); }; document.addEventListener(\"copy\", copyListener, true); document.execCommand(\"copy\");}())")
-                print("Bookmarklet copied!")
-                print("To setup on chrome:")
-                print("1) Make a new bookmark (of GBF for example)")
-                print("2) Right-click and edit")
-                print("3) Change the name if you want")
-                print("4) Paste the code in the url field")
+                v = ({'720p':0, '1080p':1}[self.data.get('quality', '720p')] + 1) % 2
+                self.data['quality'] = {0:'720p', 1:'1080p'}.get(v, 0)
             else:
                 return
 
+    def run(self):
+        while True:
+            try:
+                print("")
+                print("Main Menu:")
+                print("[0] Generate Image")
+                print("[1] Get Bookmarklet")
+                print("[2] Change settings")
+                print("[Any] Exit")
+                s = input()
+                if s == "0":
+                    self.make()
+                elif s == "1":
+                    pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#party/index/\")){alert('Please go to a GBF Party screen');return}let obj={p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],c:[],cl:[],cs:[],cp:[],cwr:[],s:[],sl:[],ss:[],sp:[],w:[],wl:[],wsn:[],wll:[],wp:[],wax:[],waxi:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_attack,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute, window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage, window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage]};for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)});Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});let copyListener = event => { document.removeEventListener(\"copy\", copyListener, true); event.preventDefault(); let clipboardData = event.clipboardData; clipboardData.clearData(); clipboardData.setData(\"text/plain\", JSON.stringify(obj)); }; document.addEventListener(\"copy\", copyListener, true); document.execCommand(\"copy\");}())")
+                    print("Bookmarklet copied!")
+                    print("To setup on chrome:")
+                    print("1) Make a new bookmark (of GBF for example)")
+                    print("2) Right-click and edit")
+                    print("3) Change the name if you want")
+                    print("4) Paste the code in the url field")
+                elif s == "2":
+                    self.settings()
+                    self.save()
+                else:
+                    self.save()
+                    return
+            except Exception as e:
+                print(e)
+                self.save()
+                return
+
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.3")
+    print("Granblue Fantasy Party Image Builder v1.4")
     PartyBuilder().run()
