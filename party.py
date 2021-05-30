@@ -336,6 +336,8 @@ class PartyBuilder():
         ax_separator = skill_box_height
         mh_size = self.v[Q]['mh_size']
         sub_size = self.v[Q]['sub_size']
+        if len(export['w']) <= 10:
+            base_offset = (base_offset[0] + sub_size[0], base_offset[1])
         # background
         if len(export['w']) > 10:
             self.pasteImage(img, "assets/grid_bg.png", (base_offset[0]+self.v[Q]['bg_offset'], base_offset[1]+self.v[Q]['bg_offset']), (mh_size[0]+4*sub_size[0]+self.v[Q]['bg_end_offset4'][0], self.v[Q]['bg_end_offset4'][1]))
