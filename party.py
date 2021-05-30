@@ -290,7 +290,7 @@ class PartyBuilder():
                 self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", (pos[0]+self.v[Q]['ring_offset'], pos[1]+self.v[Q]['ring_offset']), self.v[Q]['ring_size'])
             # plus
             if export['cp'][i] > 0:
-                d.text((pos[0]+self.v[Q]['chara_plus_offset'][0], pos[1]+csize[1]+self.v[Q]['chara_plus_offset'][1]), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=self.v[Q]['stroke_width'], stroke_fill=(0, 0, 0))
+                d.text((pos[0]+csize[0]+self.v[Q]['chara_plus_offset'][0], pos[1]+csize[1]+self.v[Q]['chara_plus_offset'][1]), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=self.v[Q]['stroke_width'], stroke_fill=(0, 0, 0))
             # level
             self.pasteImage(img, "assets/chara_stat.png", (pos[0], pos[1]+csize[1]), (csize[0], self.v[Q]['stat_height']))
             d.text((pos[0]+self.v[Q]['text_offset'][0], pos[1]+csize[1]+self.v[Q]['text_offset'][1]), "Lv{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.font)
