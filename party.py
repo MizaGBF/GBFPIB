@@ -384,7 +384,7 @@ class PartyBuilder():
                     self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (offset[0]+skill_icon_size*j, offset[1]+size[1]), (skill_icon_size, skill_icon_size))
             # ax skills
             if len(export['waxt'][i]) > 0:
-                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), (offset[0], offset[1]), (skill_icon_size, skill_icon_size))
+                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), (offset[0], offset[1]), (skill_icon_size * (2 if i == 0 else 1), skill_icon_size * (2 if i == 0 else 1)))
                 for j in range(len(export['waxi'][i])):
                     self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/skill/{}.png".format(export['waxi'][i][j]), (offset[0]+ax_separator*j, offset[1]+size[1]+skill_icon_size), (skill_icon_size, skill_icon_size))
                     d.text((offset[0]+ax_separator*j+skill_icon_size+self.v[Q]['ax_text_off'][0], offset[1]+size[1]+skill_icon_size+self.v[Q]['ax_text_off'][1]), "{}".format(export['wax'][i][0][j]['show_value']).replace('%', '').replace('+', ''), fill=(255, 255, 255), font=self.small_font)
