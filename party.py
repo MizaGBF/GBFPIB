@@ -83,8 +83,9 @@ class PartyBuilder():
             'est_sub_text': (5, 30),
             'est_sub_text_ele': 22
         }
-        self.qual = {'720p': 1, '1080p': 1.5, '4K': 3}
+        self.qual = {'720p': 1, '1080p': 1.5, '4K': 3, '8K': 6}
         self.v = None
+        self.last = ""
         self.data = {}
         self.load()
 
@@ -109,6 +110,8 @@ class PartyBuilder():
             pass
 
     def build_quality(self):
+        if self.data.get('quality', '720p') == self.last: return
+        print("Caching size for quality", self.data.get('quality', '720p'))
         self.v = {}
         mod = self.qual[self.data.get('quality', '720p')]
         for k in self.base:
@@ -124,6 +127,10 @@ class PartyBuilder():
                     tmp.append(int(i*mod))
                 self.v[k] = tmp
             else: raise Exception("Internal error")
+        self.big_font = ImageFont.truetype("assets/basic.ttf", self.v['font'][2])
+        self.font = ImageFont.truetype("assets/basic.ttf", self.v['font'][1])
+        self.small_font = ImageFont.truetype("assets/basic.ttf", self.v['font'][0])
+        self.last = self.data.get('quality', '720p')
 
     def pasteImage(self, img, file, offset, resize=None): # paste and image onto another
         buffers = [Image.open(file)]
@@ -149,6 +156,7 @@ class PartyBuilder():
         return {2:'02', 3:'02', 4:'02', 5:'03', 6:'04'}.get(cs, '01')
 
     def make_party_babyl(self, export, img, d, offset): # draw the tower of babyl parties
+        print("Drawing Tower of Babel Parties...")
         csize = self.v['chara_size_babyl']
         # background
         for i in range(0, 3):
@@ -156,6 +164,7 @@ class PartyBuilder():
         # mc
         self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/quest/{}.jpg".format(export['pcjs']), (offset[0], offset[1]), csize)
         self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), (offset[0], offset[1]), self.v['job_size'])
+        print("MC: skin", export['pcjs'], ", job", export['p'])
         for i in range(0, 11): # npcs
             pos = (offset[0]+csize[0]*(i+1)+((i+1)//4)*self.v['chara_babyl_off'], offset[1])
             # portrait
@@ -163,6 +172,7 @@ class PartyBuilder():
                 self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/deckcombination/base_empty_npc.jpg", pos, csize)
                 continue
             else:
+                print("Ally", i, ",", str(export['c'][i]) + "000")
                 self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/quest/{}000_{}.jpg".format(export['c'][i], self.get_uncap_id(export['cs'][i])), pos, csize)
             # rings
             if export['cwr'][i] == True:
@@ -175,6 +185,7 @@ class PartyBuilder():
             d.text((pos[0]+self.v['text_offset'][0], pos[1]+csize[1]+self.v['text_offset'][1]), "{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.small_font)
 
     def make_party(self, export, img, d, offset): # draw the party
+        print("Drawing Party...")
         csize = self.v['chara_size']
         skill_width = self.v['skill_width']
         # background
@@ -182,6 +193,7 @@ class PartyBuilder():
         # mc
         self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/quest/{}.jpg".format(export['pcjs']), (offset[0]+skill_width, offset[1]), csize)
         self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), (offset[0]+skill_width, offset[1]), self.v['job_size'])
+        print("MC: skin", export['pcjs'], ", job", export['p'])
         for i in range(0, 5): # npcs
             pos = (offset[0]+skill_width+csize[0]*(i+1), offset[1])
             # portrait
@@ -189,6 +201,7 @@ class PartyBuilder():
                 self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/deckcombination/base_empty_npc.jpg", pos, csize)
                 continue
             else:
+                print("Ally", i, ",", str(export['c'][i]) + "000")
                 self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/quest/{}000_{}.jpg".format(export['c'][i], self.get_uncap_id(export['cs'][i])), pos, csize)
             # rings
             if export['cwr'][i] == True:
@@ -202,16 +215,19 @@ class PartyBuilder():
         # mc sub skills
         self.pasteImage(img, "assets/subskills.png", (offset[0], offset[1]), self.v['sub_skill_bg'])
         count = 0
+        print("MC skills:", export['ps'])
         for i in range(len(export['ps'])):
             if export['ps'][i] is not None:
                 d.text((offset[0]+self.v['sub_skill_text_off'], offset[1]+self.v['sub_skill_text_off']+self.v['sub_skill_text_space']*count), export['ps'][i], fill=(255, 255, 255), font=self.font)
                 count += 1
 
     def make_summons(self, export, img, d, offset): # draw the summons
+        print("Drawing Summons...")
         ssize = self.v['summon_size']
         # background
         self.pasteImage(img, "assets/bg.png", (offset[0]+self.v['bg_offset'], offset[1]+self.v['bg_offset']), (ssize[0]*5+self.v['bg_end_offset2'][0], ssize[1]+self.v['bg_end_offset2'][1]))
         for i in range(0, 5):
+            print("Summon", i, ",", export['ss'][i])
             pos = (offset[0]+ssize[0]*i, offset[1])
             # portraits
             if export['s'][i] is None:
@@ -234,6 +250,7 @@ class PartyBuilder():
         d.text((offset[0]+self.v['sum_stat_offsets'][3]+self.v['sum_stat_offsets'][1], offset[1]+ssize[1]+self.v['stat_height']+self.v['sum_stat_offsets'][0]), "{}".format(export['shp']), fill=(255, 255, 255), font=self.small_font)
 
     def make_grid(self, export, img, d, base_offset): # draw the weapons (sandbox is supported)
+        print("Drawing Weapons...")
         skill_box_height = self.v['skill_box_height']
         skill_icon_size = skill_box_height // 2
         ax_separator = skill_box_height
@@ -241,6 +258,8 @@ class PartyBuilder():
         sub_size = self.v['sub_size']
         if len(export['w']) <= 10:
             base_offset = (base_offset[0] + sub_size[0], base_offset[1])
+        else:
+            print("Sandbox detected")
         # background
         if len(export['w']) > 10:
             self.pasteImage(img, "assets/grid_bg.png", (base_offset[0]+self.v['bg_offset'], base_offset[1]+self.v['bg_offset']), (mh_size[0]+4*sub_size[0]+self.v['bg_end_offset4'][0], self.v['bg_end_offset4'][1]))
@@ -267,6 +286,7 @@ class PartyBuilder():
                 self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), offset, size)
                 continue
             else:
+                print("Weapon", i, ",", str(export['w'][i])+"00")
                 self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/{}00.jpg".format(wt, export['w'][i]), offset, size)
             # skill box
             self.pasteImage(img, "assets/skill.png", (offset[0], offset[1]+size[1]), (size[0], skill_box_height//2))
@@ -316,7 +336,6 @@ class PartyBuilder():
                 else: vs = (export['est'][0] - 5 + 1) % 2 + 5
                 d.text((offset[0]+est_width*i+self.v['est_sub_text'][0] , offset[1]+self.v['est_sub_text'][1]), "vs", fill=(255, 255, 255), font=self.font)
                 d.text((offset[0]+est_width*i+self.v['est_sub_text_ele'] , offset[1]+self.v['est_sub_text'][1]), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.font)
-                
 
     def make(self):
         print("Instructions:")
@@ -329,9 +348,6 @@ class PartyBuilder():
             export = json.loads(clipboard)
             self.cache = {}
             self.build_quality()
-            self.big_font = ImageFont.truetype("assets/basic.ttf", self.v['font'][2])
-            self.font = ImageFont.truetype("assets/basic.ttf", self.v['font'][1])
-            self.small_font = ImageFont.truetype("assets/basic.ttf", self.v['font'][0])
             
             img = Image.new('RGB', self.v['base'], "black")
             im_a = Image.new("L", img.size, "black")
@@ -369,8 +385,8 @@ class PartyBuilder():
             print("[Any] Back")
             s = input()
             if s == "0":
-                v = ({'720p':0, '1080p':1, '4K':2}[self.data.get('quality', '720p')] + 1) % 3
-                self.data['quality'] = {0:'720p', 1:'1080p', 2:'4K'}.get(v, 0)
+                v = ({'720p':0, '1080p':1, '4K':2, '8K':3}[self.data.get('quality', '720p')] + 1) % 4
+                self.data['quality'] = {0:'720p', 1:'1080p', 2:'4K', 3:'8K'}.get(v, 0)
             else:
                 return
 
@@ -406,5 +422,5 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.7")
+    print("Granblue Fantasy Party Image Builder v1.8")
     PartyBuilder().run()
