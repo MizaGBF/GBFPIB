@@ -68,6 +68,7 @@ class PartyBuilder():
             'sum_hp_size': (22, 13),
             'sum_stat_offsets': [3, 30, 40, 100],
             'skill_box_height': 48,
+            'ax_box_height': 32,
             'mh_size': (100, 210),
             'sub_size': (96, 55),
             'wpn_separator': 5,
@@ -85,6 +86,33 @@ class PartyBuilder():
             'est_text': 3,
             'est_sub_text': (5, 30),
             'est_sub_text_ele': 22
+        }
+        self.classes = {
+            10: 'sw',
+            11: 'sw',
+            12: 'wa',
+            13: 'wa',
+            14: 'kn',
+            15: 'sw',
+            16: 'me',
+            17: 'bw',
+            18: 'mc',
+            19: 'sp',
+            30: 'sw',
+            41: 'ax',
+            42: 'sp',
+            44: 'bw',
+            45: 'sw',
+            20: 'kn',
+            21: 'kt',
+            22: 'kt',
+            23: 'sw',
+            24: 'gu',
+            25: 'wa',
+            26: 'kn',
+            27: 'mc',
+            28: 'kn',
+            29: 'gu'
         }
         self.qual = {'720p': 1, '1080p': 1.5, '4K': 3, '8K': 6}
         self.v = None
@@ -158,6 +186,11 @@ class PartyBuilder():
     def get_uncap_id(self, cs): # to get character portraits based on uncap levels
         return {2:'02', 3:'02', 4:'02', 5:'03', 6:'04'}.get(cs, '01')
 
+    def get_mc_job_look(self, skin, job):
+        jid = job // 10000
+        if jid not in self.classes: return skin
+        return "{}_{}_{}".format(job, self.classes[jid], '_'.join(skin.split('_')[2:]))
+
     def make_party_babyl(self, export, img, d, offset): # draw the tower of babyl parties
         print("Drawing Tower of Babel Parties...")
         csize = self.v['chara_size_babyl']
@@ -167,7 +200,7 @@ class PartyBuilder():
             pos = (offset[0]+csize[0]*(i%4)+skill_width+self.v['chara_pos_babyl_offset'], offset[1]+csize[1]*(i//4))
             if i == 0:
                 print("MC: skin", export['pcjs'], ", job", export['p'])
-                self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/s/{}.jpg".format(export['pcjs']), pos, csize)
+                self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/s/{}.jpg".format(self.get_mc_job_look(export['pcjs'], export['p'])), pos, csize)
                 self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, self.v['job_size_babyl'])
             else:
                 # portrait
@@ -200,7 +233,7 @@ class PartyBuilder():
         # background
         self.pasteImage(img, "assets/bg.png", (offset[0]+skill_width+self.v['bg_offset'], offset[1]+self.v['bg_offset']), (csize[0]*6+self.v['bg_end_offset'][0], csize[1]+self.v['bg_end_offset'][1]))
         # mc
-        self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/quest/{}.jpg".format(export['pcjs']), (offset[0]+skill_width, offset[1]), csize)
+        self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/quest/{}.jpg".format(self.get_mc_job_look(export['pcjs'], export['p'])), (offset[0]+skill_width, offset[1]), csize)
         self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), (offset[0]+skill_width, offset[1]), self.v['job_size'])
         print("MC: skin", export['pcjs'], ", job", export['p'])
         for i in range(0, 5): # npcs
@@ -262,6 +295,7 @@ class PartyBuilder():
         print("Drawing Weapons...")
         skill_box_height = self.v['skill_box_height']
         skill_icon_size = skill_box_height // 2
+        ax_icon_size = self.v['ax_box_height']
         ax_separator = skill_box_height
         mh_size = self.v['mh_size']
         sub_size = self.v['sub_size']
@@ -292,7 +326,10 @@ class PartyBuilder():
                 size = sub_size
                 offset = (base_offset[0]+bsize[0]+self.v['wpn_separator']+size[0]*x, base_offset[1]+(size[1]+skill_box_height)*y)
             if export['w'][i] is None:
-                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), offset, size)
+                if i >= 10:
+                    self.pasteImage(img, "assets/arca_slot.png", offset, size)
+                else:
+                    self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), offset, size)
                 continue
             else:
                 print("Weapon", i, ",", str(export['w'][i])+"00")
@@ -316,7 +353,7 @@ class PartyBuilder():
                     self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (offset[0]+skill_icon_size*j, offset[1]+size[1]), (skill_icon_size, skill_icon_size))
             # ax skills
             if len(export['waxt'][i]) > 0:
-                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), (offset[0], offset[1]), (skill_icon_size * (2 if i == 0 else 1), skill_icon_size * (2 if i == 0 else 1)))
+                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), (offset[0], offset[1]), (int(ax_icon_size * (1.5 if i == 0 else 1)), int(ax_icon_size * (1.5 if i == 0 else 1))))
                 for j in range(len(export['waxi'][i])):
                     self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/skill/{}.png".format(export['waxi'][i][j]), (offset[0]+ax_separator*j, offset[1]+size[1]+skill_icon_size), (skill_icon_size, skill_icon_size))
                     d.text((offset[0]+ax_separator*j+skill_icon_size+self.v['ax_text_off'][0], offset[1]+size[1]+skill_icon_size+self.v['ax_text_off'][1]), "{}".format(export['wax'][i][0][j]['show_value']).replace('%', '').replace('+', ''), fill=(255, 255, 255), font=self.small_font)
@@ -431,5 +468,5 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.12")
+    print("Granblue Fantasy Party Image Builder v1.13")
     PartyBuilder().run()
