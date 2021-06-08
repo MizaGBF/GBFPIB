@@ -37,12 +37,13 @@ class PartyBuilder():
             'weapon_header': (10, 320),
             'header_size': (92, 25),
             'party_pos': (10, 45),
-            'party_babyl_pos': (170, 10),
+            'party_babyl_pos': (30, 10),
             'summon_pos': (150, 185),
             'weapon_pos': (10, 355),
             'chara_size': (55, 100),
             'chara_size_babyl': (52, 52),
             'chara_plus_babyl_offset': (-35, -15),
+            'chara_pos_babyl_offset': 10,
             'skill_width': 140,
             'bg_offset': -5,
             'bg_end_offset': (10, 40),
@@ -160,9 +161,10 @@ class PartyBuilder():
     def make_party_babyl(self, export, img, d, offset): # draw the tower of babyl parties
         print("Drawing Tower of Babel Parties...")
         csize = self.v['chara_size_babyl']
-        self.pasteImage(img, "assets/bg.png", (offset[0]+self.v['bg_offset'], offset[1]+self.v['bg_offset']), (csize[0]*4+self.v['bg_end_offset'][0], csize[1]*3+self.v['bg_end_offset'][1]+self.v['bg_offset']*3))
+        skill_width = self.v['skill_width']
+        self.pasteImage(img, "assets/bg.png", (offset[0]+self.v['bg_offset']+skill_width+self.v['chara_pos_babyl_offset'], offset[1]+self.v['bg_offset']), (csize[0]*4+self.v['bg_end_offset'][0], csize[1]*3+self.v['bg_end_offset'][1]+self.v['bg_offset']*3))
         for i in range(0, 12):
-            pos = (offset[0]+csize[0]*(i%4), offset[1]+csize[1]*(i//4))
+            pos = (offset[0]+csize[0]*(i%4)+skill_width+self.v['chara_pos_babyl_offset'], offset[1]+csize[1]*(i//4))
             if i == 0:
                 print("MC: skin", export['pcjs'], ", job", export['p'])
                 self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/s/{}.jpg".format(export['pcjs']), pos, csize)
@@ -181,6 +183,15 @@ class PartyBuilder():
                 # plus
                 if export['cp'][i] > 0:
                     d.text((pos[0]+csize[0]+self.v['chara_plus_babyl_offset'][0], pos[1]+csize[1]+self.v['chara_plus_babyl_offset'][1]), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.small_font, stroke_width=self.v['stroke_width'], stroke_fill=(0, 0, 0))
+        # mc sub skills
+        self.pasteImage(img, "assets/subskills.png", (offset[0], offset[1]+csize[1]), self.v['sub_skill_bg'])
+        count = 0
+        print("MC skills:", export['ps'])
+        for i in range(len(export['ps'])):
+            if export['ps'][i] is not None:
+                d.text((offset[0]+self.v['sub_skill_text_off'], offset[1]+self.v['sub_skill_text_off']+csize[1]+self.v['sub_skill_text_space']*count), export['ps'][i], fill=(255, 255, 255), font=self.font)
+                count += 1
+                    
 
     def make_party(self, export, img, d, offset): # draw the party
         print("Drawing Party...")
@@ -420,5 +431,5 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.10")
+    print("Granblue Fantasy Party Image Builder v1.11")
     PartyBuilder().run()
