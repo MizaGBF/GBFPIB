@@ -37,12 +37,12 @@ class PartyBuilder():
             'weapon_header': (10, 320),
             'header_size': (92, 25),
             'party_pos': (10, 45),
+            'party_babyl_pos': (170, 10),
             'summon_pos': (150, 185),
             'weapon_pos': (10, 355),
             'chara_size': (55, 100),
-            'chara_size_babyl': (39, 71),
-            'chara_babyl_off': 5,
-            'chara_plus_babyl_offset': (-30, -20),
+            'chara_size_babyl': (52, 52),
+            'chara_plus_babyl_offset': (-35, -15),
             'skill_width': 140,
             'bg_offset': -5,
             'bg_end_offset': (10, 40),
@@ -50,7 +50,9 @@ class PartyBuilder():
             'bg_end_offset3': (20, 420),
             'bg_end_offset4': (20, 500),
             'job_size': (24, 20),
+            'job_size_babyl': (18, 15),
             'ring_size': (30, 30),
+            'ring_size_babyl': (20, 20),
             'ring_offset': -2,
             'chara_plus_offset': (-48, -22),
             'stat_height': 20,
@@ -158,31 +160,27 @@ class PartyBuilder():
     def make_party_babyl(self, export, img, d, offset): # draw the tower of babyl parties
         print("Drawing Tower of Babel Parties...")
         csize = self.v['chara_size_babyl']
-        # background
-        for i in range(0, 3):
-            self.pasteImage(img, "assets/bg.png", (offset[0]+self.v['bg_offset']+i*(self.v['chara_babyl_off']+4*csize[0]), offset[1]+self.v['bg_offset']), (csize[0]*4+self.v['bg_end_offset'][0], csize[1]+self.v['bg_end_offset'][1]+self.v['bg_offset']))
-        # mc
-        self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/quest/{}.jpg".format(export['pcjs']), (offset[0], offset[1]), csize)
-        self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), (offset[0], offset[1]), self.v['job_size'])
-        print("MC: skin", export['pcjs'], ", job", export['p'])
-        for i in range(1, 12): # npcs
-            pos = (offset[0]+csize[0]*i+(i//4)*self.v['chara_babyl_off'], offset[1])
-            # portrait
-            if i >= len(export['c']) or export['c'][i] is None:
-                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/deckcombination/base_empty_npc.jpg", pos, csize)
-                continue
+        self.pasteImage(img, "assets/bg.png", (offset[0]+self.v['bg_offset'], offset[1]+self.v['bg_offset']), (csize[0]*4+self.v['bg_end_offset'][0], csize[1]*3+self.v['bg_end_offset'][1]+self.v['bg_offset']*3))
+        for i in range(0, 12):
+            pos = (offset[0]+csize[0]*(i%4), offset[1]+csize[1]*(i//4))
+            if i == 0:
+                print("MC: skin", export['pcjs'], ", job", export['p'])
+                self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/s/{}.jpg".format(export['pcjs']), pos, csize)
+                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, self.v['job_size_babyl'])
             else:
-                print("Ally", i, ",", str(export['c'][i]) + "000")
-                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/quest/{}000_{}.jpg".format(export['c'][i], self.get_uncap_id(export['cs'][i])), pos, csize)
-            # rings
-            if export['cwr'][i] == True:
-                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", (pos[0]+self.v['ring_offset'], pos[1]+self.v['ring_offset']), self.v['ring_size'])
-            # plus
-            if export['cp'][i] > 0:
-                d.text((pos[0]+csize[0]+self.v['chara_plus_babyl_offset'][0], pos[1]+csize[1]+self.v['chara_plus_babyl_offset'][1]), "{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.small_font, stroke_width=self.v['stroke_width'], stroke_fill=(0, 0, 0))
-            # level
-            self.pasteImage(img, "assets/chara_stat.png", (pos[0], pos[1]+csize[1]), (csize[0], self.v['stat_height']))
-            d.text((pos[0]+self.v['text_offset'][0], pos[1]+csize[1]+self.v['text_offset'][1]), "{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.small_font)
+                # portrait
+                if i >= len(export['c']) or export['c'][i] is None:
+                    self.dlAndPasteImage(img, "hhttp://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize)
+                    continue
+                else:
+                    print("Ally", i, ",", str(export['c'][i]) + "000")
+                    self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/s/{}000_{}.jpg".format(export['c'][i], self.get_uncap_id(export['cs'][i])), pos, csize)
+                # rings
+                if export['cwr'][i] == True:
+                    self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", pos, self.v['ring_size_babyl'])
+                # plus
+                if export['cp'][i] > 0:
+                    d.text((pos[0]+csize[0]+self.v['chara_plus_babyl_offset'][0], pos[1]+csize[1]+self.v['chara_plus_babyl_offset'][1]), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.small_font, stroke_width=self.v['stroke_width'], stroke_fill=(0, 0, 0))
 
     def make_party(self, export, img, d, offset): # draw the party
         print("Drawing Party...")
@@ -257,7 +255,7 @@ class PartyBuilder():
         mh_size = self.v['mh_size']
         sub_size = self.v['sub_size']
         if len(export['w']) <= 10:
-            base_offset = (base_offset[0] + sub_size[0], base_offset[1])
+            base_offset = (base_offset[0] + int(sub_size[0] / 1.5), base_offset[1])
         else:
             print("Sandbox detected")
         # background
@@ -357,7 +355,7 @@ class PartyBuilder():
             # party
             self.pasteImage(img, "assets/characters.png", self.v['party_header'], self.v['header_size'])
             if len(export['c']) > 5:
-                self.make_party_babyl(export, img, d, self.v['party_pos'])
+                self.make_party_babyl(export, img, d, self.v['party_babyl_pos'])
             else:
                 self.make_party(export, img, d, self.v['party_pos'])
 
@@ -422,5 +420,5 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.9")
+    print("Granblue Fantasy Party Image Builder v1.10")
     PartyBuilder().run()
