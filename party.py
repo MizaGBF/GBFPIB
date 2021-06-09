@@ -205,7 +205,7 @@ class PartyBuilder():
             else:
                 # portrait
                 if i >= len(export['c']) or export['c'][i] is None:
-                    self.dlAndPasteImage(img, "hhttp://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize)
+                    self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize)
                     continue
                 else:
                     print("Ally", i, ",", str(export['c'][i]) + "000")
