@@ -37,11 +37,11 @@ class PartyBuilder():
             'weapon_header': (10, 320),
             'header_size': (92, 25),
             'party_pos': (10, 45),
-            'party_babyl_pos': (30, 10),
-            'summon_pos': (150, 185),
+            'party_babyl_pos': (35, 2),
+            'summon_pos': (150, 180),
             'weapon_pos': (10, 355),
-            'chara_size': (55, 100),
-            'chara_size_babyl': (52, 52),
+            'chara_size': (58, 105),
+            'chara_size_babyl': (56, 56),
             'chara_plus_babyl_offset': (-35, -15),
             'chara_pos_babyl_offset': 10,
             'skill_width': 140,
@@ -61,7 +61,7 @@ class PartyBuilder():
             'sub_skill_bg': (140, 49),
             'sub_skill_text_off': 1,
             'sub_skill_text_space': 16,
-            'summon_size': (50, 105),
+            'summon_size': (60, 126),
             'summon_plus_offset': (-35, -20),
             'sum_level_text_off': (2, 3),
             'sum_atk_size': (30, 13),
@@ -195,10 +195,10 @@ class PartyBuilder():
         print("Drawing Tower of Babel Parties...")
         csize = self.v['chara_size_babyl']
         skill_width = self.v['skill_width']
-        self.pasteImage(img, "assets/bg.png", (offset[0]+self.v['bg_offset']+skill_width+self.v['chara_pos_babyl_offset'], offset[1]+self.v['bg_offset']), (csize[0]*4+self.v['bg_end_offset'][0], csize[1]*3+self.v['bg_end_offset'][1]+self.v['bg_offset']*3))
         for i in range(0, 12):
             pos = (offset[0]+csize[0]*(i%4)+skill_width+self.v['chara_pos_babyl_offset'], offset[1]+csize[1]*(i//4))
             if i == 0:
+                self.pasteImage(img, "assets/bg.png", (pos[0]+self.v['bg_offset'], pos[1]+self.v['bg_offset']), (csize[0]*4+self.v['bg_end_offset'][0], csize[1]*3+self.v['bg_end_offset'][1]+self.v['bg_offset']*3))
                 print("MC: skin", export['pcjs'], ", job", export['p'])
                 self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/s/{}.jpg".format(self.get_mc_job_look(export['pcjs'], export['p'])), pos, csize)
                 self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, self.v['job_size_babyl'])
@@ -360,7 +360,7 @@ class PartyBuilder():
         # sandbox tag
         if len(export['w']) > 10:
             sandbox = (size[0], int(66*size[0]/159))
-            self.pasteImage(img, "assets/sandbox.png", (offset[0], base_offset[1]-sandbox[1]), sandbox)
+            self.pasteImage(img, "assets/sandbox.png", (offset[0], base_offset[1]+(skill_box_height+sub_size[1])*3), sandbox)
         # stats
         offset = (base_offset[0], base_offset[1]+bsize[1]+self.v['wpn_stat_off'])
         self.pasteImage(img, "assets/skill.png", (offset[0], offset[1]), (bsize[0], self.v['wpn_stat_line']))
@@ -400,6 +400,7 @@ class PartyBuilder():
             img.putalpha(im_a)
             im_a.close()
             d = ImageDraw.Draw(img, 'RGBA')
+
             # party
             self.pasteImage(img, "assets/characters.png", self.v['party_header'], self.v['header_size'])
             if len(export['c']) > 5:
@@ -468,5 +469,5 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.13")
+    print("Granblue Fantasy Party Image Builder v1.14")
     PartyBuilder().run()
