@@ -5,6 +5,7 @@ from PIL import Image, ImageFont, ImageDraw
 from io import BytesIO
 import pyperclip
 import json
+import re
 
 class PartyBuilder():
     def __init__(self):
@@ -12,6 +13,7 @@ class PartyBuilder():
         self.font = None
         self.small_font = None
         self.cache = {}
+        self.sumcache = {}
         self.colors = {
             1:(243, 48, 33),
             2:(50, 159, 222),
@@ -85,7 +87,9 @@ class PartyBuilder():
             'big_stat': (-5, 50),
             'est_text': 3,
             'est_sub_text': (5, 30),
-            'est_sub_text_ele': 22
+            'est_sub_text_ele': 22,
+            'supp_summon': (87, 50),
+            'supp_summon_off': 6
         }
         self.classes = {
             10: 'sw',
@@ -115,6 +119,10 @@ class PartyBuilder():
             29: 'gu'
         }
         self.qual = {'720p': 1, '1080p': 1.5, '4K': 3, '8K': 6}
+        self.supp_summon_re = [
+            re.compile('(20[0-9]{8})\\.'),
+            re.compile('(20[0-9]{8}_02)\\.')
+        ]
         self.v = None
         self.last = ""
         self.data = {}
@@ -183,6 +191,65 @@ class PartyBuilder():
     def draw_rect(self, d, x, y, w, h): # to draw placholders
         d.rectangle([(x, y), (x+w-1, y+h-1)], fill=(0, 0, 0, 200))
 
+    def fixCase(self, terms): # function to fix the case (for wiki requests)
+        terms = terms.split(' ')
+        fixeds = []
+        for term in terms:
+            fixed = ""
+            up = False
+            if term.lower() == "and": # if it's just 'and', we don't don't fix anything and return a lowercase 'and'
+                return "and"
+            elif term.lower() == "of":
+                return "of"
+            elif term.lower() == "(sr)":
+                return "(SR)"
+            elif term.lower() == "(ssr)":
+                return "(SSR)"
+            elif term.lower() == "(r)":
+                return "(R)"
+            for i in range(0, len(term)): # for each character
+                if term[i].isalpha(): # if letter
+                    if term[i].isupper(): # is uppercase
+                        if not up: # we haven't encountered an uppercase letter
+                            up = True
+                            fixed += term[i] # save
+                        else: # we have
+                            fixed += term[i].lower() # make it lowercase and save
+                    elif term[i].islower(): # is lowercase
+                        if not up: # we haven't encountered an uppercase letter
+                            fixed += term[i].upper() # make it uppercase and save
+                            up = True
+                        else: # we have
+                            fixed += term[i] # save
+                    else: # other characters
+                        fixed += term[i] # we just save
+                elif term[i] == "/" or term[i] == ":" or term[i] == "#" or term[i] == "-": # we reset the uppercase detection if we encounter those
+                    up = False
+                    fixed += term[i]
+                else: # everything else,
+                    fixed += term[i] # we save
+            fixeds.append(fixed)
+        return "_".join(fixeds) # return the result
+
+    def get_support_summon(self, sps): # search the wiki to match a summon name to its id
+        try:
+            if sps in self.sumcache: return self.sumcache[sps]
+            req = request.Request("https://gbf.wiki/" + self.fixCase(sps))
+            url_handle = request.urlopen(req)
+            data = url_handle.read().decode('utf-8')
+            url_handle.close()
+            group = self.supp_summon_re[1].findall(data)
+            if len(group) > 0:
+                self.sumcache[sps] = group[0]
+                return group[0]
+            group = self.supp_summon_re[0].findall(data)
+            self.sumcache[sps] = group[0]
+            return group[0]
+        except Exception as e:
+            if "(summon)" not in sps.lower():
+                return self.get_support_summon(sps + ' (Summon)')
+            return None
+
     def get_uncap_id(self, cs): # to get character portraits based on uncap levels
         return {2:'02', 3:'02', 4:'02', 5:'03', 6:'04'}.get(cs, '01')
 
@@ -224,7 +291,6 @@ class PartyBuilder():
             if export['ps'][i] is not None:
                 d.text((offset[0]+self.v['sub_skill_text_off'], offset[1]+self.v['sub_skill_text_off']+csize[1]+self.v['sub_skill_text_space']*count), export['ps'][i], fill=(255, 255, 255), font=self.font)
                 count += 1
-                    
 
     def make_party(self, export, img, d, offset): # draw the party
         print("Drawing Party...")
@@ -284,8 +350,7 @@ class PartyBuilder():
             self.pasteImage(img, "assets/chara_stat.png", (pos[0], pos[1]+ssize[1]), (ssize[0], self.v['stat_height']))
             d.text((pos[0]+self.v['sum_level_text_off'][0], pos[1]+ssize[1]+self.v['sum_level_text_off'][1]), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.small_font)
         # stats
-        self.pasteImage(img, "assets/chara_stat.png", (offset[0], offset[1]+ssize[1]+self.v['stat_height']), (ssize[0]*2, self.v['stat_height']))
-        self.pasteImage(img, "assets/chara_stat.png", (offset[0]+ssize[0]*2, offset[1]+ssize[1]+self.v['stat_height']), (ssize[0]*2, self.v['stat_height']))
+        self.pasteImage(img, "assets/chara_stat.png", (offset[0], offset[1]+ssize[1]+self.v['stat_height']), (ssize[0]*3, self.v['stat_height']))
         self.pasteImage(img, "assets/atk.png", (offset[0]+self.v['sum_stat_offsets'][0], offset[1]+ssize[1]+self.v['stat_height']+self.v['sum_stat_offsets'][0]), self.v['sum_atk_size'])
         self.pasteImage(img, "assets/hp.png", (offset[0]+self.v['sum_stat_offsets'][0]+self.v['sum_stat_offsets'][3], offset[1]+ssize[1]+self.v['stat_height']+self.v['sum_stat_offsets'][0]), self.v['sum_hp_size'])
         d.text((offset[0]+self.v['sum_stat_offsets'][2], offset[1]+ssize[1]+self.v['stat_height']+self.v['sum_stat_offsets'][0]), "{}".format(export['satk']), fill=(255, 255, 255), font=self.small_font)
@@ -369,8 +434,22 @@ class PartyBuilder():
         self.pasteImage(img, "assets/hp.png", (offset[0]+self.v['wpn_stat_text_off'][0], offset[1]+self.v['wpn_stat_text_off'][1]+self.v['wpn_stat_line']), self.v['wpn_hp_size'])
         d.text((offset[0]+self.v['wpn_stat_text_off2'][0], offset[1]+self.v['wpn_stat_text_off2'][1]), "{}".format(export['watk']), fill=(255, 255, 255), font=self.font)
         d.text((offset[0]+self.v['wpn_stat_text_off2'][0], offset[1]+self.v['wpn_stat_text_off2'][1]+self.v['wpn_stat_line']), "{}".format(export['whp']), fill=(255, 255, 255), font=self.font)
-        # estimated
+        # estimated dama
         offset = (offset[0]+bsize[0]+self.v['estimate_off'][0], offset[1]+self.v['estimate_off'][1])
+        if export['sps'] != '':
+            # support summon
+            print("Support summon is", export['sps'], ", searching its ID on the wiki...")
+            supp = self.get_support_summon(export['sps'])
+            if supp is None:
+                print("No matches found")
+                self.pasteImage(img, "assets/big_stat.png", (offset[0]-bsize[0]-self.v['estimate_off'][0], offset[1]), (bsize[0], self.v['big_stat'][1]))
+                d.text((offset[0]-bsize[0]-self.v['estimate_off'][0]+self.v['est_sub_text'][0] , offset[1]+self.v['est_text']*2), "Support", fill=(255, 255, 255), font=self.font)
+                if len(export['sps']) > 10: supp = export['sps'][:10] + "..."
+                else: supp = export['sps']
+                d.text((offset[0]-bsize[0]-self.v['estimate_off'][0]+self.v['est_sub_text'][0] , offset[1]+self.v['est_text']*2+self.v['stat_height']), supp, fill=(255, 255, 255), font=self.font)
+            else:
+                print("ID is", supp)
+                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/summon/m/{}.jpg".format(supp), (offset[0]-bsize[0]-self.v['estimate_off'][0]+self.v['supp_summon_off'], offset[1]), self.v['supp_summon'])
         est_width = ((size[0]*3)//2)
         for i in range(0, 2):
             self.pasteImage(img, "assets/big_stat.png", (offset[0]+est_width*i , offset[1]), (est_width+self.v['big_stat'][0], self.v['big_stat'][1]))
@@ -415,7 +494,7 @@ class PartyBuilder():
             # grid
             self.pasteImage(img, "assets/weapons.png", self.v['weapon_header'], self.v['header_size'])
             self.make_grid(export, img, d, self.v['weapon_pos'])
-
+            
             img.save("party.png", "PNG")
             img.close()
             print("Success, party.png has been generated")
@@ -450,7 +529,7 @@ class PartyBuilder():
                 if s == "0":
                     self.make()
                 elif s == "1":
-                    pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#party/index/\")&&!window.location.hash.startsWith(\"#tower/party/index/\")){alert('Please go to a GBF Party screen');return}let obj={p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],c:[],cl:[],cs:[],cp:[],cwr:[],s:[],sl:[],ss:[],sp:[],w:[],wl:[],wsn:[],wll:[],wp:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage]};try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{console.log(x);Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}())")
+                    pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#party/index/\")&&!window.location.hash.startsWith(\"#tower/party/index/\")){alert('Please go to a GBF Party screen');return}let obj={p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],c:[],cl:[],cs:[],cp:[],cwr:[],s:[],sl:[],ss:[],sp:[],w:[],wl:[],wsn:[],wll:[],wp:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage],sps:window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name};try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{console.log(x);Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}())")
                     print("Bookmarklet copied!")
                     print("To setup on chrome:")
                     print("1) Make a new bookmark (of GBF for example)")
@@ -469,5 +548,5 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.14")
+    print("Granblue Fantasy Party Image Builder v1.15")
     PartyBuilder().run()
