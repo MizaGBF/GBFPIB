@@ -372,7 +372,6 @@ class PartyBuilder():
         mh_size = self.v['mh_size']
         sub_size = self.v['sub_size']
         is_not_sandbox = (len(export['w']) <= 10 or isinstance(export['est'][0], str)) # pg shows 13 weapons somehow but the estimate element is also a string
-        print(is_not_sandbox)
         if is_not_sandbox: 
             base_offset = (base_offset[0] + int(sub_size[0] / 1.5), base_offset[1])
         else:
