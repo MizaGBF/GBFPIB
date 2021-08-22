@@ -92,10 +92,9 @@ class PartyBuilder():
             'est_sub_text': (5, 30),
             'est_sub_text_ele': 22,
             'supp_summon': (87, 50),
-            'mod_top_space': 180,
             'mod_off': 5,
             'mod_bg_size': (98, 38),
-            'mod_bg_supp_size': (98, 530),
+            'mod_bg_supp_size': 98,
             'mod_size': (80, 20),
             'mod_text_off': [20, 35],
 
@@ -445,7 +444,7 @@ class PartyBuilder():
         ax_separator = skill_box_height
         mh_size = self.v['mh_size']
         sub_size = self.v['sub_size']
-        mod_offset = (base_offset[0]+mh_size[0]+4*sub_size[0]+self.v['bg_end_offset4'][0], base_offset[1]-self.v['mod_top_space'])
+        mod_offset = (base_offset[0]+mh_size[0]+4*sub_size[0]+self.v['bg_end_offset4'][0], self.v['base'][1]-self.v['mod_off']-self.v['mod_text_off'][1] * len(export['mods']))
         is_not_sandbox = (len(export['w']) <= 10 or isinstance(export['est'][0], str)) # pg shows 13 weapons somehow but the estimate element is also a string
         if is_not_sandbox: 
             base_offset = (base_offset[0] + int(sub_size[0] / 1.5), base_offset[1])
@@ -547,11 +546,12 @@ class PartyBuilder():
                 d.text((offset[0]+est_width*i+self.v['est_sub_text'][0] , offset[1]+self.v['est_sub_text'][1]), "vs", fill=(255, 255, 255), font=self.font)
                 d.text((offset[0]+est_width*i+self.v['est_sub_text_ele'] , offset[1]+self.v['est_sub_text'][1]), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.font)
         # modifiers
+        print("Adding the", len(export['mods']), "modifier(s)")
         self.pasteImage(img, "assets/mod_bg.png", (mod_offset[0]-self.v['mod_off'], mod_offset[1]-self.v['mod_off']), self.v['mod_bg_size'])
-        self.pasteImage(img, "assets/mod_bg_supp.png", (mod_offset[0]-self.v['mod_off'], mod_offset[1]-self.v['mod_off']+self.v['mod_bg_size'][1]), self.v['mod_bg_supp_size'])
+        self.pasteImage(img, "assets/mod_bg_supp.png", (mod_offset[0]-self.v['mod_off'], mod_offset[1]-self.v['mod_off']+self.v['mod_bg_size'][1]), (self.v['mod_bg_supp_size'], self.v['mod_text_off'][1] * len(export['mods'])))
         for m in export['mods']:
             self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], mod_offset, self.v['mod_size'])
-            d.text((mod_offset[0], mod_offset[1]+self.v['mod_text_off'][0]), m['value'], fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.font)
+            d.text((mod_offset[0], mod_offset[1]+self.v['mod_text_off'][0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.font)
             mod_offset = (mod_offset[0], mod_offset[1]+self.v['mod_text_off'][1])
 
     def make(self):
@@ -640,5 +640,5 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.20")
+    print("Granblue Fantasy Party Image Builder v1.21")
     PartyBuilder().run()
