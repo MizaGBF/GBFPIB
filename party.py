@@ -6,6 +6,8 @@ from io import BytesIO
 import pyperclip
 import json
 import re
+import sys
+import time
 
 class PartyBuilder():
     def __init__(self):
@@ -554,13 +556,14 @@ class PartyBuilder():
             d.text((mod_offset[0], mod_offset[1]+self.v['mod_text_off'][0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.font)
             mod_offset = (mod_offset[0], mod_offset[1]+self.v['mod_text_off'][1])
 
-    def make(self):
-        print("Instructions:")
-        print("1) Go to the party screen you want to export")
-        print("2) Click your bookmarklet")
-        print("3) Come back here and press Return to continue")
+    def make(self, fast=False):
         try:
-            input()
+            if not fast:
+                print("Instructions:")
+                print("1) Go to the party screen you want to export")
+                print("2) Click your bookmarklet")
+                print("3) Come back here and press Return to continue")
+                input()
             clipboard = pyperclip.paste()
             export = json.loads(clipboard)
             self.cache = {}
@@ -640,5 +643,12 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.21")
-    PartyBuilder().run()
+    print("Granblue Fantasy Party Image Builder v1.22")
+    pb = PartyBuilder()
+    if '-fast' in sys.argv:
+        pb.make(fast=True)
+        if '-nowait' not in sys.argv:
+            print("Closing in 10 seconds...")
+            time.sleep(10)
+    else:
+        pb.run()

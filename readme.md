@@ -23,7 +23,10 @@ You are done.
 5. The script will repeat those instructions again. Press return again.  
 6. If everything went well, the image should appear beside `party.py` under the name `party.png`.  
 7. If it didn't, something went wrong, probably around the step 2.  
-### To Do  
-2. More options  
+### Settings  
+1. `Quality`: let you control the output size (default is 720p, up to 8K).  
+### Command Line  
+1. `-fast`: Automatically start the image building process. Be sure to have the party data ready in your clipboard.  
+2. `-nowait`: Skil the 10 seconds waiting time at the end when using `-fast`.  
 ### Result  
 ![Example](https://cdn.discordapp.com/attachments/614716155646705676/878646321110712320/party.png)

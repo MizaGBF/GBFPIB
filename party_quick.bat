@@ -1,0 +1,1 @@
+python party.py -fast
