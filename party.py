@@ -312,7 +312,8 @@ class PartyBuilder():
     def make_party(self, export, img, d, offset): # draw the party
         print("Drawing Party...")
         csize = self.v['chara_size']
-        skill_width = self.v['skill_width']
+        if len(export['mods']) > 15: skill_width = self.v['skill_width'] * 75 // 100
+        else: skill_width = self.v['skill_width']
         # background
         self.pasteImage(img, "assets/bg.png", (offset[0]+skill_width+self.v['bg_offset'], offset[1]+self.v['bg_offset']), (csize[0]*6+self.v['bg_end_offset'][0], csize[1]+self.v['bg_end_offset'][1]))
         # mc
@@ -341,7 +342,7 @@ class PartyBuilder():
             self.pasteImage(img, "assets/chara_stat.png", (pos[0], pos[1]+csize[1]), (csize[0], self.v['stat_height']))
             d.text((pos[0]+self.v['text_offset'][0], pos[1]+csize[1]+self.v['text_offset'][1]), "Lv{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.font)
         # mc sub skills
-        pos = (offset[0], offset[1]+self.v['sub_skill_text_space']*2)
+        pos = (offset[0], offset[1]+self.v['sub_skill_text_space']*5)
         self.pasteImage(img, "assets/subskills.png", pos, self.v['sub_skill_bg'])
         count = 0
         print("MC skills:", export['ps'])
@@ -643,7 +644,7 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.22")
+    print("Granblue Fantasy Party Image Builder v1.23")
     pb = PartyBuilder()
     if '-fast' in sys.argv:
         pb.make(fast=True)
