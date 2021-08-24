@@ -19,11 +19,11 @@ class PartyBuilder():
         self.nullchar = [3030182000, 3020072000]
         self.colors = {
             1:(243, 48, 33),
-            2:(50, 159, 222),
-            3:(186, 108, 39),
-            4:(40, 172, 45),
+            2:(85, 176, 250),
+            3:(227, 124, 32),
+            4:(55, 232, 16),
             5:(253, 216, 67),
-            6:(130, 75, 177),
+            6:(176, 84, 251),
         }
         self.color_strs = {
             1:"Fire",
@@ -644,7 +644,7 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.23")
+    print("Granblue Fantasy Party Image Builder v1.24")
     pb = PartyBuilder()
     if '-fast' in sys.argv:
         pb.make(fast=True)
