@@ -27,6 +27,6 @@ You are done.
 1. `Quality`: let you control the output size (default is 720p, up to 8K).  
 ### Command Line  
 1. `-fast`: Automatically start the image building process. Be sure to have the party data ready in your clipboard.  
-2. `-nowait`: Skil the 10 seconds waiting time at the end when using `-fast`.  
+2. `-nowait`: Skip the 10 seconds waiting time at the end when using `-fast`.  
 ### Result  
 ![Example](https://cdn.discordapp.com/attachments/614716155646705676/878646321110712320/party.png)
