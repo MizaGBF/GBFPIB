@@ -118,6 +118,7 @@ class PartyBuilder():
             30: 'sw',
             41: 'ax',
             42: 'sp',
+            43: 'me',
             44: 'bw',
             45: 'sw',
             20: 'kn',
@@ -615,7 +616,7 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.25")
+    print("Granblue Fantasy Party Image Builder v1.26")
     pb = PartyBuilder()
     if '-fast' in sys.argv:
         pb.make(fast=True)
