@@ -7,8 +7,8 @@
 * `pip install -r requirements.txt` to install all the modules.  
 ### Setup  
 1. Install the requirements with the command above.  
-2. Double click on `party.py`.  
-3. Type `1` and valid to select the `Get Bookmarklet` option. A javascript code will be copied to your clipboard.  
+2. Double click on `party.pyw`.  
+3. Click on the `Get Bookmarklet` button. A javascript code will be copied to your clipboard.  
 4. On the Chrome (or equivalent) browser you are using, make a new bookmark.  
 5. Right click that bookmark, select `edit`.  
 6. Paste the javascript code into the url field.  
@@ -18,11 +18,11 @@ You are done.
 ### How-to  
 1. Go on the party screen you want to export.  
 2. Click the bookmarklet. If nothing happens, everything went well.  
-3. Open `party.py` again.  
-4. This time, type `0` and valid to select the `Generate Image` option.  
+3. Open `party.pyw` again.  
+4. This time, click on the `Build Image` button.  
 5. The script will repeat those instructions again. Press return again.  
-6. If everything went well, the image should appear beside `party.py` under the name `party.png`.  
-7. If it didn't, something went wrong, probably around the step 2.  
+6. If everything went well, the image should appear beside `party.pyw` under the name `party.png`.  
+7. If it didn't, something went wrong, probably at the step 2.  
 ### Settings  
 1. `Quality`: let you control the output size (default is 720p, up to 8K).  
 2. `Disk Caching`: if enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  

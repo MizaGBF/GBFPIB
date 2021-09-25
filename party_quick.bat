@@ -1,1 +1,1 @@
-python party.py -fast
+python party.pyw -fast

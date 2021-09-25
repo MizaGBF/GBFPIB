@@ -10,6 +10,10 @@ import sys
 import time
 import os
 import base64
+import tkinter as Tk
+import tkinter.ttk as ttk
+from tkinter import messagebox
+import threading
 
 class PartyBuilder():
     def __init__(self):
@@ -588,10 +592,12 @@ class PartyBuilder():
             img.save("party.png", "PNG")
             img.close()
             print("Success, party.png has been generated")
+            return True
         except Exception as e:
             print("An error occured")
             print("exception message:", e)
             print("Did you follow the instructions?")
+            return False
 
     def settings(self):
         while True:
@@ -610,6 +616,9 @@ class PartyBuilder():
             else:
                 return
 
+    def cpyBookmark(self):
+        pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#party/index/\")&&!window.location.hash.startsWith(\"#party/expectancy_damage/index\")&&!window.location.hash.startsWith(\"#tower/party/index/\")&&!(window.location.hash.startsWith(\"#event/sequenceraid\") && window.location.hash.indexOf(\"/party/index/\") > 0)&&!window.location.hash.startsWith(\"#tower/party/expectancy_damage/index/\")){alert('Please go to a GBF Party screen');return}let obj={p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],c:[],cl:[],cs:[],cp:[],cwr:[],s:[],sl:[],ss:[],se:[],sp:[],w:[],wl:[],wsn:[],wll:[],wp:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage],mods:window.Game.view.deck_model.attributes.deck.pc.damage_info.effect_value_info,sps:(window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name?window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name:null)};try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{console.log(x);Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.sub_summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}())")
+
     def run(self):
         while True:
             try:
@@ -623,7 +632,7 @@ class PartyBuilder():
                 if s == "0":
                     self.make()
                 elif s == "1":
-                    pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#party/index/\")&&!window.location.hash.startsWith(\"#party/expectancy_damage/index\")&&!window.location.hash.startsWith(\"#tower/party/index/\")&&!(window.location.hash.startsWith(\"#event/sequenceraid\") && window.location.hash.indexOf(\"/party/index/\") > 0)&&!window.location.hash.startsWith(\"#tower/party/expectancy_damage/index/\")){alert('Please go to a GBF Party screen');return}let obj={p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],c:[],cl:[],cs:[],cp:[],cwr:[],s:[],sl:[],ss:[],se:[],sp:[],w:[],wl:[],wsn:[],wll:[],wp:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage],mods:window.Game.view.deck_model.attributes.deck.pc.damage_info.effect_value_info,sps:(window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name?window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name:null)};try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{console.log(x);Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.sub_summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}())")
+                    self.cpyBookmark()
                     print("Bookmarklet copied!")
                     print("To setup on chrome:")
                     print("1) Make a new bookmark (of GBF for example)")
@@ -641,13 +650,101 @@ class PartyBuilder():
                 self.save()
                 return
 
+class Interface(Tk.Tk):
+    def __init__(self, pb, ver):
+        Tk.Tk.__init__(self,None)
+        self.parent = None
+        self.pb = pb
+        self.apprunning = True
+        self.iconbitmap('icon.ico')
+        self.title("GBFPIB {}".format(ver))
+        #self.minsize(200, 80)
+        self.resizable(width=False, height=False) # not resizable
+        self.protocol("WM_DELETE_WINDOW", self.close) # call close() if we close the window
+        
+        # run
+        tabs = ttk.Notebook(self)
+        tabs.grid(row=1, column=0, sticky="we")
+        tabcontent = Tk.Frame(tabs)
+        tabs.add(tabcontent, text="Run")
+        self.button = Tk.Button(tabcontent, text="Build Image", command=self.build)
+        self.button.grid(row=0, column=0, sticky="we")
+        Tk.Button(tabcontent, text="Get Bookmarklet", command=self.bookmark).grid(row=1, column=0, sticky="we")
+        
+        # setting
+        tabs = ttk.Notebook(self)
+        tabs.grid(row=1, column=1, sticky="we")
+        tabcontent = Tk.Frame(tabs)
+        tabs.add(tabcontent, text="Settings")
+        self.qual_variable = Tk.StringVar(self)
+        options = list(self.pb.qual.keys())
+        self.qual_variable.set(self.pb.data.get('quality', options[0]))
+        Tk.Label(tabcontent, text="Quality").grid(row=0, column=0)
+        opt = Tk.OptionMenu(tabcontent, self.qual_variable, *options, command=self.qual_changed)
+        opt.grid(row=0, column=1)
+        
+        self.cache_var = Tk.IntVar(value=self.pb.data.get('caching', False))
+        Tk.Label(tabcontent, text="Caching").grid(row=1, column=0)
+        Tk.Checkbutton(tabcontent, variable=self.cache_var, command=self.toggleCaching).grid(row=1, column=1)
+        
+        # other
+        self.status = Tk.Label(self, text="Starting")
+        self.status.grid(row=0, column=0, sticky="w")
+        
+        self.thread = None
+        self.events = []
+
+    def run(self):
+        # main loop
+        while self.apprunning:
+            if len(self.events) > 0:
+                ev = self.events.pop(0)
+                if ev[0] == "Info": messagebox.showinfo(ev[0], ev[1])
+                elif ev[0] == "Error": messagebox.showerror(ev[0], ev[1])
+            if self.thread is None: self.status.config(text="Idle", background='#c7edcd')
+            else: self.status.config(text="Running", background='#edc7c7')
+            self.update()
+            time.sleep(0.02)
+
+    def close(self): # called by the app when closed
+        self.pb.save()
+        self.apprunning = False
+        self.destroy() # destroy the window
+
+    def build(self):
+        if self.thread is not None:
+            messagebox.showinfo("Info", "Wait for the current processing to finish")
+            return
+        self.thread = threading.Thread(target=self.buildThread)
+        self.thread.setDaemon(True)
+        self.thread.start()
+
+    def buildThread(self):
+        if self.pb.make(fast=True):
+            self.events.append(("Info", "Process completed with success"))
+        else:
+            self.events.append(("Error", "An error occured, did you press the bookmark before starting?"))
+        self.thread = None
+
+    def bookmark(self):
+        self.pb.cpyBookmark()
+        messagebox.showinfo("Info", "Bookmarklet copied!\nTo setup on chrome:\n1) Make a new bookmark (of GBF for example)\n2) Right-click and edit\n3) Change the name if you want\n4) Paste the code in the url field")
+
+    def qual_changed(self, *args):
+        self.pb.data['quality'] = args[0]
+
+    def toggleCaching(self):
+        self.pb.data['caching'] = (self.cache_var.get() != 0)
+
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.27")
-    pb = PartyBuilder()
+    ver = "v2.0"
     if '-fast' in sys.argv:
+        print("Granblue Fantasy Party Image Builder", ver)
+        pb = PartyBuilder()
         pb.make(fast=True)
         if '-nowait' not in sys.argv:
             print("Closing in 10 seconds...")
             time.sleep(10)
     else:
-        pb.run()
+        ui = Interface(PartyBuilder(), ver)
+        ui.run()
