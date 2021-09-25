@@ -20,9 +20,8 @@ You are done.
 2. Click the bookmarklet. If nothing happens, everything went well.  
 3. Open `party.pyw` again.  
 4. This time, click on the `Build Image` button.  
-5. The script will repeat those instructions again. Press return again.  
-6. If everything went well, the image should appear beside `party.pyw` under the name `party.png`.  
-7. If it didn't, something went wrong, probably at the step 2.  
+5. If everything went well, the image should appear beside `party.pyw` under the name `party.png`.  
+6. If it didn't, something went wrong, probably at the step 2.  
 ### Settings  
 1. `Quality`: let you control the output size (default is 720p, up to 8K).  
 2. `Disk Caching`: if enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  
