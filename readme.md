@@ -25,6 +25,7 @@ You are done.
 7. If it didn't, something went wrong, probably around the step 2.  
 ### Settings  
 1. `Quality`: let you control the output size (default is 720p, up to 8K).  
+2. `Disk Caching`: if enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  
 ### Command Line  
 1. `-fast`: Automatically start the image building process. Be sure to have the party data ready in your clipboard.  
 2. `-nowait`: Skip the 10 seconds waiting time at the end when using `-fast`.  

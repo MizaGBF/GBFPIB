@@ -8,6 +8,8 @@ import json
 import re
 import sys
 import time
+import os
+import base64
 
 class PartyBuilder():
     def __init__(self):
@@ -195,12 +197,30 @@ class PartyBuilder():
 
     def dlAndPasteImage(self, img, url, offset, resize=None): # dl an image and call pasteImage()
         if url not in self.cache:
-            req = request.Request(url)
-            url_handle = request.urlopen(req)
-            self.cache[url] = url_handle.read()
-            url_handle.close()
+            try: # get from disk cache if enabled
+                if self.data.get('caching', False):
+                    with open("cache/" + base64.b64encode(url.encode('utf-8')).decode('utf-8'), "rb") as f:
+                        self.cache[url] = f.read()
+                else:
+                    raise Exception()
+            except:
+                req = request.Request(url)
+                url_handle = request.urlopen(req)
+                self.cache[url] = url_handle.read()
+                if self.data.get('caching', False):
+                    try:
+                        with open("cache/" + base64.b64encode(url.encode('utf-8')).decode('utf-8'), "wb") as f:
+                            f.write(self.cache[url])
+                    except Exception as e:
+                        print(e)
+                        pass
+                url_handle.close()
         with BytesIO(self.cache[url]) as file_jpgdata:
             self.pasteImage(img, file_jpgdata, offset, resize)
+
+    def checkDiskCache(self):
+        if not os.path.isdir('cache'):
+            os.mkdir('cache')
 
     def draw_rect(self, d, x, y, w, h): # to draw placholders
         d.rectangle([(x, y), (x+w-1, y+h-1)], fill=(0, 0, 0, 200))
@@ -539,6 +559,8 @@ class PartyBuilder():
                 input()
             clipboard = pyperclip.paste()
             export = json.loads(clipboard)
+            if self.data.get('caching', False):
+                self.checkDiskCache()
             self.cache = {}
             self.build_quality()
             
@@ -575,12 +597,16 @@ class PartyBuilder():
         while True:
             print("")
             print("Settings:")
-            print("[0] Change quality (Current:", self.data.get('quality', '720p'),")")
+            print("[0] Change quality ( Current:", self.data.get('quality', '720p'),")")
+            print("[1] Enable Disk Caching ( Current:", self.data.get('caching', False),")")
             print("[Any] Back")
             s = input()
             if s == "0":
                 v = ({'720p':0, '1080p':1, '4K':2, '8K':3}[self.data.get('quality', '720p')] + 1) % 4
                 self.data['quality'] = {0:'720p', 1:'1080p', 2:'4K', 3:'8K'}.get(v, 0)
+            elif s == "1":
+                v = ({'720p':0, '1080p':1, '4K':2, '8K':3}[self.data.get('quality', '720p')] + 1) % 4
+                self.data['caching'] = not self.data.get('caching', False)
             else:
                 return
 
@@ -616,7 +642,7 @@ class PartyBuilder():
                 return
 
 if __name__ == "__main__":
-    print("Granblue Fantasy Party Image Builder v1.26")
+    print("Granblue Fantasy Party Image Builder v1.27")
     pb = PartyBuilder()
     if '-fast' in sys.argv:
         pb.make(fast=True)
