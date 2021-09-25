@@ -29,4 +29,4 @@ You are done.
 1. `-fast`: Automatically start the image building process. Be sure to have the party data ready in your clipboard.  
 2. `-nowait`: Skip the 10 seconds waiting time at the end when using `-fast`.  
 ### Result  
-![Example](https://cdn.discordapp.com/attachments/614716155646705676/878646321110712320/party.png)
+![Example](https://cdn.discordapp.com/attachments/614716155646705676/891340472671404052/party.png)
