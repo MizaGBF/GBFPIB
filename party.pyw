@@ -48,7 +48,7 @@ class PartyBuilder():
             'weapon_header': (10, 320),
             'header_size': (92, 25),
             'party_pos': (5, 20),
-            'party_babyl_pos': (35, 2),
+            'party_babyl_pos': (30, -18),
             'summon_pos': (120, 180),
             'weapon_pos': (10, 355),
             'chara_size': (66, 120),
@@ -296,77 +296,68 @@ class PartyBuilder():
         if jid not in self.classes: return skin
         return "{}_{}_{}".format(job, self.classes[jid], '_'.join(skin.split('_')[2:]))
 
-    def make_party_babyl(self, export, img, d, offset): # draw the tower of babyl parties
-        print("Drawing Tower of Babel Parties...")
-        csize = self.v['chara_size_babyl']
-        skill_width = self.v['skill_width']
-        for i in range(0, 12):
-            pos = (offset[0]+csize[0]*(i%4)+skill_width+self.v['chara_pos_babyl_offset'], offset[1]+csize[1]*(i//4))
-            if i == 0:
-                self.pasteImage(img, "assets/bg.png", (pos[0]+self.v['bg_offset'], pos[1]+self.v['bg_offset']), (csize[0]*4+self.v['bg_end_offset'][0], csize[1]*3+self.v['bg_end_offset'][1]+self.v['bg_offset']*3))
-                print("MC: skin", export['pcjs'], ", job", export['p'])
-                self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/s/{}.jpg".format(self.get_mc_job_look(export['pcjs'], export['p'])), pos, csize)
-                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, self.v['job_size_babyl'])
-            else:
-                # portrait
-                if i >= len(export['c']) or export['c'][i] is None:
-                    self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize)
-                    continue
-                else:
-                    print("Ally", i, ",", export['c'][i])
-                    if export['c'][i] in self.nullchar:
-                        self.dlAndPasteImage(img, "assets/{}.jpg".format(export['c'][i]), pos, csize)
-                    else:
-                        self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/s/{}_{}.jpg".format(export['c'][i], self.get_uncap_id(export['cs'][i])), pos, csize)
-                # rings
-                if export['cwr'][i] == True:
-                    self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", pos, self.v['ring_size_babyl'])
-                # plus
-                if export['cp'][i] > 0:
-                    d.text((pos[0]+csize[0]+self.v['chara_plus_babyl_offset'][0], pos[1]+csize[1]+self.v['chara_plus_babyl_offset'][1]), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.small_font, stroke_width=self.v['stroke_width'], stroke_fill=(0, 0, 0))
-        # mc sub skills
-        self.pasteImage(img, "assets/subskills.png", (offset[0], offset[1]+csize[1]), self.v['sub_skill_bg'])
-        count = 0
-        print("MC skills:", export['ps'])
-        for i in range(len(export['ps'])):
-            if export['ps'][i] is not None:
-                d.text((offset[0]+self.v['sub_skill_text_off'], offset[1]+self.v['sub_skill_text_off']+csize[1]+self.v['sub_skill_text_space']*count), export['ps'][i], fill=(255, 255, 255), font=self.font)
-                count += 1
-
     def make_party(self, export, img, d, offset): # draw the party
         print("Drawing Party...")
-        csize = self.v['chara_size']
-        if len(export['mods']) > 15: skill_width = self.v['skill_width'] * 75 // 100
-        else: skill_width = self.v['skill_width']
-        # background
-        self.pasteImage(img, "assets/bg.png", (offset[0]+skill_width+self.v['bg_offset'], offset[1]+self.v['bg_offset']), (csize[0]*6+self.v['bg_end_offset'][0], csize[1]+self.v['bg_end_offset'][1]))
-        # mc
-        self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/quest/{}.jpg".format(self.get_mc_job_look(export['pcjs'], export['p'])), (offset[0]+skill_width, offset[1]), csize)
-        self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), (offset[0]+skill_width, offset[1]), self.v['job_size'])
+        if len(export['c']) > 5: # babyl mode
+            print("Babyl detected")
+            babyl = True
+            nchara = 12
+            offset = (offset[0]+self.v['party_babyl_pos'][0], offset[1]+self.v['party_babyl_pos'][1])
+            csize = self.v['chara_size_babyl']
+            skill_width = self.v['skill_width']
+            pos = (offset[0]+skill_width+self.v['chara_pos_babyl_offset'], offset[1])
+            plus_key = "chara_plus_babyl_offset"
+            # background
+            self.pasteImage(img, "assets/bg.png", (pos[0]+self.v['bg_offset'], pos[1]+self.v['bg_offset']), (csize[0]*4+self.v['bg_end_offset'][0], csize[1]*3+self.v['bg_end_offset'][1]+self.v['bg_offset']*3))
+            # mc
+            self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/s/{}.jpg".format(self.get_mc_job_look(export['pcjs'], export['p'])), pos, csize)
+            self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, self.v['job_size_babyl'])
+        else: # normal mode
+            babyl = False
+            nchara = 5
+            csize = self.v['chara_size']
+            if len(export['mods']) > 15: skill_width = self.v['skill_width'] * 75 // 100
+            else: skill_width = self.v['skill_width']
+            pos = (offset[0]+skill_width, offset[1])
+            plus_key = "chara_plus_offset"
+            # background
+            self.pasteImage(img, "assets/bg.png", (pos[0]+self.v['bg_offset'], pos[1]+self.v['bg_offset']), (csize[0]*6+self.v['bg_end_offset'][0], csize[1]+self.v['bg_end_offset'][1]))
+            # mc
+            self.dlAndPasteImage(img,  "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/quest/{}.jpg".format(self.get_mc_job_look(export['pcjs'], export['p'])), pos, csize)
+            self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, self.v['job_size'])
         print("MC: skin", export['pcjs'], ", job", export['p'])
-        for i in range(0, 5): # npcs
-            pos = (offset[0]+skill_width+csize[0]*(i+1), offset[1])
+
+        for i in range(0, nchara): # npcs
+            if babyl:
+                pos = (offset[0]+csize[0]*(i%4)+skill_width+self.v['chara_pos_babyl_offset'], offset[1]+csize[1]*(i//4))
+                if i == 0: continue
+            else:
+                pos = (offset[0]+skill_width+csize[0]*(i+1), offset[1])
             # portrait
-            if export['c'][i] is None:
-                self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/deckcombination/base_empty_npc.jpg", pos, csize)
+            if i >= len(export['c']) or export['c'][i] is None:
+                if babyl: self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize)
+                else: self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/deckcombination/base_empty_npc.jpg", pos, csize)
                 continue
             else:
                 print("Ally", i, ",", export['c'][i])
-                if export['c'][i] in self.nullchar:
-                    self.pasteImage(img, "assets/{}.jpg".format(export['c'][i]), pos, csize)
+                if export['c'][i] in self.nullchar: 
+                    self.pasteImage(img, ("assets/babyl_{}.jpg" if babyl else "assets/{}.jpg").format(export['c'][i]), pos, csize)
                 else:
-                    self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/quest/{}_{}.jpg".format(export['c'][i], self.get_uncap_id(export['cs'][i])), pos, csize)
+                    self.dlAndPasteImage(img, ("http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/s/{}_{}.jpg" if babyl else "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/quest/{}_{}.jpg").format(export['c'][i], self.get_uncap_id(export['cs'][i])), pos, csize)
             # rings
             if export['cwr'][i] == True:
-                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", (pos[0]+self.v['ring_offset'], pos[1]+self.v['ring_offset']), self.v['ring_size'])
+                if babyl: self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", pos, self.v['ring_size_babyl'])
+                else: self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", (pos[0]+self.v['ring_offset'], pos[1]+self.v['ring_offset']), self.v['ring_size'])
             # plus
             if export['cp'][i] > 0:
-                d.text((pos[0]+csize[0]+self.v['chara_plus_offset'][0], pos[1]+csize[1]+self.v['chara_plus_offset'][1]), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.font, stroke_width=self.v['stroke_width'], stroke_fill=(0, 0, 0))
-            # level
-            self.pasteImage(img, "assets/chara_stat.png", (pos[0], pos[1]+csize[1]), (csize[0], self.v['stat_height']))
-            d.text((pos[0]+self.v['text_offset'][0], pos[1]+csize[1]+self.v['text_offset'][1]), "Lv{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.font)
+                d.text((pos[0]+csize[0]+self.v[plus_key][0], pos[1]+csize[1]+self.v[plus_key][1]), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.small_font, stroke_width=self.v['stroke_width'], stroke_fill=(0, 0, 0))
+            if not babyl:
+                # level
+                self.pasteImage(img, "assets/chara_stat.png", (pos[0], pos[1]+csize[1]), (csize[0], self.v['stat_height']))
+                d.text((pos[0]+self.v['text_offset'][0], pos[1]+csize[1]+self.v['text_offset'][1]), "Lv{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.font)
         # mc sub skills
-        pos = (offset[0], offset[1]+self.v['sub_skill_text_space']*5)
+        if babyl: pos = (offset[0], offset[1]+csize[1])
+        else: pos = (offset[0], offset[1]+self.v['sub_skill_text_space']*5)
         self.pasteImage(img, "assets/subskills.png", pos, self.v['sub_skill_bg'])
         count = 0
         print("MC skills:", export['ps'])
@@ -576,10 +567,7 @@ class PartyBuilder():
 
             # party
             self.pasteImage(img, "assets/characters.png", self.v['party_header'], self.v['header_size'])
-            if len(export['c']) > 5: # babyl mode
-                self.make_party_babyl(export, img, d, self.v['party_babyl_pos'])
-            else: # normal mode
-                self.make_party(export, img, d, self.v['party_pos'])
+            self.make_party(export, img, d, self.v['party_pos'])
 
             # summons
             self.pasteImage(img, "assets/summons.png", self.v['summon_header'], self.v['header_size'])
@@ -737,7 +725,7 @@ class Interface(Tk.Tk):
         self.pb.data['caching'] = (self.cache_var.get() != 0)
 
 if __name__ == "__main__":
-    ver = "v2.0"
+    ver = "v2.1"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder()
