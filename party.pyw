@@ -99,11 +99,11 @@ class PartyBuilder():
             'est_sub_text': (5, 30),
             'est_sub_text_ele': 22,
             'supp_summon': (87, 50),
-            'mod_off': 5,
-            'mod_bg_size': (98, 38),
-            'mod_bg_supp_size': 98,
-            'mod_size': (80, 20),
-            'mod_text_off': [20, 32],
+            'mod_off': 8,
+            'mod_bg_size': (74, 38),
+            'mod_bg_supp_size': 74,
+            'mod_size': (58, 15),
+            'mod_text_off': [15, 28],
             'supp_summon_off': 6,
             'summon_off': 10,
             'extra_sum_size': (60, 24),
@@ -315,7 +315,7 @@ class PartyBuilder():
             babyl = False
             nchara = 5
             csize = self.v['chara_size']
-            if len(export['mods']) > 17: skill_width = self.v['skill_width'] * 75 // 100
+            if len(export['mods']) > 19: skill_width = self.v['skill_width'] * 75 // 100
             else: skill_width = self.v['skill_width']
             pos = (offset[0]+skill_width, offset[1])
             plus_key = "chara_plus_offset"
@@ -536,7 +536,7 @@ class PartyBuilder():
                 d.text((offset[0]+est_width*i+self.v['est_sub_text_ele'] , offset[1]+self.v['est_sub_text'][1]), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.font)
         # modifiers
         print("Adding the", len(export['mods']), "modifier(s)")
-        self.pasteImage(img, "assets/mod_bg.png", (mod_offset[0]-self.v['mod_off'], mod_offset[1]-self.v['mod_off']), self.v['mod_bg_size'])
+        self.pasteImage(img, "assets/mod_bg.png", (mod_offset[0]-self.v['mod_off'], mod_offset[1]-self.v['mod_off']//2), self.v['mod_bg_size'])
         self.pasteImage(img, "assets/mod_bg_supp.png", (mod_offset[0]-self.v['mod_off'], mod_offset[1]-self.v['mod_off']+self.v['mod_bg_size'][1]), (self.v['mod_bg_supp_size'], self.v['mod_text_off'][1] * len(export['mods'])))
         for m in export['mods']:
             self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], mod_offset, self.v['mod_size'])
@@ -724,7 +724,7 @@ class Interface(Tk.Tk):
         self.pb.data['caching'] = (self.cache_var.get() != 0)
 
 if __name__ == "__main__":
-    ver = "v2.2"
+    ver = "v2.3"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder()
