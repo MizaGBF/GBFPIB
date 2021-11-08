@@ -4,7 +4,6 @@ import json
 from PIL import Image, ImageFont, ImageDraw
 from io import BytesIO
 import pyperclip
-import json
 import re
 import sys
 import time
@@ -104,7 +103,7 @@ class PartyBuilder():
             'mod_bg_size': (98, 38),
             'mod_bg_supp_size': 98,
             'mod_size': (80, 20),
-            'mod_text_off': [20, 35],
+            'mod_text_off': [20, 32],
             'supp_summon_off': 6,
             'summon_off': 10,
             'extra_sum_size': (60, 24),
@@ -155,7 +154,7 @@ class PartyBuilder():
         except Exception as e:
             print("Failed to load settings.json")
             while True:
-                print("An empty config.json file will be created, continue? (y/n)")
+                print("An empty settings.json file will be created, continue? (y/n)")
                 i = input()
                 if i.lower() == 'n': exit(0)
                 elif i.lower() == 'y': break
@@ -316,7 +315,7 @@ class PartyBuilder():
             babyl = False
             nchara = 5
             csize = self.v['chara_size']
-            if len(export['mods']) > 15: skill_width = self.v['skill_width'] * 75 // 100
+            if len(export['mods']) > 17: skill_width = self.v['skill_width'] * 75 // 100
             else: skill_width = self.v['skill_width']
             pos = (offset[0]+skill_width, offset[1])
             plus_key = "chara_plus_offset"
@@ -541,7 +540,7 @@ class PartyBuilder():
         self.pasteImage(img, "assets/mod_bg_supp.png", (mod_offset[0]-self.v['mod_off'], mod_offset[1]-self.v['mod_off']+self.v['mod_bg_size'][1]), (self.v['mod_bg_supp_size'], self.v['mod_text_off'][1] * len(export['mods'])))
         for m in export['mods']:
             self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], mod_offset, self.v['mod_size'])
-            d.text((mod_offset[0], mod_offset[1]+self.v['mod_text_off'][0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.font)
+            d.text((mod_offset[0], mod_offset[1]+self.v['mod_text_off'][0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.small_font)
             mod_offset = (mod_offset[0], mod_offset[1]+self.v['mod_text_off'][1])
 
     def make(self, fast=False):
@@ -725,7 +724,7 @@ class Interface(Tk.Tk):
         self.pb.data['caching'] = (self.cache_var.get() != 0)
 
 if __name__ == "__main__":
-    ver = "v2.1"
+    ver = "v2.2"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder()
