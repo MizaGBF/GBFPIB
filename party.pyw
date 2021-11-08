@@ -433,7 +433,7 @@ class PartyBuilder():
         ax_separator = skill_box_height
         mh_size = self.v['mh_size']
         sub_size = self.v['sub_size']
-        mod_offset = (base_offset[0]+mh_size[0]+4*sub_size[0]+self.v['bg_end_offset4'][0], self.v['base'][1]-self.v['mod_off']-self.v['mod_text_off'][1] * len(export['mods']))
+        mod_offset = (base_offset[0]+mh_size[0]+4*sub_size[0]+self.v['bg_end_offset4'][0]+self.v['mod_off'], self.v['base'][1]-self.v['mod_off']-self.v['mod_text_off'][1] * len(export['mods']))
         is_not_sandbox = (len(export['w']) <= 10 or isinstance(export['est'][0], str)) # pg shows 13 weapons somehow but the estimate element is also a string
         if is_not_sandbox: 
             base_offset = (base_offset[0] + int(sub_size[0] / 1.5), base_offset[1])
@@ -724,7 +724,7 @@ class Interface(Tk.Tk):
         self.pb.data['caching'] = (self.cache_var.get() != 0)
 
 if __name__ == "__main__":
-    ver = "v2.3"
+    ver = "v2.4"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder()
