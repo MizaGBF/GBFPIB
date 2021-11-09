@@ -28,5 +28,9 @@ You are done.
 ### Command Line  
 1. `-fast`: Automatically start the image building process. Be sure to have the party data ready in your clipboard.  
 2. `-nowait`: Skip the 10 seconds waiting time at the end when using `-fast`.  
+### Cache  
+Images from the GBF asset servers can be saved for later uses.  
+You only need to enable the option to make it work.  
+If some of those images are updated in game, all you need is to delete the cache folder so they are redownloaded later.  
 ### Result  
-![Example](https://cdn.discordapp.com/attachments/614716155646705676/891340472671404052/party.png)
+![Example](https://cdn.discordapp.com/attachments/614716155646705676/907564265978875924/party.png)

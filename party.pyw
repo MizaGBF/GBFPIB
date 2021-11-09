@@ -65,7 +65,7 @@ class PartyBuilder():
             'ring_size': (30, 30), # size of the ring icon
             'ring_size_babyl': (20, 20), # size of the ring icon (babyl mode)
             'ring_offset': -2, # offset of the ring icon
-            'chara_plus_offset': (-48, -22), # offset of the plus mark text
+            'chara_plus_offset': (-40, -20), # offset of the plus mark text
             'stat_height': 20, # height of the bg used for chara lvl text
             'text_offset': (4, 2), # lvl text offset
             'sub_skill_bg': (140, 49), # subskill background size
@@ -754,7 +754,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v2.6"
+    ver = "v2.7"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder()
