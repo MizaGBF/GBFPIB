@@ -16,13 +16,13 @@ import threading
 
 class PartyBuilder():
     def __init__(self):
-        self.big_font = None
-        self.font = None
-        self.small_font = None
-        self.cache = {}
-        self.sumcache = {}
-        self.nullchar = [3030182000, 3020072000]
-        self.colors = {
+        self.big_font = None # font size 30
+        self.font = None # font size 16
+        self.small_font = None # font size 14
+        self.cache = {} # image cache
+        self.sumcache = {} # wiki summon cache
+        self.nullchar = [3030182000, 3020072000] # null character id list (lyria, cat...)
+        self.colors = { # color for estimated advantage
             1:(243, 48, 33),
             2:(85, 176, 250),
             3:(227, 124, 32),
@@ -30,7 +30,7 @@ class PartyBuilder():
             5:(253, 216, 67),
             6:(176, 84, 251),
         }
-        self.color_strs = {
+        self.color_strs = { # color string
             1:"Fire",
             2:"Water",
             3:"Earth",
@@ -38,78 +38,83 @@ class PartyBuilder():
             5:"Light",
             6:"Dark",
         }
-        self.base = {
-            'font': [14, 16, 30],
-            'stroke_width': 2,
-            'base': (600, 720),
-            'party_header': (10, 10),
-            'summon_header': (10, 150),
-            'weapon_header': (10, 320),
-            'header_size': (92, 25),
-            'party_pos': (5, 20),
-            'party_babyl_pos': (30, -18),
-            'summon_pos': (120, 180),
-            'weapon_pos': (10, 355),
-            'chara_size': (66, 120),
-            'chara_size_babyl': (56, 56),
-            'chara_plus_babyl_offset': (-35, -15),
-            'chara_pos_babyl_offset': 10,
-            'skill_width': 140,
-            'bg_offset': -5,
-            'bg_end_offset': (10, 40),
-            'bg_end_offset2': (10, 56),
-            'bg_end_offset3': (20, 420),
-            'bg_end_offset4': (20, 500),
-            'job_size': (24, 20),
-            'job_size_babyl': (18, 15),
-            'ring_size': (30, 30),
-            'ring_size_babyl': (20, 20),
-            'ring_offset': -2,
-            'chara_plus_offset': (-48, -22),
-            'stat_height': 20,
-            'text_offset': (4, 2),
-            'sub_skill_bg': (140, 49),
-            'sub_skill_text_off': 1,
-            'sub_skill_text_space': 16,
-            'star_size': (22, 22),
-            'summon_size': (60, 126),
-            'summon_sub_size': (60, 34),
-            'summon_plus_offset': (-35, -20),
-            'sum_level_text_off': (2, 3),
-            'sum_atk_size': (30, 13),
-            'sum_hp_size': (22, 13),
-            'sum_stat_offsets': [3, 30, 40, 100],
-            'skill_box_height': 48,
-            'ax_box_height': 32,
-            'mh_size': (100, 210),
-            'sub_size': (96, 55),
-            'wpn_separator': 5,
-            'weapon_plus_offset': (-35, -20),
-            'skill_lvl_off': [-17, 5],
-            'ax_text_off': [2, 5],
-            'wpn_stat_off': 50,
-            'wpn_stat_line': 25,
-            'wpn_atk_size': (30, 13),
-            'wpn_hp_size': (22, 13),
-            'wpn_stat_text_off': (3, 5),
-            'wpn_stat_text_off2': (37, 5),
-            'estimate_off': (5, 55),
-            'big_stat': (-5, 50),
-            'est_text': 3,
-            'est_sub_text': (5, 30),
-            'est_sub_text_ele': 22,
-            'supp_summon': (87, 50),
-            'mod_off': 8,
-            'mod_bg_size': (74, 38),
-            'mod_bg_supp_size': 74,
-            'mod_size': (58, 15),
-            'mod_text_off': [15, 28],
-            'supp_summon_off': 6,
-            'summon_off': 10,
-            'extra_sum_size': (60, 24),
-            'extra_sum_off': 10
+        self.base = { # list of size/offset for a 720p image
+            'font': [14, 16, 30], # font size
+            'stroke_width': 2, # text stroke width
+            'base': (600, 720), # base image size
+            'party_header': (10, 10), # party header position
+            'summon_header': (10, 150), # summon header position
+            'weapon_header': (10, 320), # wpn grid header position
+            'header_size': (92, 25), # size of the above image headers
+            'party_pos': (5, 20), # position of the party section
+            'party_babyl_pos': (30, -18), # position of the party section (babyl mode)
+            'summon_pos': (120, 180), # position of the summon section
+            'weapon_pos': (10, 355), # position of the wpn grid section
+            'chara_size': (66, 120), # size of a character portrait
+            'chara_size_babyl': (56, 56), # size of a character portrait (babyl mode)
+            'chara_plus_babyl_offset': (-35, -15), # offset of the plus mark text (babyl mode)
+            'chara_pos_babyl_offset': 10, # offset of the character position (babyl mode)
+            'skill_width': 140, # width of the MC subskill text box
+            'bg_offset': -5, # offset used by the party background
+            'bg_end_offset': (10, 40), # offset used for the bottom of the background (party)
+            'bg_end_offset2': (10, 56), # offset used for the bottom of the background (summon)
+            'bg_end_offset3': (20, 420), # offset used for the bottom of the background (wpn grid)
+            'bg_end_offset4': (20, 500), # offset used for the bottom of the background ((wpn grid)
+            'job_size': (24, 20), # size of the job icon
+            'job_size_babyl': (18, 15), # size of the job icon (babyl mode)
+            'ring_size': (30, 30), # size of the ring icon
+            'ring_size_babyl': (20, 20), # size of the ring icon (babyl mode)
+            'ring_offset': -2, # offset of the ring icon
+            'chara_plus_offset': (-48, -22), # offset of the plus mark text
+            'stat_height': 20, # height of the bg used for chara lvl text
+            'text_offset': (4, 2), # lvl text offset
+            'sub_skill_bg': (140, 49), # subskill background size
+            'sub_skill_text_off': 1, # subskill text offset
+            'sub_skill_text_space': 16, # subskill text space from one line to another
+            'star_size': (22, 22), # size of summon star icon
+            'summon_size': (60, 126), # size of summon portrait
+            'summon_sub_size': (60, 34), # size of sub summon portrait
+            'summon_plus_offset': (-35, -20), # summon plus mark text offset
+            'sum_level_text_off': (2, 3), # summon lvl text offset
+            'sum_atk_size': (30, 13), # summon atk icon size
+            'sum_hp_size': (22, 13), # summon hp icon size
+            'sum_stat_offsets': [3, 30, 40, 100], # offset for summon atk and hp icons
+            'summon_off': 10, # summon offset
+            'skill_box_height': 48, # height of a weapon skills
+            'ax_box_height': 32, # height of an AX weapon skills
+            'mh_size': (100, 210), # size of the mainhand image
+            'sub_size': (96, 55), # size of the sub weapon images
+            'wpn_separator': 5, # separation in pixel between weapons
+            'weapon_plus_offset': (-35, -20), # offset of weapon plus mark text
+            'skill_lvl_off': [-17, 5], # offset of weapon skill level text
+            'ax_text_off': [2, 5], # offset of ax skill text
+            'wpn_stat_off': 50, # offset of grid stat
+            'wpn_stat_line': 25, # height of grid stat
+            'wpn_atk_size': (30, 13), # size of grid atk icon
+            'wpn_hp_size': (22, 13), # size of grid sum icon
+            'wpn_stat_text_off': (3, 5), # offset of grid stat text
+            'wpn_stat_text_off2': (37, 5), # offset of grid stat text (2nd one)
+            'estimate_off': (5, 55), # estimate offset
+            'big_stat': (-5, 50), # size of estimate background
+            'est_text': 3, # estimate text offset
+            'est_sub_text': (5, 30), # estimate text offset
+            'est_sub_text_ele': 22, # estimate text offset (element)
+            'supp_summon': (87, 50), # support summon size
+            'supp_summon_off': 6, # support summon offset
+            'mod_off': 8, # wpn modifier offset
+            'mod_bg_size': (74, 38), # wpn modifier background (top part) size
+            'mod_bg_supp_size': 74, # wpn modifier background (main part) width
+            'mod_size': (58, 15), # wpn modifieer icon size
+            'mod_text_off': [15, 28], # wpn modifier text offset
+            'mod_off_big': 5, # wpn modifier offset (bigger version)
+            'mod_bg_size_big': (98, 38), # wpn modifier background (top part) size (bigger version)
+            'mod_bg_supp_size_big': 98, # wpn modifier background (main part) width (bigger version)
+            'mod_size_big': (80, 20), # wpn modifieer icon size (bigger version)
+            'mod_text_off_big': [20, 35], # wpn modifier text offset (bigger version)
+            'extra_sum_size': (60, 24), # extra summon size
+            'extra_sum_off': 10 # extra summon offset
         }
-        self.classes = {
+        self.classes = { # class prefix (gotta add them manually, sadly)
             10: 'sw',
             11: 'sw',
             12: 'wa',
@@ -137,17 +142,17 @@ class PartyBuilder():
             28: 'kn',
             29: 'gu'
         }
-        self.qual = {'720p': 1, '1080p': 1.5, '4K': 3, '8K': 6}
-        self.supp_summon_re = [
+        self.qual = {'720p': 1, '1080p': 1.5, '4K': 3, '8K': 6} # quality modifier, self.base will be copied and multiplied by that
+        self.supp_summon_re = [ # regex used for the wiki support summon id search
             re.compile('(20[0-9]{8})\\.'),
             re.compile('(20[0-9]{8}_02)\\.')
         ]
-        self.v = None
-        self.last = ""
-        self.data = {}
-        self.load()
+        self.v = None # will contain the modified copy of self.base
+        self.last = "" # last used quality
+        self.data = {} # settings.json data
+        self.load() # loading settings.json
 
-    def load(self):
+    def load(self): # load settings.json
         try:
             with open('settings.json') as f:
                 self.data = json.load(f)
@@ -160,37 +165,42 @@ class PartyBuilder():
                 elif i.lower() == 'y': break
                 self.save()
 
-    def save(self):
+    def save(self): # save settings.json
         try:
             with open('settings.json', 'w') as outfile:
                 json.dump(self.data, outfile)
         except:
             pass
 
-    def build_quality(self):
-        if self.data.get('quality', '720p') == self.last: return
+    def build_quality(self): # copy self.base and apply the quality modifier
+        if self.data.get('quality', '720p') == self.last: return # if it's the last used quality, do nothing
         print("Caching size for quality", self.data.get('quality', '720p'))
         self.v = {}
         mod = self.qual[self.data.get('quality', '720p')]
-        for k in self.base:
-            if isinstance(self.base[k], int): self.v[k] = int(self.base[k]*mod)
-            elif isinstance(self.base[k], tuple):
-                tmp = []
-                for i in self.base[k]:
-                    tmp.append(int(i*mod))
-                self.v[k] = tuple(tmp)
-            elif isinstance(self.base[k], list):
-                tmp = []
-                for i in self.base[k]:
-                    tmp.append(int(i*mod))
-                self.v[k] = tmp
-            else: raise Exception("Internal error")
+        if mod == 1: # no modification, just copy
+            self.v = self.base.copy()
+        else: # iterate and multiply
+            for k in self.base:
+                if isinstance(self.base[k], int): self.v[k] = int(self.base[k]*mod)
+                elif isinstance(self.base[k], tuple):
+                    tmp = []
+                    for i in self.base[k]:
+                        tmp.append(int(i*mod))
+                    self.v[k] = tuple(tmp)
+                elif isinstance(self.base[k], list):
+                    tmp = []
+                    for i in self.base[k]:
+                        tmp.append(int(i*mod))
+                    self.v[k] = tmp
+                else: raise Exception("Internal error")
+        # load fonts
         self.big_font = ImageFont.truetype("assets/basic.ttf", self.v['font'][2])
         self.font = ImageFont.truetype("assets/basic.ttf", self.v['font'][1])
         self.small_font = ImageFont.truetype("assets/basic.ttf", self.v['font'][0])
+        # update last quality used
         self.last = self.data.get('quality', '720p')
 
-    def pasteImage(self, img, file, offset, resize=None): # paste and image onto another
+    def pasteImage(self, img, file, offset, resize=None): # paste an image onto another
         buffers = [Image.open(file)]
         buffers.append(buffers[-1].convert('RGBA'))
         if resize is not None: buffers.append(buffers[-1].resize(resize, Image.LANCZOS))
@@ -206,7 +216,7 @@ class PartyBuilder():
                         self.cache[url] = f.read()
                 else:
                     raise Exception()
-            except:
+            except: # else request it from gbf
                 req = request.Request(url)
                 url_handle = request.urlopen(req)
                 self.cache[url] = url_handle.read()
@@ -221,14 +231,14 @@ class PartyBuilder():
         with BytesIO(self.cache[url]) as file_jpgdata:
             self.pasteImage(img, file_jpgdata, offset, resize)
 
-    def checkDiskCache(self):
+    def checkDiskCache(self): # check if cache folder exists (and create it if needed)
         if not os.path.isdir('cache'):
             os.mkdir('cache')
 
-    def draw_rect(self, d, x, y, w, h): # to draw placholders
+    def draw_rect(self, d, x, y, w, h): # unused, for debug/dev purpose
         d.rectangle([(x, y), (x+w-1, y+h-1)], fill=(0, 0, 0, 200))
 
-    def fixCase(self, terms): # function to fix the case (for wiki requests)
+    def fixCase(self, terms): # function to fix the case (for wiki search requests)
         terms = terms.split(' ')
         fixeds = []
         for term in terms:
@@ -290,14 +300,14 @@ class PartyBuilder():
     def get_uncap_id(self, cs): # to get character portraits based on uncap levels
         return {2:'02', 3:'02', 4:'02', 5:'03', 6:'04'}.get(cs, '01')
 
-    def get_mc_job_look(self, skin, job):
+    def get_mc_job_look(self, skin, job): # get the MC unskined filename based on id
         jid = job // 10000
         if jid not in self.classes: return skin
         return "{}_{}_{}".format(job, self.classes[jid], '_'.join(skin.split('_')[2:]))
 
     def make_party(self, export, img, d, offset): # draw the party
         print("Drawing Party...")
-        if len(export['c']) > 5: # babyl mode
+        if len(export['c']) > 5: # babyl mode (modifiers/positions are different)
             print("Babyl detected")
             babyl = True
             nchara = 12
@@ -326,7 +336,7 @@ class PartyBuilder():
             self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, self.v['job_size'])
         print("MC: skin", export['pcjs'], ", job", export['p'])
 
-        for i in range(0, nchara): # npcs
+        for i in range(0, nchara): # iterate through the party
             if babyl:
                 pos = (offset[0]+csize[0]*(i%4)+skill_width+self.v['chara_pos_babyl_offset'], offset[1]+csize[1]*(i//4))
                 if i == 0: continue
@@ -365,7 +375,7 @@ class PartyBuilder():
                 d.text((pos[0]+self.v['sub_skill_text_off'], pos[1]+self.v['sub_skill_text_off']+self.v['sub_skill_text_space']*count), export['ps'][i], fill=(255, 255, 255), font=self.font)
                 count += 1
 
-    def make_extra_summon(self, export, img, d, offset):
+    def make_extra_summon(self, export, img, d, offset): # extra sub summons (only called if detected)
         print("Drawing Extra Summons...")
         ssize = self.v['summon_sub_size']
         for i in range(0, 2):
@@ -389,13 +399,14 @@ class PartyBuilder():
     def make_summons(self, export, img, d, offset): # draw the summons
         print("Drawing Summons...")
         ssize = self.v['summon_size']
-        # background
-        if len(export['ss']) > 5:
+        # background setup
+        if len(export['ss']) > 5: # with sub summon
             self.pasteImage(img, "assets/bg.png", (offset[0]+self.v['bg_offset'], offset[1]+self.v['bg_offset']), (self.v['summon_off']*2+ssize[0]*6+self.v['bg_end_offset2'][0], ssize[1]+self.v['bg_end_offset2'][1]))
-        else:
+        else: # without
             self.pasteImage(img, "assets/bg.png", (offset[0]+self.v['bg_offset'], offset[1]+self.v['bg_offset']), (ssize[0]*5+self.v['bg_end_offset2'][0]*2, ssize[1]+self.v['bg_end_offset2'][1]))
-        for i in range(0, 5):
-            if i > 0: pos = (offset[0]+ssize[0]*i+self.v['summon_off'], offset[1])
+
+        for i in range(0, 5): # iterate through first 5 summons)
+            if i > 0: pos = (offset[0]+ssize[0]*i+self.v['summon_off'], offset[1]) # first one is a bit more on the left
             else: pos = (offset[0]+ssize[0]*i, offset[1])
             # portraits
             if export['s'][i] is None:
@@ -427,24 +438,29 @@ class PartyBuilder():
 
     def make_grid(self, export, img, d, base_offset): # draw the weapons (sandbox is supported)
         print("Drawing Weapons...")
+        # calculate various offset and position
         skill_box_height = self.v['skill_box_height']
         skill_icon_size = skill_box_height // 2
         ax_icon_size = self.v['ax_box_height']
         ax_separator = skill_box_height
         mh_size = self.v['mh_size']
         sub_size = self.v['sub_size']
-        mod_offset = (base_offset[0]+mh_size[0]+4*sub_size[0]+self.v['bg_end_offset4'][0]+self.v['mod_off'], self.v['base'][1]-(self.v['mod_off']//2)-self.v['mod_text_off'][1] * len(export['mods']))
-        is_not_sandbox = (len(export['w']) <= 10 or isinstance(export['est'][0], str)) # pg shows 13 weapons somehow but the estimate element is also a string
+        if len(export['mods']) > 15: # if more than 15 weapon mods are to be displayed, it uses the smaller size
+            mod_offset = (base_offset[0]+mh_size[0]+4*sub_size[0]+self.v['bg_end_offset4'][0]+self.v['mod_off'], self.v['base'][1]-(self.v['mod_off']//2)-self.v['mod_text_off'][1] * len(export['mods']))
+        else:
+            mod_offset = (base_offset[0]+mh_size[0]+4*sub_size[0]+self.v['bg_end_offset4'][0]+self.v['mod_off_big'], self.v['base'][1]-(self.v['mod_off_big']//2)-self.v['mod_text_off_big'][1] * len(export['mods']))
+        # check if we are using 10 or 13 weapons
+        is_not_sandbox = (len(export['w']) <= 10 or isinstance(export['est'][0], str)) # pg shows 13 weapons somehow but the estimate element is also a string, hence we check if it's a string
         if is_not_sandbox: 
             base_offset = (base_offset[0] + int(sub_size[0] / 1.5), base_offset[1])
         else:
             print("Sandbox detected")
-        # background
+        # put background
         if not is_not_sandbox:
             self.pasteImage(img, "assets/grid_bg.png", (base_offset[0]+self.v['bg_offset'], base_offset[1]+self.v['bg_offset']), (mh_size[0]+4*sub_size[0]+self.v['bg_end_offset4'][0], self.v['bg_end_offset4'][1]))
         else:
             self.pasteImage(img, "assets/grid_bg.png", (base_offset[0]+self.v['bg_offset'], base_offset[1]+self.v['bg_offset']), (mh_size[0]+3*sub_size[0]+self.v['bg_end_offset3'][0], self.v['bg_end_offset3'][1]))
-        # weapons
+        # iterate through weapons
         for i in range(0, len(export['w'])):
             wt = "ls" if i == 0 else "m"
             if i == 0: # mainhand
@@ -463,6 +479,7 @@ class PartyBuilder():
                 y = (i-1) // 3
                 size = sub_size
                 offset = (base_offset[0]+bsize[0]+self.v['wpn_separator']+size[0]*x, base_offset[1]+(size[1]+skill_box_height)*y)
+            # portrait
             if export['w'][i] is None or export['wl'][i] is None:
                 if i >= 10:
                     self.pasteImage(img, "assets/arca_slot.png", offset, size)
@@ -507,7 +524,7 @@ class PartyBuilder():
         self.pasteImage(img, "assets/hp.png", (offset[0]+self.v['wpn_stat_text_off'][0], offset[1]+self.v['wpn_stat_text_off'][1]+self.v['wpn_stat_line']), self.v['wpn_hp_size'])
         d.text((offset[0]+self.v['wpn_stat_text_off2'][0], offset[1]+self.v['wpn_stat_text_off2'][1]), "{}".format(export['watk']), fill=(255, 255, 255), font=self.font)
         d.text((offset[0]+self.v['wpn_stat_text_off2'][0], offset[1]+self.v['wpn_stat_text_off2'][1]+self.v['wpn_stat_line']), "{}".format(export['whp']), fill=(255, 255, 255), font=self.font)
-        # estimated dama
+        # estimated damage
         offset = (offset[0]+bsize[0]+self.v['estimate_off'][0], offset[1]+self.v['estimate_off'][1])
         if export['sps'] is not None and export['sps'] != '':
             # support summon
@@ -523,6 +540,7 @@ class PartyBuilder():
             else:
                 print("ID is", supp)
                 self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/summon/m/{}.jpg".format(supp), (offset[0]-bsize[0]-self.v['estimate_off'][0]+self.v['supp_summon_off'], offset[1]), self.v['supp_summon'])
+        # weapon grid stats
         est_width = ((size[0]*3)//2)
         for i in range(0, 2):
             self.pasteImage(img, "assets/big_stat.png", (offset[0]+est_width*i , offset[1]), (est_width+self.v['big_stat'][0], self.v['big_stat'][1]))
@@ -534,16 +552,24 @@ class PartyBuilder():
                 else: vs = (int(export['est'][0]) - 5 + 1) % 2 + 5
                 d.text((offset[0]+est_width*i+self.v['est_sub_text'][0] , offset[1]+self.v['est_sub_text'][1]), "vs", fill=(255, 255, 255), font=self.font)
                 d.text((offset[0]+est_width*i+self.v['est_sub_text_ele'] , offset[1]+self.v['est_sub_text'][1]), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.font)
-        # modifiers
+        # weapon modifiers
         print("Adding the", len(export['mods']), "modifier(s)")
-        self.pasteImage(img, "assets/mod_bg.png", (mod_offset[0]-self.v['mod_off'], mod_offset[1]-self.v['mod_off']//2), self.v['mod_bg_size'])
-        self.pasteImage(img, "assets/mod_bg_supp.png", (mod_offset[0]-self.v['mod_off'], mod_offset[1]-self.v['mod_off']+self.v['mod_bg_size'][1]), (self.v['mod_bg_supp_size'], self.v['mod_text_off'][1] * len(export['mods'])))
-        for m in export['mods']:
-            self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], mod_offset, self.v['mod_size'])
-            d.text((mod_offset[0], mod_offset[1]+self.v['mod_text_off'][0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.small_font)
-            mod_offset = (mod_offset[0], mod_offset[1]+self.v['mod_text_off'][1])
+        if len(export['mods']) > 15: # code is ugly as fuck, maybe I'll find an alternative later
+            self.pasteImage(img, "assets/mod_bg.png", (mod_offset[0]-self.v['mod_off'], mod_offset[1]-self.v['mod_off']//2), self.v['mod_bg_size'])
+            self.pasteImage(img, "assets/mod_bg_supp.png", (mod_offset[0]-self.v['mod_off'], mod_offset[1]-self.v['mod_off']+self.v['mod_bg_size'][1]), (self.v['mod_bg_supp_size'], self.v['mod_text_off'][1] * len(export['mods'])))
+            for m in export['mods']:
+                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], mod_offset, self.v['mod_size'])
+                d.text((mod_offset[0], mod_offset[1]+self.v['mod_text_off'][0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.small_font)
+                mod_offset = (mod_offset[0], mod_offset[1]+self.v['mod_text_off'][1])
+        else:
+            self.pasteImage(img, "assets/mod_bg.png", (mod_offset[0]-self.v['mod_off_big'], mod_offset[1]-self.v['mod_off_big']//2), self.v['mod_bg_size_big'])
+            self.pasteImage(img, "assets/mod_bg_supp.png", (mod_offset[0]-self.v['mod_off_big'], mod_offset[1]-self.v['mod_off_big']+self.v['mod_bg_size_big'][1]), (self.v['mod_bg_supp_size_big'], self.v['mod_text_off_big'][1] * len(export['mods'])))
+            for m in export['mods']:
+                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], mod_offset, self.v['mod_size_big'])
+                d.text((mod_offset[0], mod_offset[1]+self.v['mod_text_off_big'][0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.font)
+                mod_offset = (mod_offset[0], mod_offset[1]+self.v['mod_text_off_big'][1])
 
-    def make(self, fast=False):
+    def make(self, fast=False): # main function
         try:
             if not fast:
                 print("Instructions:")
@@ -551,13 +577,14 @@ class PartyBuilder():
                 print("2) Click your bookmarklet")
                 print("3) Come back here and press Return to continue")
                 input()
-            clipboard = pyperclip.paste()
-            export = json.loads(clipboard)
+            clipboard = pyperclip.paste() # get clipboard content
+            export = json.loads(clipboard) # get the data from clipboard
             if self.data.get('caching', False):
                 self.checkDiskCache()
             self.cache = {}
             self.build_quality()
             
+            # make image
             img = Image.new('RGB', self.v['base'], "black")
             im_a = Image.new("L", img.size, "black")
             img.putalpha(im_a)
@@ -576,6 +603,7 @@ class PartyBuilder():
             self.pasteImage(img, "assets/weapons.png", self.v['weapon_header'], self.v['header_size'])
             self.make_grid(export, img, d, self.v['weapon_pos'])
             
+            # done
             img.save("party.png", "PNG")
             img.close()
             print("Success, party.png has been generated")
@@ -604,9 +632,11 @@ class PartyBuilder():
                 return
 
     def cpyBookmark(self):
+        # check bookmarklet.txt for a more readable version
+        # note: when updating it in this piece of code, you need to double the \
         pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#party/index/\")&&!window.location.hash.startsWith(\"#party/expectancy_damage/index\")&&!window.location.hash.startsWith(\"#tower/party/index/\")&&!(window.location.hash.startsWith(\"#event/sequenceraid\") && window.location.hash.indexOf(\"/party/index/\") > 0)&&!window.location.hash.startsWith(\"#tower/party/expectancy_damage/index/\")){alert('Please go to a GBF Party screen');return}let obj={p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],c:[],cl:[],cs:[],cp:[],cwr:[],s:[],sl:[],ss:[],se:[],sp:[],w:[],wl:[],wsn:[],wll:[],wp:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage],mods:window.Game.view.deck_model.attributes.deck.pc.damage_info.effect_value_info,sps:(window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name?window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name:null)};try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{console.log(x);Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.sub_summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}())")
 
-    def run(self):
+    def run(self): # old command line menu
         while True:
             try:
                 print("")
@@ -637,7 +667,7 @@ class PartyBuilder():
                 self.save()
                 return
 
-class Interface(Tk.Tk):
+class Interface(Tk.Tk): # interface
     def __init__(self, pb, ver):
         Tk.Tk.__init__(self,None)
         self.parent = None
@@ -645,11 +675,10 @@ class Interface(Tk.Tk):
         self.apprunning = True
         self.iconbitmap('icon.ico')
         self.title("GBFPIB {}".format(ver))
-        #self.minsize(200, 80)
         self.resizable(width=False, height=False) # not resizable
         self.protocol("WM_DELETE_WINDOW", self.close) # call close() if we close the window
         
-        # run
+        # run part
         tabs = ttk.Notebook(self)
         tabs.grid(row=1, column=0, sticky="we")
         tabcontent = Tk.Frame(tabs)
@@ -658,7 +687,7 @@ class Interface(Tk.Tk):
         self.button.grid(row=0, column=0, sticky="we")
         Tk.Button(tabcontent, text="Get Bookmarklet", command=self.bookmark).grid(row=1, column=0, sticky="we")
         
-        # setting
+        # setting part
         tabs = ttk.Notebook(self)
         tabs.grid(row=1, column=1, sticky="we")
         tabcontent = Tk.Frame(tabs)
@@ -723,8 +752,9 @@ class Interface(Tk.Tk):
     def toggleCaching(self):
         self.pb.data['caching'] = (self.cache_var.get() != 0)
 
+# entry point
 if __name__ == "__main__":
-    ver = "v2.5"
+    ver = "v2.6"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder()
