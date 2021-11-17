@@ -16,7 +16,8 @@ import threading
 import shutil
 
 class PartyBuilder():
-    def __init__(self):
+    def __init__(self, ver):
+        self.version = ver
         self.japanese = False # True if the data is japanese, False if not
         self.big_font = None # font size 30
         self.font = None # font size 16
@@ -53,6 +54,7 @@ class PartyBuilder():
             'font_jp': [11, 12, 24], # font size (japanese)
             'stroke_width': 2, # text stroke width
             'base': (600, 720), # base image size
+            'version_pos': (570, 0), # position of the version number
             'party_header': (10, 10), # party header position
             'summon_header': (10, 150), # summon header position
             'weapon_header': (10, 320), # wpn grid header position
@@ -653,16 +655,19 @@ class PartyBuilder():
             im_a.close()
             d = ImageDraw.Draw(img, 'RGBA')
 
+            # version number
+            d.text(val['version_pos'], self.version, fill=(255, 255, 255, 120), font=self.small_font)
+
             # party
-            self.pasteImage(img, "assets/characters.png", val['party_header'], val['header_size'])
+            self.pasteImage(img, "assets/characters_EN.png", val['party_header'], val['header_size'])
             self.make_party(val, export, img, d, val['party_pos'])
 
             # summons
-            self.pasteImage(img, "assets/summons.png", val['summon_header'], val['header_size'])
+            self.pasteImage(img, "assets/summons_EN.png", val['summon_header'], val['header_size'])
             self.make_summons(val, export, img, d, val['summon_pos'])
 
             # grid
-            self.pasteImage(img, "assets/weapons.png", val['weapon_header'], val['header_size'])
+            self.pasteImage(img, "assets/weapons_EN.png", val['weapon_header'], val['header_size'])
             self.make_grid(val, export, img, d, val['weapon_pos'])
             
             # done
@@ -818,18 +823,18 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v3.0"
+    ver = "v3.1"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
-        pb = PartyBuilder()
+        pb = PartyBuilder(ver)
         pb.make(fast=True)
         if '-nowait' not in sys.argv:
             print("Closing in 10 seconds...")
             time.sleep(10)
     elif '-cmd' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
-        pb = PartyBuilder()
+        pb = PartyBuilder(ver)
         pb.run()
     else:
-        ui = Interface(PartyBuilder(), ver)
+        ui = Interface(PartyBuilder(ver), ver)
         ui.run()

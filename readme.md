@@ -44,4 +44,7 @@ There are a few ways to go around this issue:
 When updating this script with a new version, be sure to update your bookmarklet, or issues might occur.  
 You might also want to rerun the `pip install -r requirements.txt` command if the required modules got updated.  
 ### Result  
-![Example](https://cdn.discordapp.com/attachments/614716155646705676/907564265978875924/party.png)
+Here's what a resulting image looks like:  
+![Example](https://cdn.discordapp.com/attachments/614716155646705676/910561082203054080/party.png)  
+Here's a video using it:  
+[![Video Example](https://img.youtube.com/vi/6t0zl7qTPVw/0.jpg)](https://www.youtube.com/watch?v=6t0zl7qTPVw)  
