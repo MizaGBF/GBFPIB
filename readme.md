@@ -28,9 +28,20 @@ You are done.
 ### Command Line  
 1. `-fast`: Automatically start the image building process. Be sure to have the party data ready in your clipboard.  
 2. `-nowait`: Skip the 10 seconds waiting time at the end when using `-fast`.  
+2. `-cmd`: Let you access the old command line menu. Can't be used with `-fast`.  
 ### Cache  
 Images from the GBF asset servers can be saved for later uses.  
 You only need to enable the option to make it work.  
 If some of those images are updated in game, all you need is to delete the cache folder so they are redownloaded later.  
+You can also delete it if it gets too big.  
+### Support Summon  
+By default, the game doesn't provide you the ID of the support summon set in your damage calculator.  
+There are a few ways to go around this issue:  
+1. If you open the damage calculator BEFORE clicking the bookmarklet, the ID will be fetched properly. You need to open it again if you change the party without reloading the page or the last loaded one will stay.  
+2. Alternatively, the bookmarklet will fetch the name of the support summon and search its ID on [gbf.wiki](https://gbf.wiki/). However, be warned this method isn't perfect, especially if you are playing in japanese.  
+3. If the above two methods don't work, the name of the support summon will simply be written instead.  
+### Updating  
+When updating this script with a new version, be sure to update your bookmarklet, or issues might occur.  
+You might also want to rerun the `pip install -r requirements.txt` command if the required modules got updated.  
 ### Result  
 ![Example](https://cdn.discordapp.com/attachments/614716155646705676/907564265978875924/party.png)
