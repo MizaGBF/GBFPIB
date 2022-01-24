@@ -391,7 +391,7 @@ class PartyBuilder():
                 pos = (offset[0]+skill_width+csize[0]*(i+1), offset[1])
             # portrait
             if i >= len(export['c']) or export['c'][i] is None:
-                if babyl: self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets_en/npc/s/3999999999.jpg", pos, csize)
+                if babyl: self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize)
                 else: self.dlAndPasteImage(img, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/deckcombination/base_empty_npc.jpg", pos, csize)
                 continue
             else:
@@ -823,7 +823,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v3.1"
+    ver = "v3.2"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
