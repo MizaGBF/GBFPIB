@@ -471,24 +471,25 @@ class PartyBuilder():
                     d.text((pos[0]+est_width*i+30 , pos[1]+180), "vs", fill=(255, 255, 255), font=self.fonts['medium'])
                     d.text((pos[0]+est_width*i+132 , pos[1]+180), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.fonts['medium'])
         # weapon modifiers
-        if len(export['mods']) > 15: # if more than 15 weapon mods are to be displayed, it uses the smaller size
-            mod_pos = (offset[0]+mh_size[0]+4*sub_size[0]+120+54, 4320-(54//2)-168 * len(export['mods']))
-        else:
-            mod_pos = (offset[0]+mh_size[0]+4*sub_size[0]+120+60, 4320-(60//2)-210 * len(export['mods']))
+        if len(export['mods']) > 0:
+            if len(export['mods']) > 15: # if more than 15 weapon mods are to be displayed, it uses the smaller size
+                mod_pos = (offset[0]+mh_size[0]+4*sub_size[0]+120+54, 4320-(54//2)-168 * len(export['mods']))
+            else:
+                mod_pos = (offset[0]+mh_size[0]+4*sub_size[0]+120+60, 4320-(60//2)-210 * len(export['mods']))
 
-        print("|--> Adding the", len(export['mods']), "modifier(s)...")
-        mod_font = 'small' if len(export['mods']) > 15 else 'medium'
-        mod_off = 54 if len(export['mods']) > 15 else 30
-        mod_bg_size = (444, 228) if len(export['mods']) > 15 else (516, 228)
-        mod_size = (348, 90) if len(export['mods']) > 15 else (540, 120)
-        mod_text_off = (90, 168) if len(export['mods']) > 15 else (120, 210)
-        
-        self.pasteImage(img, "assets/mod_bg.png", (mod_pos[0]-mod_off, mod_pos[1]-mod_off//2), mod_bg_size)
-        self.pasteImage(img, "assets/mod_bg_supp.png", (mod_pos[0]-mod_off, mod_pos[1]-mod_off+mod_bg_size[1]), (mod_bg_size[0], mod_text_off[1] * len(export['mods'])))
-        for m in export['mods']:
-            self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], mod_pos, mod_size)
-            d.text((mod_pos[0], mod_pos[1]+mod_text_off[0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.fonts[mod_font])
-            mod_pos = (mod_pos[0], mod_pos[1]+mod_text_off[1])
+            print("|--> Adding the", len(export['mods']), "modifier(s)...")
+            mod_font = 'small' if len(export['mods']) > 15 else 'medium'
+            mod_off = 54 if len(export['mods']) > 15 else 30
+            mod_bg_size = (444, 228) if len(export['mods']) > 15 else (516, 228)
+            mod_size = (348, 90) if len(export['mods']) > 15 else (540, 120)
+            mod_text_off = (90, 168) if len(export['mods']) > 15 else (120, 210)
+            
+            self.pasteImage(img, "assets/mod_bg.png", (mod_pos[0]-mod_off, mod_pos[1]-mod_off//2), mod_bg_size)
+            self.pasteImage(img, "assets/mod_bg_supp.png", (mod_pos[0]-mod_off, mod_pos[1]-mod_off+mod_bg_size[1]), (mod_bg_size[0], mod_text_off[1] * len(export['mods'])))
+            for m in export['mods']:
+                self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], mod_pos, mod_size)
+                d.text((mod_pos[0], mod_pos[1]+mod_text_off[0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.fonts[mod_font])
+                mod_pos = (mod_pos[0], mod_pos[1]+mod_text_off[1])
 
     def make(self, fast=False): # main function
         try:
@@ -716,7 +717,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v4.0"
+    ver = "v4.1"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
