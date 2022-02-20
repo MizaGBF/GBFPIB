@@ -45,6 +45,7 @@ When updating this script with a new version, be sure to update your bookmarklet
 You might also want to rerun the `pip install -r requirements.txt` command if the required modules got updated.  
 ### Result  
 Here's what a resulting image looks like:  
+(Screenshot taken on version 3.1)  
 ![Example](https://cdn.discordapp.com/attachments/614716155646705676/910561082203054080/party.png)  
 Here's a video using it:  
 [![Video Example](https://img.youtube.com/vi/6t0zl7qTPVw/0.jpg)](https://www.youtube.com/watch?v=6t0zl7qTPVw)  
