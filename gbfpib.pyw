@@ -258,7 +258,7 @@ class PartyBuilder():
             nchara = 5
             csize = (396, 720)
             poffset = (0, 0)
-            if len(export['mods']) > 19: skill_width = 630
+            if len(export['mods']) > 18: skill_width = 630
             else: skill_width = 840
             pos = self.addTuple(offset, (skill_width, 0))
             jsize = (144, 120)
@@ -368,8 +368,9 @@ class PartyBuilder():
         ax_separator = skill_box_height
         mh_size = (600, 1260)
         sub_size = (576, 330)
-        if not self.sandbox: 
-            offset = (offset[0] + int(sub_size[0] / 1.5), offset[1])
+        if self.sandbox:  diff = 0
+        else: diff = int(sub_size[0] / 1.5) # shift the grid right a bit
+        offset = (offset[0] + diff, offset[1])
         self.pasteImage(img, "assets/grid_bg.png", self.addTuple(offset, (-30, -30)), (mh_size[0]+(4 if self.sandbox else 3)*sub_size[0]+120, 2520+(480 if self.sandbox else 0)))
         if self.sandbox:
             self.pasteImage(img, "assets/grid_bg_extra.png", (offset[0]+mh_size[0]+60+sub_size[0]*3, offset[1]), (576, 2290))
@@ -472,20 +473,24 @@ class PartyBuilder():
                     d.text((pos[0]+est_width*i+132 , pos[1]+180), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.fonts['medium'])
         # weapon modifiers
         if len(export['mods']) > 0:
-            if len(export['mods']) > 15: # if more than 15 weapon mods are to be displayed, it uses the smaller size
-                mod_pos = (offset[0]+mh_size[0]+4*sub_size[0]+120+54, 4320-(54//2)-168 * len(export['mods']))
-            else:
-                mod_pos = (offset[0]+mh_size[0]+4*sub_size[0]+120+60, 4320-(60//2)-210 * len(export['mods']))
+            offset = (offset[0] - diff, offset[1]) # cancel the shift
 
             print("|--> Adding the", len(export['mods']), "modifier(s)...")
             mod_font = 'small' if len(export['mods']) > 15 else 'medium'
             mod_off = 54 if len(export['mods']) > 15 else 30
             mod_bg_size = (444, 228) if len(export['mods']) > 15 else (516, 228)
-            mod_size = (348, 90) if len(export['mods']) > 15 else (540, 120)
+            mod_size = (348, 90) if len(export['mods']) > 15 else (462, 120)
             mod_text_off = (90, 168) if len(export['mods']) > 15 else (120, 210)
             
+            if len(export['mods']) > 15: # if more than 15 weapon mods are to be displayed, it uses a smaller size
+                mod_pos = (offset[0]+mh_size[0]+4*sub_size[0]+120+54, 4320-(54//2)-168 * len(export['mods'])-mod_text_off[1])
+                print('x')
+            else:
+                mod_pos = (offset[0]+mh_size[0]+4*sub_size[0]+120+27, 4320-(60//2)-210 * len(export['mods'])-mod_text_off[1])
+            
             self.pasteImage(img, "assets/mod_bg.png", (mod_pos[0]-mod_off, mod_pos[1]-mod_off//2), mod_bg_size)
-            self.pasteImage(img, "assets/mod_bg_supp.png", (mod_pos[0]-mod_off, mod_pos[1]-mod_off+mod_bg_size[1]), (mod_bg_size[0], mod_text_off[1] * len(export['mods'])))
+            self.pasteImage(img, "assets/mod_bg_supp.png", (mod_pos[0]-mod_off, mod_pos[1]-mod_off+mod_bg_size[1]), (mod_bg_size[0], mod_text_off[1] * (len(export['mods'])-1)))
+            self.pasteImage(img, "assets/mod_bg_bot.png", (mod_pos[0]-mod_off, mod_pos[1]+mod_off+mod_text_off[1]*(len(export['mods'])-1)), mod_bg_size)
             for m in export['mods']:
                 self.dlAndPasteImage(img, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], mod_pos, mod_size)
                 d.text((mod_pos[0], mod_pos[1]+mod_text_off[0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.fonts[mod_font])
@@ -539,7 +544,7 @@ class PartyBuilder():
             d = ImageDraw.Draw(img, 'RGBA')
 
             # version number
-            d.text((3320, 0), "GBFPIB\n" + self.version, fill=(200, 200, 200, 100), font=self.fonts['mini'], align="right")
+            d.text((3320, 0), "GBFPIB\n" + self.version, fill=(200, 200, 200, 60), font=self.fonts['mini'], align="right")
             
             print("* Drawing Party...")
             self.make_party(d, img, export)
@@ -717,7 +722,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v4.1"
+    ver = "v4.2"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
