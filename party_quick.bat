@@ -1,1 +1,0 @@
-python party.pyw -fast
