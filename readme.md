@@ -7,7 +7,7 @@
 * `pip install -r requirements.txt` to install all the modules.  
 ### Setup  
 1. Install the requirements with the command above.  
-2. Double click on `party.pyw`.  
+2. Double click on `gbfpib.pyw`.  
 3. Click on the `Get Bookmarklet` button. A javascript code will be copied to your clipboard.  
 4. On the Chrome (or equivalent) browser you are using, make a new bookmark.  
 5. Right click that bookmark, select `edit`.  
@@ -18,9 +18,9 @@ You are done.
 ### How-to  
 1. Go on the party screen you want to export.  
 2. Click the bookmarklet. If nothing happens, everything went well.  
-3. Open `party.pyw` again.  
+3. Open `gbfpib.pyw` again.  
 4. This time, click on the `Build Image` button.  
-5. If everything went well, the image should appear beside `party.pyw` under the name `party.png`.  
+5. If everything went well, the image should appear beside `gbfpib.pyw` under the name `party.png`.  
 6. If it didn't, something went wrong, probably at the step 2.  
 ### Settings  
 1. `Quality`: let you control the output size (default is 720p, up to 8K).  

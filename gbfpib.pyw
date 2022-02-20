@@ -54,7 +54,7 @@ class PartyBuilder():
             'font_jp': [11, 12, 24], # font size (japanese)
             'stroke_width': 2, # text stroke width
             'base': (600, 720), # base image size
-            'version_pos': (570, 0), # position of the version number
+            'version_pos': (470, 0), # position of the version number
             'party_header': (10, 10), # party header position
             'summon_header': (10, 150), # summon header position
             'weapon_header': (10, 320), # wpn grid header position
@@ -419,7 +419,10 @@ class PartyBuilder():
         print("MC skills:", export['ps'])
         for i in range(len(export['ps'])):
             if export['ps'][i] is not None:
-                d.text((pos[0]+val['sub_skill_text_off'], pos[1]+val['sub_skill_text_off']+val['sub_skill_text_space']*count), export['ps'][i], fill=(255, 255, 255), font=self.font)
+                if len(export['ps'][i]) > 15:
+                    d.text((pos[0]+val['sub_skill_text_off'], pos[1]+val['sub_skill_text_off']+val['sub_skill_text_space']*count), export['ps'][i], fill=(255, 255, 255), font=self.small_font)
+                else:
+                    d.text((pos[0]+val['sub_skill_text_off'], pos[1]+val['sub_skill_text_off']+val['sub_skill_text_space']*count), export['ps'][i], fill=(255, 255, 255), font=self.font)
                 count += 1
 
     def make_extra_summon(self, val, export, img, d, offset): # extra sub summons (only called if detected)
@@ -656,7 +659,7 @@ class PartyBuilder():
             d = ImageDraw.Draw(img, 'RGBA')
 
             # version number
-            d.text(val['version_pos'], self.version, fill=(255, 255, 255, 120), font=self.small_font)
+            d.text(val['version_pos'], "Miza's GBFPIB " + self.version, fill=(255, 255, 255, 100), font=self.small_font)
 
             # party
             self.pasteImage(img, "assets/characters_EN.png", val['party_header'], val['header_size'])
@@ -823,7 +826,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v3.2"
+    ver = "v3.3"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
