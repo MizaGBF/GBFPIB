@@ -351,6 +351,10 @@ class PartyBuilder():
             # level
             self.pasteImage(img, "assets/chara_stat.png", self.addTuple(pos, (0, ssize[1] if i < 5 else esize[1])), (ssize[0] if i < 5 else esize[0], 120))
             d.text(self.addTuple(pos, (12,(ssize[1] if i < 5 else esize[1])+ 18)), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.fonts['small'])
+            # plus
+            if export['sp'][i] > 0:
+                d.text((pos[0]+ssize[0]-210, pos[1]+ssize[1]-120), "+{}".format(export['sp'][i]), fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+            
 
         # stats
         self.pasteImage(img, "assets/chara_stat.png",  self.addTuple(offset, (0, ssize[1]+120)), (ssize[0]*3, 120))
@@ -721,7 +725,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v4.2"
+    ver = "v4.3"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
