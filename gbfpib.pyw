@@ -484,7 +484,6 @@ class PartyBuilder():
             
             if len(export['mods']) > 15: # if more than 15 weapon mods are to be displayed, it uses a smaller size
                 mod_pos = (offset[0]+mh_size[0]+4*sub_size[0]+120+54, 4320-(54//2)-168 * len(export['mods'])-mod_text_off[1])
-                print('x')
             else:
                 mod_pos = (offset[0]+mh_size[0]+4*sub_size[0]+120+27, 4320-(60//2)-210 * len(export['mods'])-mod_text_off[1])
             
