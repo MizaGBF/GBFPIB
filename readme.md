@@ -20,11 +20,12 @@ You are done.
 2. Click the bookmarklet. If nothing happens, everything went well.  
 3. Open `gbfpib.pyw` again.  
 4. This time, click on the `Build Image` button.  
-5. If everything went well, the image should appear beside `gbfpib.pyw` under the name `party.png`.  
+5. If everything went well, the image should appear beside `gbfpib.pyw` under the name `party.png`. Note: if the `Skin` setting is enabled, it will also generate a second image called `skin.png`, where your selected skins will appear instead.  
 6. If it didn't, something went wrong, probably at the step 2.  
 ### Settings  
-1. `Quality`: let you control the output size (default is 720p, up to 8K).  
+1. `Quality`: let you control the output size (default is 8K, minimum is 720p).  
 2. `Disk Caching`: if enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  
+3. `Skin`: if enabled, it will also generate `skin.png`.  
 ### Command Line  
 1. `-fast`: Automatically start the image building process. Be sure to have the party data ready in your clipboard.  
 2. `-nowait`: Skip the 10 seconds waiting time at the end when using `-fast`.  
