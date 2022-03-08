@@ -336,7 +336,7 @@ class PartyBuilder():
         offset = (340, 850)
         sizes = [(543, 944), (532, 400), (547, 310)]
         durls = ["http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/ls/2999999999.jpg","http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/m/2999999999.jpg", "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/summon/m/2999999999.jpg"]
-        surls = ["http://game-a.granbluefantasy.jp/assets_en/img_low/sp/assets/summon/party_main/{}.jpg", "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/party_sub/{}.jpg", "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/summon/m/{}.jpg"]
+        surls = ["http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/party_main/{}.jpg", "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/party_sub/{}.jpg", "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/summon/m/{}.jpg"]
 
         # background setup
         self.pasteImage(imgs, "assets/bg.png", self.addTuple(offset, (-30, -30)), (200+sizes[0][0]+sizes[1][0]*2+sizes[0][0]+96, sizes[0][1]+286))
@@ -362,6 +362,7 @@ class PartyBuilder():
             # main summon skin
             if i == 0 and export['ssm'] is not None:
                 self.dlAndPasteImage(imgs[1:], surls[idx].format(export['ssm']), pos, sizes[idx])
+                self.pasteImage(imgs, "assets/skin.png", self.addTuple(pos, (0, 150)), (153, 171))
             # star
             self.pasteImage(imgs, "assets/star_{}.png".format({3:1, 4:2, 5:3, 6:3, 7:3}.get(export['se'][i], 0)), pos, (132, 132))
             # level
@@ -422,6 +423,7 @@ class PartyBuilder():
             # skin
             if i <= 1 and export['wsm'][i] is not None:
                 self.dlAndPasteImage(imgs[1:], "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/{}.jpg".format(wt, export['wsm'][i]), pos, size)
+                self.pasteImage(imgs, "assets/skin.png", self.addTuple(pos, (size[0]-153, 0)), (153, 171))
             # skill box
             self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+size[1]), (size[0], skill_box_height//2))
             if len(export['waxi'][i]) > 0:
@@ -441,7 +443,7 @@ class PartyBuilder():
                     self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]), (skill_icon_size, skill_icon_size))
             # ax skills
             if len(export['waxt'][i]) > 0:
-                self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), (pos[0], pos[1]), (int(ax_icon_size * (1.5 if i == 0 else 1)), int(ax_icon_size * (1.5 if i == 0 else 1))))
+                self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), pos, (int(ax_icon_size * (1.5 if i == 0 else 1)), int(ax_icon_size * (1.5 if i == 0 else 1))))
                 for j in range(len(export['waxi'][i])):
                     self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/skill/{}.png".format(export['waxi'][i][j]), (pos[0]+ax_separator*j, pos[1]+size[1]+skill_icon_size), (skill_icon_size, skill_icon_size))
                     self.text(ds, (pos[0]+ax_separator*j+skill_icon_size+12, pos[1]+size[1]+skill_icon_size+30), "{}".format(export['wax'][i][0][j]['show_value']).replace('%', '').replace('+', ''), fill=(255, 255, 255), font=self.fonts['small'])
@@ -785,7 +787,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v5.2"
+    ver = "v5.3"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
