@@ -13,6 +13,7 @@ import tkinter as Tk
 import tkinter.ttk as ttk
 from tkinter import messagebox
 import threading
+import concurrent.futures
 import shutil
 
 class PartyBuilder():
@@ -523,6 +524,15 @@ class PartyBuilder():
         for d in ds:
             d.text(*args, **kwargs)
 
+    def saveImage(self, img, filename):
+        try:
+            img.save(filename, "PNG")
+            img.close()
+            print("|--> '{}' has been generated".format(filename))
+            return None
+        except Exception as e:
+            return e
+
     def make(self, fast=False): # main function
         try:
             if not fast:
@@ -587,14 +597,23 @@ class PartyBuilder():
                 print("* Resizing...")
                 for img in imgs:
                     img = img.resize(self.definition)
-            imgs[0].save("party.png", "PNG")
-            imgs[0].close()
-            print("'party.png' has been generated")
+            print("* Saving resulting images...")
             if self.settings.get('skin', True):
-                imgs[1].save("skin.png", "PNG")
-                imgs[1].close()
-                print("'skin.png' has been generated")
-            print("Task completed with success!")
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                    futures = [
+                        executor.submit(self.saveImage, imgs[0], "party.png"),
+                        executor.submit(self.saveImage, imgs[1], "skin.png")
+                    ]
+                    res = []
+                    for future in concurrent.futures.as_completed(futures):
+                        res.append(future.result())
+                    for r in res:
+                        if r is not None: raise Exception() from r
+            else:
+                r = self.saveImage(imgs[0], "party.png")
+                if r is not None:
+                    raise Exception() from r
+            print("* Task completed with success!")
             self.running = False
             return True
         except Exception as e:
@@ -766,7 +785,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v5.1"
+    ver = "v5.2"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
