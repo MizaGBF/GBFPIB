@@ -363,7 +363,7 @@ class PartyBuilder():
             # main summon skin
             if i == 0 and export['ssm'] is not None:
                 self.dlAndPasteImage(imgs[1:], surls[idx].format(export['ssm']), pos, sizes[idx])
-                self.pasteImage(imgs, "assets/skin.png", self.addTuple(pos, (0, 150)), (153, 171))
+                self.pasteImage(imgs[1:], "assets/skin.png", self.addTuple(pos, (0, 150)), (153, 171))
             # star
             self.pasteImage(imgs, "assets/star_{}.png".format({3:1, 4:2, 5:3, 6:3, 7:3}.get(export['se'][i], 0)), pos, (132, 132))
             # level
@@ -789,7 +789,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v5.5"
+    ver = "v5.6"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
