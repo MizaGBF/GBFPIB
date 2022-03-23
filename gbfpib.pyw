@@ -425,7 +425,7 @@ class PartyBuilder():
             if i <= 1 and export['wsm'][i] is not None:
                 if i == 0 or (i == 1 and export['p'] in self.aux_class): # aux class check for 2nd weapon
                     self.dlAndPasteImage(imgs[1:], "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/{}.jpg".format(wt, export['wsm'][i]), pos, size)
-                    self.pasteImage(imgs, "assets/skin.png", self.addTuple(pos, (size[0]-153, 0)), (153, 171))
+                    self.pasteImage(imgs[1:], "assets/skin.png", self.addTuple(pos, (size[0]-153, 0)), (153, 171))
             # skill box
             self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+size[1]), (size[0], skill_box_height//2))
             if len(export['waxi'][i]) > 0:
@@ -789,7 +789,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v5.6"
+    ver = "v5.7"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
