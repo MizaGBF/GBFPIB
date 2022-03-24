@@ -254,7 +254,6 @@ class PartyBuilder():
             poffset = self.addTuple(csize, (-210, -90))
             ssoffset = self.addTuple(pos, (0, 20+csize[1]))
             stoffset = self.addTuple(ssoffset, (6, 6))
-            plsoffset = self.addTuple(ssoffset, (0, -300))
             plsoffset = self.addTuple(ssoffset, (894, 0))
             # background
             self.pasteImage(imgs, "assets/bg.png", self.addTuple(pos, (-30, -30)), (csize[0]*8+80, csize[1]*2+110))
