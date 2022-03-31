@@ -148,6 +148,9 @@ class PartyBuilder():
     def addTuple(self, A:tuple, B:tuple):
         return (A[0]+B[0], A[1]+B[1])
 
+    def subTuple(self, A:tuple, B:tuple):
+        return (A[0]-B[0], A[1]-B[1])
+
     def fixCase(self, terms): # function to fix the case (for wiki search requests)
         terms = terms.split(' ')
         fixeds = []
@@ -245,7 +248,6 @@ class PartyBuilder():
             offset = (30, 20)
             nchara = 12
             csize = (360, 360)
-            poffset = (-210, -90)
             skill_width = 840
             pos = self.addTuple(offset, (60, 0))
             jsize = (108, 90)
@@ -261,7 +263,6 @@ class PartyBuilder():
             offset = (30, 10)
             nchara = 5
             csize = (500, 500)
-            poffset = (0, 0)
             skill_width = 840
             pos = self.addTuple(offset, (skill_width-csize[0], 0))
             jsize = (144, 120)
@@ -370,7 +371,7 @@ class PartyBuilder():
             # main summon skin
             if i == 0 and export['ssm'] is not None:
                 self.dlAndPasteImage(imgs[1:], surls[idx].format(export['ssm']), pos, sizes[idx])
-                self.pasteImage(imgs[1:], "assets/skin.png", self.addTuple(pos, (0, 150)), (153, 171))
+                self.pasteImage(imgs[1:], "assets/skin.png", self.addTuple(pos, (sizes[idx][0]-170, 30)), (153, 171))
             # star
             self.pasteImage(imgs, "assets/star_{}.png".format({3:1, 4:2, 5:3, 6:3, 7:3}.get(export['se'][i], 0)), pos, (132, 132))
             # level
@@ -531,6 +532,106 @@ class PartyBuilder():
                 self.text(ds, (offset[0], offset[1]+mod_text_off[idx][0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.fonts[mod_font[idx]])
                 offset = (offset[0], offset[1]+mod_text_off[idx][1])
 
+    def loadEMP(self, id):
+        try:
+            with open("emp/{}.json".format(id)) as f:
+                return json.load(f)
+        except:
+            return None
+
+    def make_emp(self, ds, imgs, export):
+        offset = (30, 0)
+        eoffset = (30, 30)
+        ersize = (160, 160)
+        roffset = (-20, -20)
+        rsize = (180, 180)
+        if self.babyl:
+            portrait_type = 's'
+            nchara = 12
+            csize = (392, 392)
+            esizes = [(208, 208), (155, 155)]
+            eroffset = (200, 50)
+            bg_size = (imgs[0].size[0] - csize[0] - offset[0], csize[1])
+            poffset = self.addTuple(csize, (-220, -100))
+            pos = self.addTuple(offset, (0, offset[1]-csize[1]))
+        else:
+            portrait_type = 'f'
+            offset = (30, 0)
+            nchara = 5
+            csize = (415, 864)
+            esizes = [(266, 266), (200, 200)]
+            eroffset = (200, 30)
+            bg_size = (imgs[0].size[0] - csize[0] - offset[0], csize[1])
+            poffset = self.addTuple(csize, (-220, -100))
+            pos = self.addTuple(offset, (0, offset[1]-csize[1]))
+
+        # allies
+        for i in range(0, nchara):
+            if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
+            pos = self.addTuple(pos, (0, csize[1])) # set chara position
+            if i >= len(export['c']) or export['c'][i] is None:
+                self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets/npc/{}/3999999999.jpg".format(portrait_type), pos, csize)
+                continue
+            else:
+                print("|--> Ally #{}".format(i+1))
+                # portrait
+                if export['c'][i] in self.nullchar: 
+                    cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['ce'][i])
+                else:
+                    cid = "{}_{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]))
+                self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/{}/{}.jpg".format(portrait_type, cid), pos, csize)
+                # rings
+                if export['cwr'][i] == True:
+                    self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.addTuple(pos, roffset), rsize)
+                # plus
+                if export['cp'][i] > 0:
+                    self.text(ds, self.addTuple(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=12, stroke_fill=(0, 0, 0))
+                self.pasteImage(imgs, "assets/bg_emp.png".format(cid), self.addTuple(pos, (csize[0], 0)), bg_size)
+                # load EMP file
+                data = self.loadEMP(export['c'][i])
+                if data is None: # skip if we can't find EMPs
+                    print("|----> {}.json can't be loaded".format(export['c'][i]))
+                    self.text(ds, self.addTuple(pos, (csize[0]+100, csize[1]//3)), "EMP not set", fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                    continue
+                # main EMP
+                nemp = len(data['emp'])
+                print("|----> {} EMPs".format(nemp))
+                if nemp > 15: # transcended eternal only (for now)
+                    idx = 1
+                    off = ((esizes[0][0] - esizes[1][0]) * 5) // 2
+                    font_size = "medium"
+                else:
+                    idx = 0
+                    off = 0
+                    font_size = "big"
+                for j, emp in enumerate(data['emp']):
+                    if self.babyl:
+                        epos = self.addTuple(pos, (csize[0]+30+esizes[idx][0]*j, 10))
+                    elif j % 5 == 0: # new line
+                        epos = self.addTuple(pos, (csize[0]+30+off, 15+esizes[idx][1]*j//5))
+                    else:
+                        epos = self.addTuple(epos, (esizes[idx][0], 0))
+                    if emp.get('is_lock', False):
+                        self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/zenith/assets/ability/lock.png", epos, esizes[idx])
+                    else:
+                        self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/zenith/assets/ability/{}.png".format(emp['image']), epos, esizes[idx])
+                        if str(emp['current_level']) != "0":
+                            self.text(ds, self.addTuple(epos, eoffset), str(emp['current_level']), fill=(210, 194, 240), font=self.fonts[font_size], stroke_width=12, stroke_fill=(0, 0, 0))
+                        else:
+                            self.pasteImage(imgs, "assets/emp_unused.png", epos, esizes[idx])
+                # ring EMP
+                print("|----> {} Ring EMPs".format(len(data['ring'])))
+                for j, ring in enumerate(data['ring']):
+                    if self.babyl:
+                        epos = self.addTuple(pos, (csize[0]+30+(400+ersize[0])*j, csize[1]-ersize[1]-30))
+                    else:
+                        epos = self.addTuple(pos, (csize[0]+100+off*2+esizes[idx][0]*5, 30+ersize[1]*j))
+                    self.pasteImage(imgs, "assets/{}.png".format(ring['type']['image']), epos, ersize)
+                    if self.babyl:
+                        self.text(ds, self.addTuple(epos, eroffset), ring['param']['disp_total_param'], fill=(255, 255, 95), font=self.fonts['small'], stroke_width=12, stroke_fill=(0, 0, 0))
+                    else:
+                        self.text(ds, self.addTuple(epos, eroffset), ring['type']['name'] + " " + ring['param']['disp_total_param'], fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+
     def text(self, ds, *args, **kwargs):
         for d in ds:
             d.text(*args, **kwargs)
@@ -544,87 +645,21 @@ class PartyBuilder():
         except Exception as e:
             return e
 
+    def clipboardToJSON(self):
+        return json.loads(pyperclip.paste())
+
     def make(self, fast=False): # main function
         try:
             if not fast:
                 print("Instructions:")
-                print("1) Go to the party screen you want to export")
-                print("2) Click your bookmarklet")
+                print("1) Go to the party or EMP screen you want to export")
+                print("2) Click the corresponding bookmarklet")
                 print("3) Come back here and press Return to continue")
                 input()
             self.running = True
-            clipboard = pyperclip.paste() # get clipboard content
-            export = json.loads(clipboard) # get the data from clipboard
-            if self.settings.get('caching', False):
-                self.checkDiskCache()
-            self.quality = {'720p':1/6, '1080p':1/4, '4k':1/2, '8k':1}.get(self.settings.get('quality', '8K').lower(), 1)
-            self.definition = {'720p':(600, 720), '1080p':(900, 1080), '4k':(1800, 2160), '8k':(3600, 4320)}.get(self.settings.get('quality', '8K').lower(), (3600, 4320))
-            print("* Image Quality ratio:", self.quality)
-            print("* Image Definition:", self.definition)
-            self.japanese = (export['lang'] == 'ja')
-            if self.japanese: print("* Japanese detected")
-            else: print("* English detected")
-            self.babyl = (len(export['c']) > 5)
-            if self.babyl: print("* Tower of Babyl Party detectd")
-            self.sandbox = (len(export['w']) > 10 and not isinstance(export['est'][0], str))
-            if self.sandbox: print("* Extra Party Weapon Grid detected")
-
-            if self.prev_lang != self.japanese:
-                print("* Preparing Font...")
-                if self.japanese:
-                    self.fonts['big'] = ImageFont.truetype("assets/font_japanese.ttf", 144, encoding="unic")
-                    self.fonts['medium'] = ImageFont.truetype("assets/font_japanese.ttf", 72, encoding="unic")
-                    self.fonts['small'] = ImageFont.truetype("assets/font_japanese.ttf", 66, encoding="unic")
-                    self.fonts['mini'] = ImageFont.truetype("assets/font_japanese.ttf", 54, encoding="unic")
-                else:
-                    self.fonts['big'] = ImageFont.truetype("assets/font_english.ttf", 180, encoding="unic")
-                    self.fonts['medium'] = ImageFont.truetype("assets/font_english.ttf", 96, encoding="unic")
-                    self.fonts['small'] = ImageFont.truetype("assets/font_english.ttf", 84, encoding="unic")
-                    self.fonts['mini'] = ImageFont.truetype("assets/font_english.ttf", 72, encoding="unic")
-            self.prev_lang = self.japanese
-            
-            print("* Preparing Canvas...")
-            # make image
-            imgs = [Image.new('RGB', (3600, 4320), "black"), Image.new('RGB', (3600, 4320), "black")]
-            for i in imgs:
-                im_a = Image.new("L", i.size, "black")
-                i.putalpha(im_a)
-                im_a.close()
-            ds = [ImageDraw.Draw(imgs[0], 'RGBA'), ImageDraw.Draw(imgs[1], 'RGBA')]
-
-            # version number
-            self.text(ds, (3420, 0), self.version, fill=(150, 150, 150, 60), font=self.fonts['mini'])
-            
-            print("* Drawing Party...")
-            self.make_party(ds, imgs, export)
-            print("* Drawing Summons...")
-            self.make_summon(ds, imgs, export)
-            print("* Drawing Weapons...")
-            self.make_weapon(ds, imgs, export)
-            print("* Drawing Weapon Skill Modifiers...")
-            self.make_modifier(ds, imgs, export)
-
-            if self.quality != 1:
-                print("* Resizing...")
-                for img in imgs:
-                    img = img.resize(self.definition)
-            print("* Saving resulting images...")
-            if self.settings.get('skin', True):
-                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                    futures = [
-                        executor.submit(self.saveImage, imgs[0], "party.png"),
-                        executor.submit(self.saveImage, imgs[1], "skin.png")
-                    ]
-                    res = []
-                    for future in concurrent.futures.as_completed(futures):
-                        res.append(future.result())
-                    for r in res:
-                        if r is not None: raise Exception() from r
-            else:
-                r = self.saveImage(imgs[0], "party.png")
-                if r is not None:
-                    raise Exception() from r
-            print("* Task completed with success!")
+            export = self.clipboardToJSON() # get the data from clipboard
+            if 'emp' in export: self.make_sub_emp(export)
+            else: self.make_sub_party(export)
             self.running = False
             return True
         except Exception as e:
@@ -634,6 +669,93 @@ class PartyBuilder():
             self.running = False
             return False
 
+    def make_canvas(self):
+        i = Image.new('RGB', (3600, 4320), "black")
+        im_a = Image.new("L", i.size, "black")
+        i.putalpha(im_a)
+        im_a.close()
+        return i
+
+    def make_sub_party(self, export):
+        do_emp = self.settings.get('emp', False)
+        do_skin = self.settings.get('skin', True)
+        if self.settings.get('caching', False):
+            self.checkDiskCache()
+        self.quality = {'720p':1/6, '1080p':1/4, '4k':1/2, '8k':1}.get(self.settings.get('quality', '8K').lower(), 1)
+        self.definition = {'720p':(600, 720), '1080p':(900, 1080), '4k':(1800, 2160), '8k':(3600, 4320)}.get(self.settings.get('quality', '8K').lower(), (3600, 4320))
+        print("* Image Quality ratio:", self.quality)
+        print("* Image Definition:", self.definition)
+        self.japanese = (export['lang'] == 'ja')
+        if self.japanese: print("* Japanese detected")
+        else: print("* English detected")
+        self.babyl = (len(export['c']) > 5)
+        if self.babyl: print("* Tower of Babyl Party detectd")
+        self.sandbox = (len(export['w']) > 10 and not isinstance(export['est'][0], str))
+        if self.sandbox: print("* Extra Party Weapon Grid detected")
+
+        if self.prev_lang != self.japanese:
+            print("* Preparing Font...")
+            if self.japanese:
+                self.fonts['big'] = ImageFont.truetype("assets/font_japanese.ttf", 144, encoding="unic")
+                self.fonts['medium'] = ImageFont.truetype("assets/font_japanese.ttf", 72, encoding="unic")
+                self.fonts['small'] = ImageFont.truetype("assets/font_japanese.ttf", 66, encoding="unic")
+                self.fonts['mini'] = ImageFont.truetype("assets/font_japanese.ttf", 54, encoding="unic")
+            else:
+                self.fonts['big'] = ImageFont.truetype("assets/font_english.ttf", 180, encoding="unic")
+                self.fonts['medium'] = ImageFont.truetype("assets/font_english.ttf", 96, encoding="unic")
+                self.fonts['small'] = ImageFont.truetype("assets/font_english.ttf", 84, encoding="unic")
+                self.fonts['mini'] = ImageFont.truetype("assets/font_english.ttf", 72, encoding="unic")
+        self.prev_lang = self.japanese
+        
+        print("* Preparing Canvas...")
+        # make image
+        imgs = [self.make_canvas(), self.make_canvas()]
+        ds = [ImageDraw.Draw(imgs[0], 'RGBA'), ImageDraw.Draw(imgs[1], 'RGBA')]
+
+        # version number
+        self.text(ds, (3420, 0), self.version, fill=(150, 150, 150, 60), font=self.fonts['mini'])
+        
+        print("* Drawing Party...")
+        self.make_party(ds, imgs, export)
+        print("* Drawing Summons...")
+        self.make_summon(ds, imgs, export)
+        print("* Drawing Weapons...")
+        self.make_weapon(ds, imgs, export)
+        print("* Drawing Weapon Skill Modifiers...")
+        self.make_modifier(ds, imgs, export)
+        if do_emp:
+            print("* Drawing EMPs...")
+            i = self.make_canvas()
+            d = ImageDraw.Draw(i, 'RGBA')
+            self.make_emp([d], [i], export)
+            imgs.append(i)
+
+        if self.quality != 1:
+            print("* Resizing...")
+            for i, img in enumerate(imgs):
+                tmp = img.resize(self.definition)
+                img.close()
+                imgs[i] = tmp
+        print("* Saving resulting images...")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [executor.submit(self.saveImage, imgs[0], "party.png")]
+            if do_skin: futures.append(executor.submit(self.saveImage, imgs[1], "skin.png"))
+            if do_emp and len(imgs) > 2: futures.append(executor.submit(self.saveImage, imgs[2], "emp.png"))
+            res = []
+            for future in concurrent.futures.as_completed(futures):
+                res.append(future.result())
+            for r in res:
+                if r is not None: raise r
+        print("* Task completed with success!")
+
+    def make_sub_emp(self, export):
+        if 'emp' not in export or 'id' not in export or 'ring' not in export: raise Exception("Invalid EMP data, check your bookmark")
+        print("* Saving EMP for Character", export['id'], "...")
+        self.checkEMP()
+        with open('emp/{}.json'.format(export['id']), 'w') as outfile:
+            json.dump(export, outfile)
+        print("* Task completed with success!")
+
     def settings_menu(self):
         while True:
             print("")
@@ -641,7 +763,9 @@ class PartyBuilder():
             print("[0] Change quality ( Current:", self.settings.get('quality', '720p'),")")
             print("[1] Enable Disk Caching ( Current:", self.settings.get('caching', False),")")
             print("[2] Generate skin.png ( Current:", self.settings.get('skin', True),")")
-            print("[3] Empty Cache")
+            print("[3] Generate emp.png ( Current:", self.settings.get('emp', False),")")
+            print("[4] Empty Cache")
+            print("[5] Empty EMP")
             print("[Any] Back")
             s = input()
             if s == "0":
@@ -652,40 +776,61 @@ class PartyBuilder():
             elif s == "2":
                 self.settings['skin'] = not self.settings.get('skin', False)
             elif s == "3":
+                self.settings['emp'] = not self.settings.get('emp', False)
+            elif s == "4":
+                self.emptyCache()
+            elif s == "5":
                 self.emptyCache()
             else:
                 return
+
+    def checkEMP(self): # check if emp folder exists (and create it if needed)
+        if not os.path.isdir('emp'):
+            os.mkdir('emp')
+
+    def emptyEMP(self): # delete the emp folder
+        try:
+            shutil.rmtree('emp')
+            print("Deleted the emp folder")
+        except:
+            print("Failed to delete the emp folder")
 
     def checkDiskCache(self): # check if cache folder exists (and create it if needed)
         if not os.path.isdir('cache'):
             os.mkdir('cache')
 
-    def emptyCache(self): # delete the cache  folder
+    def emptyCache(self): # delete the cache folder
         try:
             shutil.rmtree('cache')
             print("Deleted the cache folder")
         except:
             print("Failed to delete the cache folder")
 
-    def cpyBookmark(self):
-        # check bookmarklet.txt for a more readable version
+    def cpyPartyBookmark(self):
+        # check bookmarklet_party.txt for a more readable version
         # note: when updating it in this piece of code, you need to double the \
         pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#party/index/\")&&!window.location.hash.startsWith(\"#party/expectancy_damage/index\")&&!window.location.hash.startsWith(\"#tower/party/index/\")&&!(window.location.hash.startsWith(\"#event/sequenceraid\") && window.location.hash.indexOf(\"/party/index/\") > 0)&&!window.location.hash.startsWith(\"#tower/party/expectancy_damage/index/\")){alert('Please go to a GBF Party screen');return}let obj={lang:window.Game.lang,p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],c:[],ce:[],ci:[],cn:[],cl:[],cs:[],cp:[],cwr:[],cpl:window.Game.view.deck_model.attributes.deck.pc.shield_id,s:[],sl:[],ss:[],se:[],sp:[],ssm:window.Game.view.deck_model.attributes.deck.pc.skin_summon_id,w:[],wsm:[window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id, window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id_2],wl:[],wsn:[],wll:[],wp:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage],mods:window.Game.view.deck_model.attributes.deck.pc.damage_info.effect_value_info,sps:(window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name?window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name:null),spsid:(Game.view.expectancyDamageData?(Game.view.expectancyDamageData.summonId?Game.view.expectancyDamageData.summonId:null):null)};try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.sub_summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}())")
+
+    def cpyEMPBookmark(self):
+        # check bookmarklet_emp.txt for a more readable version
+        # note: when updating it in this piece of code, you need to double the \
+        pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#zenith/npc\")){alert('Please go to a GBF EMP screen');return}let obj={lang:window.Game.lang,id:parseInt(window.Game.view.npcId,10),emp:window.Game.view.bonusListModel.attributes.bonus_list,ring:window.Game.view.npcaugmentData.param_data};let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}())")
 
     def run(self): # old command line menu
         while True:
             try:
                 print("")
                 print("Main Menu:")
-                print("[0] Generate Image")
-                print("[1] Get Bookmarklet")
-                print("[2] Change settings")
+                print("[0] Run")
+                print("[1] Get Party Bookmarklet")
+                print("[2] Get EMP Bookmarklet")
+                print("[3] Change settings")
                 print("[Any] Exit")
                 s = input()
                 if s == "0":
                     self.make()
                 elif s == "1":
-                    self.cpyBookmark()
+                    self.cpyPartyBookmark()
                     print("Bookmarklet copied!")
                     print("To setup on chrome:")
                     print("1) Make a new bookmark (of GBF for example)")
@@ -693,6 +838,14 @@ class PartyBuilder():
                     print("3) Change the name if you want")
                     print("4) Paste the code in the url field")
                 elif s == "2":
+                    self.cpyEMPBookmark()
+                    print("Bookmarklet copied!")
+                    print("To setup on chrome:")
+                    print("1) Make a new bookmark (of GBF for example)")
+                    print("2) Right-click and edit")
+                    print("3) Change the name if you want")
+                    print("4) Paste the code in the url field")
+                elif s == "3":
                     self.settings_menu()
                     self.save()
                 else:
@@ -719,9 +872,10 @@ class Interface(Tk.Tk): # interface
         tabs.grid(row=1, column=0, rowspan=2, sticky="we")
         tabcontent = Tk.Frame(tabs)
         tabs.add(tabcontent, text="Run")
-        self.button = Tk.Button(tabcontent, text="Build Image", command=self.build)
-        self.button.grid(row=0, column=0, sticky="we")
-        Tk.Button(tabcontent, text="Get Bookmarklet", command=self.bookmark).grid(row=1, column=0, sticky="we")
+        Tk.Button(tabcontent, text="Build Images", command=self.build).grid(row=0, column=0, sticky="we")
+        Tk.Button(tabcontent, text="Add EMP", command=self.add_emp).grid(row=1, column=0, sticky="we")
+        Tk.Button(tabcontent, text="Party Bookmark", command=self.partybookmark).grid(row=2, column=0, sticky="we")
+        Tk.Button(tabcontent, text="EMP Bookmark", command=self.empbookmark).grid(row=3, column=0, sticky="we")
         
         # setting part
         tabs = ttk.Notebook(self)
@@ -739,8 +893,11 @@ class Interface(Tk.Tk): # interface
         Tk.Label(tabcontent, text="Caching").grid(row=1, column=0)
         Tk.Checkbutton(tabcontent, variable=self.cache_var, command=self.toggleCaching).grid(row=1, column=1)
         self.skin_var = Tk.IntVar(value=self.pb.settings.get('skin', True))
-        Tk.Label(tabcontent, text="Skin").grid(row=2, column=0)
+        Tk.Label(tabcontent, text="Do Skins").grid(row=2, column=0)
         Tk.Checkbutton(tabcontent, variable=self.skin_var, command=self.toggleSkin).grid(row=2, column=1)
+        self.emp_var = Tk.IntVar(value=self.pb.settings.get('emp', False))
+        Tk.Label(tabcontent, text="Do EMP").grid(row=3, column=0)
+        Tk.Checkbutton(tabcontent, variable=self.emp_var, command=self.toggleEMP).grid(row=3, column=1)
         
         # other
         self.status = Tk.Label(self, text="Starting")
@@ -775,15 +932,27 @@ class Interface(Tk.Tk): # interface
         self.thread.start()
 
     def buildThread(self):
-        if self.pb.make(fast=True):
-            self.events.append(("Info", "Process completed with success"))
-        else:
-            self.events.append(("Error", "An error occured, did you press the bookmark before starting?"))
+        try:
+            self.pb.make_sub_party(self.pb.clipboardToJSON())
+            self.events.append(("Info", "Image(s) generated with success"))
+        except:
+            self.events.append(("Error", "An error occured, did you press the Party bookmark before starting?"))
         self.thread = None
 
-    def bookmark(self):
-        self.pb.cpyBookmark()
-        messagebox.showinfo("Info", "Bookmarklet copied!\nTo setup on chrome:\n1) Make a new bookmark (of GBF for example)\n2) Right-click and edit\n3) Change the name if you want\n4) Paste the code in the url field")
+    def add_emp(self):
+        try:
+            self.pb.make_sub_emp(self.pb.clipboardToJSON())
+            self.events.append(("Info", "EMP saved with success"))
+        except:
+            self.events.append(("Error", "An error occured, did you press the EMP bookmark before starting?"))
+
+    def partybookmark(self):
+        self.pb.cpyPartyBookmark()
+        messagebox.showinfo("Info", "Party Bookmarklet copied!\nTo setup on chrome:\n1) Make a new bookmark (of GBF for example)\n2) Right-click and edit\n3) Change the name if you want\n4) Paste the code in the url field")
+
+    def empbookmark(self):
+        self.pb.cpyEMPBookmark()
+        messagebox.showinfo("Info", "EMP Bookmarklet copied!\nTo setup on chrome:\n1) Make a new bookmark (of GBF for example)\n2) Right-click and edit\n3) Change the name if you want\n4) Paste the code in the url field")
 
     def qual_changed(self, *args):
         self.pb.settings['quality'] = args[0]
@@ -794,9 +963,12 @@ class Interface(Tk.Tk): # interface
     def toggleSkin(self):
         self.pb.settings['skin'] = (self.skin_var.get() != 0)
 
+    def toggleEMP(self):
+        self.pb.settings['emp'] = (self.emp_var.get() != 0)
+
 # entry point
 if __name__ == "__main__":
-    ver = "v5.8"
+    ver = "v6.0"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
