@@ -38,16 +38,20 @@ If some of those images are updated in game, all you need is to delete the cache
 You can also delete it if it gets too big.  
 ### EMP  
 The setup for Characters Extended Mastery Perks is similar to the initial one:
-2. Double click on `gbfpib.pyw`.  
-3. Click on the `EMP Bookmark` button. A javascript code will be copied to your clipboard.  
-4. On the Chrome (or equivalent) browser you are using, make a new bookmark.  
-5. Right click that bookmark, select `edit`.  
-6. Paste the javascript code into the url field.  
-7. Change the bookmark name if you want to.  
+1. Double click on `gbfpib.pyw`.  
+2. Click on the `EMP Bookmark` button. A javascript code will be copied to your clipboard.  
+3. On the Chrome (or equivalent) browser you are using, make a new bookmark.  
+4. Right click that bookmark, select `edit`.  
+5. Paste the javascript code into the url field.  
+6. Change the bookmark name if you want to.  
+  
 Then, to set a Character, go to its EMP page, click the bookmark and then, in `gbfpib.pyw`, click `Add EMP`.  
 The details will be saved in a .json file, in the `emp` folder.  
 If you change this Character EMP setup, just repeat the process to update it.  
-Make sure the `Do EMP` setting is enabled or `emp.png` won't be generated.  
+Also,make sure:
+1. The `Do EMP` setting is enabled or `emp.png` won't be generated.  
+2. Your game language setting is set to the one you usually use. EMP saved as japanese won't work for an english party image and vice versa.  
+  
 ### Support Summon  
 By default, the game doesn't provide you the ID of the support summon set in your damage calculator.  
 There are a few ways to go around this issue:  

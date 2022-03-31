@@ -54,6 +54,18 @@ class PartyBuilder():
             5:"光",
             6:"闇"
         }
+        self.color_awakening = { # color for awakening string
+            "Balanced" : (211, 193, 148),
+            "Attack" : (255, 121, 90),
+            "Defense" : (133, 233, 245),
+            "Multiattack" : (255, 255, 95)
+        }
+        self.color_awakening_jp = { # color for awakening string
+            "バランス" : (211, 193, 148),
+            "攻撃" : (255, 121, 90),
+            "防御" : (133, 233, 245),
+            "連続攻撃" : (255, 255, 95)
+        }
         self.classes = { # class prefix (gotta add them manually, sadly)
             10: 'sw',
             11: 'sw',
@@ -157,16 +169,9 @@ class PartyBuilder():
         for term in terms:
             fixed = ""
             up = False
-            if term.lower() == "and": # if it's just 'and', we don't don't fix anything and return a lowercase 'and'
-                return "and"
-            elif term.lower() == "of":
-                return "of"
-            elif term.lower() == "(sr)":
-                return "(SR)"
-            elif term.lower() == "(ssr)":
-                return "(SSR)"
-            elif term.lower() == "(r)":
-                return "(R)"
+            special = {"and":"and", "of":"of", "de":"de", "for":"for", "the":"the", "(sr)":"(SR)", "(ssr)":"(SSR)", "(r)":"(R)"} # case where we don't don't fix anything and return it
+            if term.lower() in special:
+                return special[term.lower()]
             for i in range(0, len(term)): # for each character
                 if term[i].isalpha(): # if letter
                     if term[i].isupper(): # is uppercase
@@ -194,7 +199,7 @@ class PartyBuilder():
     def get_support_summon(self, sps): # search on gbf.wiki to match a summon name to its id
         try:
             if sps in self.sumcache: return self.sumcache[sps]
-            req = request.Request("https://gbf.wiki/" + self.fixCase(sps))
+            req = request.Request("https://gbf.wiki/" + quote(self.fixCase(sps)))
             url_handle = request.urlopen(req)
             data = url_handle.read().decode('utf-8')
             url_handle.close()
@@ -205,8 +210,7 @@ class PartyBuilder():
             group = self.supp_summon_re[0].findall(data)
             self.sumcache[sps] = group[0]
             return group[0]
-        except Exception as e:
-            print(e)
+        except:
             if "(summon)" not in sps.lower():
                 return self.get_support_summon(sps + ' (Summon)')
             else:
@@ -534,7 +538,7 @@ class PartyBuilder():
 
     def loadEMP(self, id):
         try:
-            with open("emp/{}.json".format(id)) as f:
+            with open("emp/{}.json".format(id), mode="r", encoding="utf-8") as f:
                 return json.load(f)
         except:
             return None
@@ -589,7 +593,7 @@ class PartyBuilder():
                 self.pasteImage(imgs, "assets/bg_emp.png".format(cid), self.addTuple(pos, (csize[0], 0)), bg_size)
                 # load EMP file
                 data = self.loadEMP(export['c'][i])
-                if data is None: # skip if we can't find EMPs
+                if data is None or self.japanese != (data['lang'] == 'ja'): # skip if we can't find EMPs OR if the language doesn't match
                     print("|----> {}.json can't be loaded".format(export['c'][i]))
                     self.text(ds, self.addTuple(pos, (csize[0]+100, csize[1]//3)), "EMP not set", fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                     continue
@@ -635,7 +639,10 @@ class PartyBuilder():
                     # awakening
                     if data.get('awakening', None) is not None:
                         print("|----> Awakening", data['awakening'].split('lv')[-1], data['awaktype'])
-                        self.text(ds, (imgs[0].size[0] - 800, pos[1]+40), data['awaktype'] + " Lv" + data['awakening'].split('lv')[-1], fill=(170, 120, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                        if self.japanese:
+                            self.text(ds, (imgs[0].size[0] - 800, pos[1]+40), data['awaktype'] + "Lv" + data['awakening'].split('lv')[-1], fill=self.color_awakening_jp[data['awaktype']], font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                        else:
+                            self.text(ds, (imgs[0].size[0] - 800, pos[1]+40), data['awaktype'] + " Lv" + data['awakening'].split('lv')[-1], fill=self.color_awakening[data['awaktype']], font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                     else:
                         print("|----> Awakening not set! Consider updating.")
                     # domain
@@ -644,7 +651,10 @@ class PartyBuilder():
                             dlv = 0
                             for d in data['domain']:
                                 if d[2] is not None: dlv += 1
-                            self.text(ds, (imgs[0].size[0] - 800, pos[1]+150),"Domain Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                            if self.japanese:
+                                self.text(ds, (imgs[0].size[0] - 800, pos[1]+150),"至賢Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                            else:
+                                self.text(ds, (imgs[0].size[0] - 800, pos[1]+150),"Domain Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                     else:
                         print("|----> Domain not set! Consider updating.")
 
@@ -768,7 +778,7 @@ class PartyBuilder():
         if 'emp' not in export or 'id' not in export or 'ring' not in export: raise Exception("Invalid EMP data, check your bookmark")
         print("* Saving EMP for Character", export['id'], "...")
         self.checkEMP()
-        with open('emp/{}.json'.format(export['id']), 'w') as outfile:
+        with open('emp/{}.json'.format(export['id']), mode='w', encoding="utf-8") as outfile:
             json.dump(export, outfile)
         print("* Task completed with success!")
 
@@ -984,7 +994,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v6.1"
+    ver = "v6.2"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
