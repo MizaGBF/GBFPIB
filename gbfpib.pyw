@@ -631,6 +631,22 @@ class PartyBuilder():
                         self.text(ds, self.addTuple(epos, eroffset), ring['param']['disp_total_param'], fill=(255, 255, 95), font=self.fonts['small'], stroke_width=12, stroke_fill=(0, 0, 0))
                     else:
                         self.text(ds, self.addTuple(epos, eroffset), ring['type']['name'] + " " + ring['param']['disp_total_param'], fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                if not self.babyl:
+                    # awakening
+                    if data.get('awakening', None) is not None:
+                        print("|----> Awakening", data['awakening'].split('lv')[-1], data['awaktype'])
+                        self.text(ds, (imgs[0].size[0] - 800, pos[1]+40), data['awaktype'] + " Lv" + data['awakening'].split('lv')[-1], fill=(170, 120, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                    else:
+                        print("|----> Awakening not set! Consider updating.")
+                    # domain
+                    if data.get('domain', None) is not None:
+                        if len(data['domain']) > 0:
+                            dlv = 0
+                            for d in data['domain']:
+                                if d[2] is not None: dlv += 1
+                            self.text(ds, (imgs[0].size[0] - 800, pos[1]+150),"Domain Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                    else:
+                        print("|----> Domain not set! Consider updating.")
 
     def text(self, ds, *args, **kwargs):
         for d in ds:
@@ -814,7 +830,7 @@ class PartyBuilder():
     def cpyEMPBookmark(self):
         # check bookmarklet_emp.txt for a more readable version
         # note: when updating it in this piece of code, you need to double the \
-        pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#zenith/npc\")){alert('Please go to a GBF EMP screen');return}let obj={lang:window.Game.lang,id:parseInt(window.Game.view.npcId,10),emp:window.Game.view.bonusListModel.attributes.bonus_list,ring:window.Game.view.npcaugmentData.param_data};let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}())")
+        pyperclip.copy("javascript:(function(){if(!window.location.hash.startsWith(\"#zenith/npc\")){alert('Please go to a GBF EMP screen');return}let obj={lang:window.Game.lang,id:parseInt(window.Game.view.npcId,10),emp:window.Game.view.bonusListModel.attributes.bonus_list,ring:window.Game.view.npcaugmentData.param_data,awakening:null,awaktype:null,domain:[]};try{obj.awakening=document.getElementsByClassName(\"prt-current-awakening-lv\")[0].firstChild.className;obj.awaktype=document.getElementsByClassName(\"prt-arousal-form-info\")[0].children[1].textContent;domains = document.getElementById(\"prt-domain-evoker-list\").getElementsByClassName(\"prt-bonus-detail\");for(let i=0;i<domains.length;++i){obj.domain.push([domains[i].children[0].className, domains[i].children[1].textContent, domains[i].children[2]?domains[i].children[2].textContent:null]);}}catch(error){};let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}())")
 
     def run(self): # old command line menu
         while True:
@@ -968,7 +984,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v6.0"
+    ver = "v6.1"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
