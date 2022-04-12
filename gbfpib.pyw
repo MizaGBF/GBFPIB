@@ -423,6 +423,9 @@ class PartyBuilder():
                 y = (i-1) // 3
                 size = sub_size
                 pos = (offset[0]+bsize[0]+60+size[0]*x, offset[1]+(size[1]+skill_box_height)*y)
+            # dual blade class
+            if i <= 1 and export['p'] in self.aux_class:
+                self.pasteImage(imgs, ("assets/mh_dual.png" if i == 0 else "assets/aux_dual.png"), self.addTuple(pos, (-5, -5)), self.addTuple(size, (10, 10+skill_box_height)))
             # portrait
             if export['w'][i] is None or export['wl'][i] is None:
                 if i >= 10:
@@ -620,7 +623,7 @@ class PartyBuilder():
                     else:
                         self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/zenith/assets/ability/{}.png".format(emp['image']), epos, esizes[idx])
                         if str(emp['current_level']) != "0":
-                            self.text(ds, self.addTuple(epos, eoffset), str(emp['current_level']), fill=(210, 194, 240), font=self.fonts[font_size], stroke_width=12, stroke_fill=(0, 0, 0))
+                            self.text(ds, self.addTuple(epos, eoffset), str(emp['current_level']), fill=(235, 227, 250), font=self.fonts[font_size], stroke_width=12, stroke_fill=(0, 0, 0))
                         else:
                             self.pasteImage(imgs, "assets/emp_unused.png", epos, esizes[idx])
                 # ring EMP
@@ -994,7 +997,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v6.2"
+    ver = "v6.3"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
