@@ -129,7 +129,7 @@ class PartyBuilder():
             file = file.replace('_EN', '')
         buffers = [Image.open(file)]
         buffers.append(buffers[-1].convert('RGBA'))
-        if resize is not None: buffers.append(buffers[-1].resize(resize, Image.LANCZOS))
+        if resize is not None: buffers.append(buffers[-1].resize(resize, Image.Resampling.LANCZOS))
         if not transparency:
             for img in imgs:
                 img.paste(buffers[-1], offset, buffers[-1])
@@ -588,7 +588,7 @@ class PartyBuilder():
         try:
             print("[EMP] * Drawing Extended Masteries...")
             offset = (30, 0)
-            eoffset = (30, 30)
+            eoffset = (30, 20)
             ersize = (160, 160)
             roffset = (-20, -20)
             rsize = (180, 180)
@@ -646,11 +646,9 @@ class PartyBuilder():
                     if nemp > 15: # transcended eternal only (for now)
                         idx = 1
                         off = ((esizes[0][0] - esizes[1][0]) * 5) // 2
-                        font_size = "medium"
                     else:
                         idx = 0
                         off = 0
-                        font_size = "big"
                     for j, emp in enumerate(data['emp']):
                         if self.babyl:
                             epos = self.addTuple(pos, (csize[0]+30+esizes[idx][0]*j, 10))
@@ -663,7 +661,7 @@ class PartyBuilder():
                         else:
                             self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/zenith/assets/ability/{}.png".format(emp['image']), epos, esizes[idx])
                             if str(emp['current_level']) != "0":
-                                self.text(imgs, self.addTuple(epos, eoffset), str(emp['current_level']), fill=(235, 227, 250), font=self.fonts[font_size], stroke_width=12, stroke_fill=(0, 0, 0))
+                                self.text(imgs, self.addTuple(epos, eoffset), str(emp['current_level']), fill=(235, 227, 250), font=self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0))
                             else:
                                 self.pasteImage(imgs, "assets/emp_unused.png", epos, esizes[idx], transparency=True)
                     # ring EMP
@@ -706,8 +704,7 @@ class PartyBuilder():
 
     def text(self, imgs, *args, **kwargs):
         for img in imgs:
-            d = ImageDraw.Draw(img, 'RGBA')
-            d.text(*args, **kwargs)
+            ImageDraw.Draw(img, 'RGBA').text(*args, **kwargs)
 
     def saveImage(self, img, filename):
         try:
@@ -1061,7 +1058,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.1"
+    ver = "v7.2"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
