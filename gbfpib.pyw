@@ -137,7 +137,9 @@ class PartyBuilder():
             layer = self.dummy_layer.copy()
             layer.paste(buffers[-1], offset, buffers[-1])
             for i in range(len(imgs)):
-                imgs[i] = Image.alpha_composite(imgs[i], layer)
+                tmp = Image.alpha_composite(imgs[i], layer)
+                imgs[i].close()
+                imgs[i] = tmp
             layer.close()
         for buf in buffers: buf.close()
         del buffers
@@ -263,7 +265,7 @@ class PartyBuilder():
 
     def make_party(self, imgs, export):
         try:
-            print("Party Thread * Drawing Party...")
+            print("[CHA] * Drawing Party...")
             # version number
             self.text(imgs, (3420, 0), self.version, fill=(150, 150, 150, 60), font=self.fonts['mini'])
             if self.babyl:
@@ -300,8 +302,8 @@ class PartyBuilder():
                 self.pasteImage(imgs, "assets/bg.png", self.addTuple(pos, (-30, -20)), (50+csize[0]*6+60, csize[1]+350), transparency=True)
             
             # mc
-            print("Party Thread |--> MC Skin:", export['pcjs'])
-            print("Party Thread |--> MC Job:", export['p'])
+            print("[CHA] |--> MC Skin:", export['pcjs'])
+            print("[CHA] |--> MC Job:", export['p'])
             # class
             self.dlAndPasteImage(imgs[:1], "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/s/{}.jpg".format(self.get_mc_job_look(export['pcjs'], export['p'])), pos, csize)
             # skin
@@ -323,7 +325,7 @@ class PartyBuilder():
                     self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize)
                     continue
                 else:
-                    print("Party Thread |--> Ally #{}:".format(i+1), export['c'][i], export['cn'][i], "Lv {}".format(export['cl'][i]), "+{}".format(export['cp'][i]), "Has Ring" if export['cwr'][i] else "No Ring")
+                    print("[CHA] |--> Ally #{}:".format(i+1), export['c'][i], export['cn'][i], "Lv {}".format(export['cl'][i]), "+{}".format(export['cp'][i]), "Has Ring" if export['cwr'][i] else "No Ring")
                     # portrait
                     if export['c'][i] in self.nullchar: 
                         cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['ce'][i])
@@ -353,12 +355,12 @@ class PartyBuilder():
             count = 0
             for i in range(len(export['ps'])):
                 if export['ps'][i] is not None:
-                    print("Party Thread |--> MC Skill #{}:".format(i), export['ps'][i])
+                    print("[CHA] |--> MC Skill #{}:".format(i), export['ps'][i])
                     self.text(imgs, self.addTuple(stoffset, (0, 96*count)), export['ps'][i], fill=(255, 255, 255), font=self.fonts['small'] if (len(export['ps'][i]) > 15) else self.fonts['medium'])
                     count += 1
             # paladin shield
             if export['cpl'] is not None:
-                print("Party Thread |--> Paladin shield:".format(i), export['cpl'])
+                print("[CHA] |--> Paladin shield:".format(i), export['cpl'])
                 self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/shield/s/{}.jpg".format(export['cpl']), plsoffset, (300, 300))
             elif self.babyl: # to fill the blank space
                 self.pasteImage(imgs, "assets/characters_EN.png", self.addTuple(ssoffset, (skill_width, 0)), (552, 150), transparency=True)
@@ -368,7 +370,7 @@ class PartyBuilder():
 
     def make_summon(self, imgs, export):
         try:
-            print("Summon Thread * Drawing Summons...")
+            print("[SUM] * Drawing Summons...")
             offset = (340, 850)
             sizes = [(543, 944), (532, 400), (547, 310)]
             durls = ["http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/ls/2999999999.jpg","http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/m/2999999999.jpg", "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/summon/m/2999999999.jpg"]
@@ -393,7 +395,7 @@ class PartyBuilder():
                     self.dlAndPasteImage(imgs, durls[idx], pos, sizes[idx])
                     continue
                 else:
-                    print("Summon Thread |--> Summon #{}:".format(i+1), export['ss'][i], "Uncap Lv{}".format(export['se'][i]), "Lv{}".format(export['sl'][i]))
+                    print("[SUM] |--> Summon #{}:".format(i+1), export['ss'][i], "Uncap Lv{}".format(export['se'][i]), "Lv{}".format(export['sl'][i]))
                     self.dlAndPasteImage(imgs, surls[idx].format(export['ss'][i]), pos, sizes[idx])
                 # main summon skin
                 if i == 0 and export['ssm'] is not None:
@@ -421,7 +423,7 @@ class PartyBuilder():
 
     def make_weapon(self, imgs, export):
         try:
-            print("Weapon Thread * Drawing Weapons...")
+            print("[WPN] * Drawing Weapons...")
             if self.sandbox: offset = (50, 2100)
             else: offset = (340, 2100)
             skill_box_height = 288
@@ -462,7 +464,7 @@ class PartyBuilder():
                         self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), pos, size)
                     continue
                 else:
-                    print("Weapon Thread |--> Weapon #{}".format(i), str(export['w'][i])+"00")
+                    print("[WPN] |--> Weapon #{}".format(i), str(export['w'][i])+"00")
                     self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/{}00.jpg".format(wt, export['w'][i]), pos, size)
                 # skin
                 if i <= 1 and export['wsm'][i] is not None:
@@ -512,14 +514,14 @@ class PartyBuilder():
                 else:
                     supp = self.get_support_summon(export['sps'])
                 if supp is None:
-                    print("Weapon Thread |--> Support summon is", export['sps'], "(Note: searching its ID on gbf.wiki failed)")
+                    print("[WPN] |--> Support summon is", export['sps'], "(Note: searching its ID on gbf.wiki failed)")
                     self.pasteImage(imgs, "assets/big_stat.png", (pos[0]-bsize[0]-30, 330), (bsize[0], 300), transparency=True)
                     self.text(imgs, (pos[0]-bsize[0]-30+30 , pos[1]+18*2), ("サポーター" if self.japanese else "Support"), fill=(255, 255, 255), font=self.fonts['medium'])
                     if len(export['sps']) > 10: supp = export['sps'][:10] + "..."
                     else: supp = export['sps']
                     self.text(imgs, (pos[0]-bsize[0]-30+30 , pos[1]+18*2+120), supp, fill=(255, 255, 255), font=self.fonts['medium'])
                 else:
-                    print("Weapon Thread |--> Support summon ID is", supp)
+                    print("[WPN] |--> Support summon ID is", supp)
                     self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/summon/m/{}.jpg".format(supp), (pos[0]-bsize[0]-30+18, pos[1]), (522, 300))
             # weapon grid stats
             est_width = ((size[0]*3)//2)
@@ -544,14 +546,14 @@ class PartyBuilder():
 
     def make_modifier(self, imgs, export):
         try:
-            print("Modifier Thread * Drawing Modifiers...")
+            print("[MOD] * Drawing Modifiers...")
             if self.babyl:
                 offset = (3120, 20)
                 limit = (25, 20)
             else:
                 offset = (3120, 830)
                 limit = (21, 16)
-            print("Modifier Thread |--> Found", len(export['mods']), "modifier(s)...")
+            print("[MOD] |--> Found", len(export['mods']), "modifier(s)...")
             # weapon modifiers
             if len(export['mods']) > 0:
                 mod_font = ['mini', 'small', 'medium']
@@ -584,7 +586,7 @@ class PartyBuilder():
 
     def make_emp(self, imgs, export):
         try:
-            print("EMP Thread * Drawing Extended Masteries...")
+            print("[EMP] * Drawing Extended Masteries...")
             offset = (30, 0)
             eoffset = (30, 30)
             ersize = (160, 160)
@@ -618,7 +620,7 @@ class PartyBuilder():
                     self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets/npc/{}/3999999999.jpg".format(portrait_type), pos, csize)
                     continue
                 else:
-                    print("EMP Thread |--> Ally #{}".format(i+1))
+                    print("[EMP] |--> Ally #{}".format(i+1))
                     # portrait
                     if export['c'][i] in self.nullchar: 
                         cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['ce'][i])
@@ -635,12 +637,12 @@ class PartyBuilder():
                     # load EMP file
                     data = self.loadEMP(export['c'][i])
                     if data is None or self.japanese != (data['lang'] == 'ja'): # skip if we can't find EMPs OR if the language doesn't match
-                        print("EMP Thread |----> {}.json can't be loaded".format(export['c'][i]))
+                        print("[EMP] |----> {}.json can't be loaded".format(export['c'][i]))
                         self.text(imgs, self.addTuple(pos, (csize[0]+100, csize[1]//3)), "EMP not set", fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                         continue
                     # main EMP
                     nemp = len(data['emp'])
-                    print("EMP Thread |----> {} EMPs".format(nemp))
+                    print("[EMP] |----> {} EMPs".format(nemp))
                     if nemp > 15: # transcended eternal only (for now)
                         idx = 1
                         off = ((esizes[0][0] - esizes[1][0]) * 5) // 2
@@ -665,7 +667,7 @@ class PartyBuilder():
                             else:
                                 self.pasteImage(imgs, "assets/emp_unused.png", epos, esizes[idx], transparency=True)
                     # ring EMP
-                    print("EMP Thread |----> {} Ring EMPs".format(len(data['ring'])))
+                    print("[EMP] |----> {} Ring EMPs".format(len(data['ring'])))
                     for j, ring in enumerate(data['ring']):
                         if self.babyl:
                             epos = self.addTuple(pos, (csize[0]+30+(400+ersize[0])*j, csize[1]-ersize[1]-30))
@@ -679,13 +681,13 @@ class PartyBuilder():
                     if not self.babyl:
                         # awakening
                         if data.get('awakening', None) is not None:
-                            print("EMP Thread |----> Awakening", data['awakening'].split('lv')[-1], data['awaktype'])
+                            print("[EMP] |----> Awakening", data['awakening'].split('lv')[-1], data['awaktype'])
                             if self.japanese:
                                 self.text(imgs, (imgs[0].size[0] - 800, pos[1]+40), data['awaktype'] + "Lv" + data['awakening'].split('lv')[-1], fill=self.color_awakening_jp[data['awaktype']], font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                             else:
                                 self.text(imgs, (imgs[0].size[0] - 800, pos[1]+40), data['awaktype'] + " Lv" + data['awakening'].split('lv')[-1], fill=self.color_awakening[data['awaktype']], font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                         else:
-                            print("EMP Thread |----> Awakening not set! Consider updating.")
+                            print("[EMP] |----> Awakening not set! Consider updating.")
                         # domain
                         if data.get('domain', None) is not None:
                             if len(data['domain']) > 0:
@@ -697,7 +699,7 @@ class PartyBuilder():
                                 else:
                                     self.text(imgs, (imgs[0].size[0] - 800, pos[1]+150),"Domain Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                         else:
-                            print("EMP Thread |----> Domain not set! Consider updating.")
+                            print("[EMP] |----> Domain not set! Consider updating.")
             return None
         except Exception as e:
             return e
@@ -814,6 +816,13 @@ class PartyBuilder():
                 res.append(future.result())
             for r in res:
                 if r is not None: raise r
+
+            for i in parties: i.close()
+            for i in summons: i.close()
+            for i in weapons: i.close()
+            for i in modifiers: i.close()
+            for i in emps: i.close()
+
         print("* Task completed with success!")
 
     def make_sub_emp(self, export):
@@ -1052,7 +1061,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.0"
+    ver = "v7.1"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
