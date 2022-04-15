@@ -15,7 +15,6 @@ from tkinter import messagebox
 import threading
 import concurrent.futures
 import shutil
-import traceback
 
 class PartyBuilder():
     def __init__(self, ver):
@@ -738,7 +737,6 @@ class PartyBuilder():
             print("An error occured")
             print("exception message:", e)
             print("Did you follow the instructions?")
-            print("on_exception():", traceback.format_exception(type(e), e, e.__traceback__))
             self.running = False
             return False
 
