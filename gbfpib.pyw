@@ -464,7 +464,12 @@ class PartyBuilder():
                         self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), pos, size)
                     continue
                 else:
-                    print("[WPN] |--> Weapon #{}".format(i), str(export['w'][i])+"00")
+                    # ax and awakening check
+                    has_ax = len(export['waxt'][i]) > 0
+                    has_awakening = (export['wakn'][i] is not None and export['wakn'][i]['is_arousal_weapon'])
+                    pos_shift = - skill_icon_size if (has_ax and has_awakening) else 0  # vertical shift of the skill boxes (if both ax and awk are presents)
+                    # portrait draw
+                    print("[WPN] |--> Weapon #{}".format(i+1), str(export['w'][i])+"00", ", AX:", has_ax, ", Awakening:", has_awakening)
                     self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/{}00.jpg".format(wt, export['w'][i]), pos, size)
                 # skin
                 if i <= 1 and export['wsm'][i] is not None:
@@ -472,36 +477,48 @@ class PartyBuilder():
                         self.dlAndPasteImage(imgs[1:], "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/{}.jpg".format(wt, export['wsm'][i]), pos, size)
                         imgs[1] = self.pasteImage(imgs[1:], "assets/skin.png", self.addTuple(pos, (size[0]-153, 0)), (153, 171), transparency=True)[0]
                 # skill box
-                self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+size[1]), (size[0], skill_box_height//2), transparency=True)
-                if len(export['waxi'][i]) > 0 or (export['wakn'][i] is not None and export['wakn'][i]['is_arousal_weapon']):
-                    self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+size[1]+skill_box_height//2), (size[0], skill_box_height//2), transparency=True)
+                nbox = 1 # number of skill boxes to draw
+                if has_ax: nbox += 1
+                if has_awakening: nbox += 1
+                for j in range(nbox):
+                    if i != 0 and j == 0 and nbox == 3: # if 3 boxes and we aren't on the mainhand, we draw half of one for the first box
+                        self.pasteImage(imgs, "assets/skill.png", (pos[0]+size[0]//2, pos[1]+size[1]+pos_shift+skill_icon_size*j), (size[0]//2, skill_icon_size), transparency=True)
+                    else:
+                        self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+size[1]+pos_shift+skill_icon_size*j), (size[0], skill_icon_size), transparency=True)
                 # plus
                 if export['wp'][i] > 0:
-                    if i == 0:
-                        self.text(imgs, (pos[0]+size[0]-210, pos[1]+size[1]-120), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                    # calculate shift of the position if AX and awakening are present
+                    if pos_shift != 0:
+                        if i > 0: shift = (- size[0]//2, 0)
+                        else: shift = (0, pos_shift)
                     else:
-                        self.text(imgs, (pos[0]+size[0]-210, pos[1]+size[1]-120), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                        shift = (0, 0)
+                    # draw plus text
+                    self.text(imgs, (pos[0]+size[0]-210+shift[0], pos[1]+size[1]-120+shift[1]), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                 # skill level
                 if export['wl'][i] is not None and export['wl'][i] > 1:
-                    self.text(imgs, (pos[0]+skill_icon_size*3-102, pos[1]+size[1]+30), "SL {}".format(export['wl'][i]), fill=(255, 255, 255), font=self.fonts['small'])
-                # skill icon
-                for j in range(3):
-                    if export['wsn'][i][j] is not None:
-                        self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]), (skill_icon_size, skill_icon_size))
+                    self.text(imgs, (pos[0]+skill_icon_size*3-102, pos[1]+size[1]+pos_shift+30), "SL {}".format(export['wl'][i]), fill=(255, 255, 255), font=self.fonts['small'])
+                if i == 0 or not has_ax or not has_awakening: # don't draw if ax and awakening ANd not mainhand
+                    # skill icon
+                    for j in range(3):
+                        if export['wsn'][i][j] is not None:
+                            self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size))
+                pos_shift += skill_icon_size
+                main_ax_icon_size  = int(ax_icon_size * (1.5 if i == 0 else 1) * (0.75 if (has_ax and has_awakening) else 1)) # size of the big AX/Awakening icon
                 # ax skills
-                if len(export['waxt'][i]) > 0:
-                    self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), pos, (int(ax_icon_size * (1.5 if i == 0 else 1)), int(ax_icon_size * (1.5 if i == 0 else 1))))
+                if has_ax:
+                    self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), pos, (main_ax_icon_size, main_ax_icon_size))
                     for j in range(len(export['waxi'][i])):
-                        self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/skill/{}.png".format(export['waxi'][i][j]), (pos[0]+ax_separator*j, pos[1]+size[1]+skill_icon_size), (skill_icon_size, skill_icon_size))
-                        self.text(imgs, (pos[0]+ax_separator*j+skill_icon_size+12, pos[1]+size[1]+skill_icon_size+30), "{}".format(export['wax'][i][0][j]['show_value']).replace('%', '').replace('+', ''), fill=(255, 255, 255), font=self.fonts['small'])
+                        self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/skill/{}.png".format(export['waxi'][i][j]), (pos[0]+ax_separator*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size))
+                        self.text(imgs, (pos[0]+ax_separator*j+skill_icon_size+12, pos[1]+size[1]+pos_shift+30), "{}".format(export['wax'][i][0][j]['show_value']).replace('%', '').replace('+', ''), fill=(255, 255, 255), font=self.fonts['small'])
+                    pos_shift += skill_icon_size
                 # awakening
-                if export['wakn'][i] is not None and export['wakn'][i]['is_arousal_weapon']:
-                    shift = ax_icon_size if len(export['waxt'][i]) > 0 else 0
-                    self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), self.addTuple(pos, (shift, 0)), (int(ax_icon_size * (1.5 if i == 0 else 1)), int(ax_icon_size * (1.5 if i == 0 else 1))))
-                    if len(export['waxt'][i]) == 0: # only display if no ax skills
-                        self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), (pos[0]+skill_icon_size, pos[1]+size[1]+skill_icon_size), (skill_icon_size, skill_icon_size))
-                        self.text(imgs, (pos[0]+skill_icon_size*3-102, pos[1]+size[1]+skill_icon_size+30), "LV {}".format(export['wakn'][i]['level']), fill=(255, 255, 255), font=self.fonts['small'])
-                
+                if has_awakening:
+                    shift = main_ax_icon_size//2 if has_ax else 0 # shift the icon right a bit if also has AX icon
+                    self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), self.addTuple(pos, (shift, 0)), (main_ax_icon_size, main_ax_icon_size))
+                    self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), (pos[0]+skill_icon_size, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size))
+                    self.text(imgs, (pos[0]+skill_icon_size*3-102, pos[1]+size[1]+pos_shift+30), "LV {}".format(export['wakn'][i]['level']), fill=(255, 255, 255), font=self.fonts['small'])
+
             if self.sandbox:
                 self.pasteImage(imgs, "assets/sandbox.png", (pos[0], offset[1]+(skill_box_height+sub_size[1])*3), (size[0], int(66*size[0]/159)), transparency=True)
             # stats
@@ -1066,7 +1083,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.3"
+    ver = "v7.4"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
