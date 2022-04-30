@@ -20,8 +20,10 @@ You are done.
 2. Click the bookmarklet. If nothing happens, everything went well.  
 3. Open `gbfpib.pyw` again.  
 4. This time, click on the `Build Images` button.  
-5. If everything went well, the image should appear beside `gbfpib.pyw` under the name `party.png`. Note: if the `Skin` setting is enabled, it will also generate a second image called `skin.png`, where your selected skins will appear instead.  
+5. If everything went well, the image should appear beside `gbfpib.pyw` under the name `party.png`. Note: if you enabled the corresponding settings, it will also generate `skin.png` and/or `emp.png`.  
 6. If it didn't, something went wrong, probably at the step 2.  
+  
+The process take around 1 GB of memory and can take up to one minute (if your computer is slow and the script needs to download assets).  
 ### Settings  
 1. `Quality`: let you control the output size (default is 8K, minimum is 720p).  
 2. `Disk Caching`: if enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  
@@ -35,7 +37,7 @@ You are done.
 Images from the GBF asset servers can be saved for later uses.  
 You only need to enable the option to make it work.  
 If some of those images are updated in game, all you need is to delete the cache folder so they are redownloaded later.  
-You can also delete it if it gets too big.  
+You can also delete the folder if it gets too big.  
 ### EMP  
 The setup for Characters Extended Mastery Perks is similar to the initial one:
 1. Double click on `gbfpib.pyw`.  
@@ -61,7 +63,9 @@ There are a few ways to go around this issue:
 ### Updating  
 When updating this script with a new version, be sure to update your bookmarklet, or issues might occur.  
 You might also want to rerun the `pip install -r requirements.txt` command if the required modules got updated.  
+Check the commit history to see which files changed, I won't maintain a changelog.
 ### Result  
-Here's what a resulting image looks like:  
-(Screenshot taken on version 5.0)  
-![Example](https://cdn.discordapp.com/attachments/614716155646705676/950385974322528346/party.png)  
+Here's what the resulting images look like:  
+(Screenshots taken on version 7.5)  
+![Party Example](https://cdn.discordapp.com/attachments/614716155646705676/969934493274210354/party.png)  
+![EMP Example](https://cdn.discordapp.com/attachments/614716155646705676/969934493815287889/emp.png)  

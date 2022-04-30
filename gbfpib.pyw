@@ -617,34 +617,42 @@ class PartyBuilder():
             ersize = (160, 160)
             roffset = (-20, -20)
             rsize = (180, 180)
+            # check the number of character in the party
+            ccount = 0
             if self.babyl:
+                nchara = 12 # max number for babyl (mc included)
+            else:
+                nchara = 5 # max number of allies
+            for i in range(0, nchara):
+                if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
+                if i >= len(export['c']) or export['c'][i] is None: continue
+                ccount += 1
+            print("[EMP] *", ccount, "character(s) to draw")
+            # set positions and offsets we'll need
+            if ccount > 5:
+                if ccount > 8: compact = 2
+                else: compact = 1
                 portrait_type = 's'
-                nchara = 12
                 csize = (392, 392)
+                shift = 148 if compact == 1 else 0
                 esizes = [(208, 208), (155, 155)]
                 eroffset = (200, 50)
-                bg_size = (imgs[0].size[0] - csize[0] - offset[0], csize[1])
-                poffset = self.addTuple(csize, (-220, -100))
-                pos = self.addTuple(offset, (0, offset[1]-csize[1]))
             else:
+                compact = 0
                 portrait_type = 'f'
-                offset = (30, 0)
-                nchara = 5
                 csize = (415, 864)
+                shift = 0
                 esizes = [(266, 266), (200, 200)]
                 eroffset = (200, 30)
-                bg_size = (imgs[0].size[0] - csize[0] - offset[0], csize[1])
-                poffset = self.addTuple(csize, (-220, -100))
-                pos = self.addTuple(offset, (0, offset[1]-csize[1]))
+            bg_size = (imgs[0].size[0] - csize[0] - offset[0], csize[1]+shift)
+            poffset = self.addTuple(csize, (-220, -100))
+            pos = self.addTuple(offset, (0, offset[1]-csize[1]-shift))
 
             # allies
             for i in range(0, nchara):
                 if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
-                pos = self.addTuple(pos, (0, csize[1])) # set chara position
-                if i >= len(export['c']) or export['c'][i] is None:
-                    self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets/npc/{}/3999999999.jpg".format(portrait_type), pos, csize)
-                    continue
-                else:
+                if i < len(export['c']) and export['c'][i] is not None:
+                    pos = self.addTuple(pos, (0, csize[1]+shift)) # set chara position
                     print("[EMP] |--> Ally #{}".format(i+1))
                     # portrait
                     if export['c'][i] in self.nullchar: 
@@ -658,6 +666,7 @@ class PartyBuilder():
                     # plus
                     if export['cp'][i] > 0:
                         self.text(imgs, self.addTuple(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=12, stroke_fill=(0, 0, 0))
+                    # background
                     self.pasteImage(imgs, "assets/bg_emp.png".format(cid), self.addTuple(pos, (csize[0], 0)), bg_size, transparency=True)
                     # load EMP file
                     data = self.loadEMP(export['c'][i])
@@ -675,7 +684,7 @@ class PartyBuilder():
                         idx = 0
                         off = 0
                     for j, emp in enumerate(data['emp']):
-                        if self.babyl:
+                        if compact:
                             epos = self.addTuple(pos, (csize[0]+30+esizes[idx][0]*j, 10))
                         elif j % 5 == 0: # new line
                             epos = self.addTuple(pos, (csize[0]+30+off, 15+esizes[idx][1]*j//5))
@@ -686,29 +695,36 @@ class PartyBuilder():
                         else:
                             self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/zenith/assets/ability/{}.png".format(emp['image']), epos, esizes[idx])
                             if str(emp['current_level']) != "0":
-                                self.text(imgs, self.addTuple(epos, eoffset), str(emp['current_level']), fill=(235, 227, 250), font=self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0))
+                                self.text(imgs, self.addTuple(epos, eoffset), str(emp['current_level']), fill=(235, 227, 250), font=self.fonts['medium'] if compact and nemp > 15 else self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0))
                             else:
                                 self.pasteImage(imgs, "assets/emp_unused.png", epos, esizes[idx], transparency=True)
                     # ring EMP
                     print("[EMP] |----> {} Ring EMPs".format(len(data['ring'])))
                     for j, ring in enumerate(data['ring']):
-                        if self.babyl:
+                        if compact:
                             epos = self.addTuple(pos, (csize[0]+30+(400+ersize[0])*j, csize[1]-ersize[1]-30))
                         else:
                             epos = self.addTuple(pos, (csize[0]+100+off*2+esizes[idx][0]*5, 30+ersize[1]*j))
                         self.pasteImage(imgs, "assets/{}.png".format(ring['type']['image']), epos, ersize, transparency=True)
-                        if self.babyl:
+                        if compact:
                             self.text(imgs, self.addTuple(epos, eroffset), ring['param']['disp_total_param'], fill=(255, 255, 95), font=self.fonts['small'], stroke_width=12, stroke_fill=(0, 0, 0))
                         else:
                             self.text(imgs, self.addTuple(epos, eroffset), ring['type']['name'] + " " + ring['param']['disp_total_param'], fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
-                    if not self.babyl:
+                    if compact != 2:
+                        # calc pos
+                        if compact:
+                            apos1 = (pos[0] + csize[0] + 50, pos[1] + csize[1])
+                            apos2 = (pos[0] + csize[0] + 850, pos[1] + csize[1])
+                        else:
+                            apos1 = (imgs[0].size[0] - 800, pos[1]+40)
+                            apos2 = (imgs[0].size[0] - 800, pos[1]+150)
                         # awakening
                         if data.get('awakening', None) is not None:
                             print("[EMP] |----> Awakening", data['awakening'].split('lv')[-1], data['awaktype'])
                             if self.japanese:
-                                self.text(imgs, (imgs[0].size[0] - 800, pos[1]+40), data['awaktype'] + "Lv" + data['awakening'].split('lv')[-1], fill=self.color_awakening_jp[data['awaktype']], font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                                self.text(imgs, apos1, data['awaktype'] + "Lv" + data['awakening'].split('lv')[-1], fill=self.color_awakening_jp[data['awaktype']], font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                             else:
-                                self.text(imgs, (imgs[0].size[0] - 800, pos[1]+40), data['awaktype'] + " Lv" + data['awakening'].split('lv')[-1], fill=self.color_awakening[data['awaktype']], font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                                self.text(imgs, apos1, data['awaktype'] + " Lv" + data['awakening'].split('lv')[-1], fill=self.color_awakening[data['awaktype']], font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                         else:
                             print("[EMP] |----> Awakening not set! Consider updating.")
                         # domain
@@ -718,9 +734,9 @@ class PartyBuilder():
                                 for d in data['domain']:
                                     if d[2] is not None: dlv += 1
                                 if self.japanese:
-                                    self.text(imgs, (imgs[0].size[0] - 800, pos[1]+150),"至賢Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                                    self.text(imgs, apos2,"至賢Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                                 else:
-                                    self.text(imgs, (imgs[0].size[0] - 800, pos[1]+150),"Domain Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                                    self.text(imgs, apos2,"Domain Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                         else:
                             print("[EMP] |----> Domain not set! Consider updating.")
             return None
@@ -731,8 +747,10 @@ class PartyBuilder():
         for img in imgs:
             ImageDraw.Draw(img, 'RGBA').text(*args, **kwargs)
 
-    def saveImage(self, img, filename):
+    def saveImage(self, img, filename, resize):
         try:
+            if resize is not None:
+                img = img.resize(self.definition)
             img.save(filename, "PNG")
             img.close()
             print("|--> '{}' has been generated".format(filename))
@@ -823,16 +841,17 @@ class PartyBuilder():
                 res.append(future.result())
             for r in res:
                 if r is not None: raise r
-            print("* Making final images...")
+            print("* Generating final images...")
             for i in range(2):
                 parties[i] = Image.alpha_composite(parties[i], summons[i])
                 parties[i] = Image.alpha_composite(parties[i], weapons[i])
                 parties[i] = Image.alpha_composite(parties[i], modifiers[i])
 
             print("* Saving...")
-            futures = [executor.submit(self.saveImage, parties[0], "party.png")]
-            if do_skin: futures.append(executor.submit(self.saveImage, parties[1], "skin.png"))
-            if do_emp: futures.append(executor.submit(self.saveImage, emps[0], "emp.png"))
+            resize = None if self.quality == 1 else self.definition
+            futures = [executor.submit(self.saveImage, parties[0], "party.png", resize)]
+            if do_skin: futures.append(executor.submit(self.saveImage, parties[1], "skin.png", resize))
+            if do_emp: futures.append(executor.submit(self.saveImage, emps[0], "emp.png", resize))
             res = []
             for future in concurrent.futures.as_completed(futures):
                 res.append(future.result())
@@ -850,6 +869,16 @@ class PartyBuilder():
     def make_sub_emp(self, export):
         if 'emp' not in export or 'id' not in export or 'ring' not in export: raise Exception("Invalid EMP data, check your bookmark")
         print("* Saving EMP for Character", export['id'], "...")
+        print("*", len(export['emp']), "Extended Masteries")
+        print("*", len(export['ring']), "Over Masteries")
+        if 'awakening' not in export:
+            print("* No Awakening Data found, please update your bookmark")
+        else:
+            print("* Awakening Lvl Image:", export['awakening'], ", Awakening Type:", export['awaktype'])
+        if 'domain' not in export:
+            print("* No Domain Data found, please update your bookmark")
+        else:
+            print("* Domain Lvl", len(export['domain']))
         self.checkEMP()
         with open('emp/{}.json'.format(export['id']), mode='w', encoding="utf-8") as outfile:
             json.dump(export, outfile)
@@ -1083,7 +1112,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.4"
+    ver = "v7.5"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
