@@ -30,7 +30,8 @@ The process take around 1 GB of memory and can take up to one minute (if your co
 3. `Do Skins`: if enabled, it will also generate `skin.png`.  
 4. `Do EMP`: if enabled, it will also generate `emp.png`.  
 ### Command Line  
-1. `-fast`: Automatically start the image building process. Be sure to have the party data ready in your clipboard. If EMP data is found instead, it will be saved.  
+For advanced users:  
+1. `-fast`: Automatically start the image building process. Be sure to have the party data ready in your clipboard. If EMP datas are found instead, it will be saved in the `emp` folder.  
 2. `-nowait`: Skip the 10 seconds waiting time at the end when using `-fast`.  
 2. `-cmd`: Let you access the old command line menu. Can't be used with `-fast`.  
 ### Cache  
@@ -47,12 +48,17 @@ The setup for Characters Extended Mastery Perks is similar to the initial one:
 5. Paste the javascript code into the url field.  
 6. Change the bookmark name if you want to.  
   
-Then, to set a Character, go to its EMP page, click the bookmark and then, in `gbfpib.pyw`, click `Add EMP`.  
-The details will be saved in a .json file, in the `emp` folder.  
-If you change this Character EMP setup, just repeat the process to update it.  
-Also,make sure:
-1. The `Do EMP` setting is enabled or `emp.png` won't be generated.  
-2. Your game language setting is set to the one you usually use. EMP saved as japanese won't work for an english party image and vice versa.  
+Next, when you want to save a Character's EMP:  
+1. Go to its EMP page.  
+2. Click the bookmarklet. If nothing happens, everything went well.  
+3. In `gbfpib.pyw`, click on the `Add EMP` button.  
+  
+This Character's EMP will be saved in the `emp` folder, as a `.json` file.  
+To update it, simply repeat the process.  
+  
+Keep in mind:
+1. The `Do EMP` setting must be enabled or `emp.png` won't be generated when clicking `Build Images`.  
+2. Your game language must be the same at the time you saved the EMP and when generating a Party image. EMP saved as japanese won't work for an english party image and vice versa.  
   
 ### Support Summon  
 By default, the game doesn't provide you the ID of the support summon set in your damage calculator.  
@@ -63,7 +69,7 @@ There are a few ways to go around this issue:
 ### Updating  
 When updating this script with a new version, be sure to update your bookmarklet, or issues might occur.  
 You might also want to rerun the `pip install -r requirements.txt` command if the required modules got updated.  
-Check the commit history to see which files changed, I won't maintain a changelog.
+In doubt, check the commit history to see which files changed, I won't maintain a changelog.
 ### Result  
 Here's what the resulting images look like:  
 (Screenshots taken on version 7.5)  
