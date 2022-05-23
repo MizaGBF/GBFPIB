@@ -828,15 +828,14 @@ class PartyBuilder():
             modifiers = [self.make_canvas(), self.make_canvas()]
             emps = [self.make_canvas()]
             print("* Starting Threads...")
-            futures = [
-                executor.submit(self.make_party, parties, export),
-                executor.submit(self.make_summon, summons, export),
-                executor.submit(self.make_weapon, weapons, export),
-                executor.submit(self.make_modifier, modifiers, export)
-            ]
-            res = []
+            futures = []
             if do_emp:
                 futures.append(executor.submit(self.make_emp, emps, export))
+            futures.append(executor.submit(self.make_party, parties, export))
+            futures.append(executor.submit(self.make_summon, summons, export))
+            futures.append(executor.submit(self.make_weapon, weapons, export))
+            futures.append(executor.submit(self.make_modifier, modifiers, export))
+            res = []
             for future in concurrent.futures.as_completed(futures):
                 res.append(future.result())
             for r in res:
@@ -844,8 +843,11 @@ class PartyBuilder():
             print("* Generating final images...")
             for i in range(2):
                 parties[i] = Image.alpha_composite(parties[i], summons[i])
+                summons[i].close()
                 parties[i] = Image.alpha_composite(parties[i], weapons[i])
+                weapons[i].close()
                 parties[i] = Image.alpha_composite(parties[i], modifiers[i])
+                modifiers[i].close()
 
             print("* Saving...")
             resize = None if self.quality == 1 else self.definition
@@ -859,9 +861,6 @@ class PartyBuilder():
                 if r is not None: raise r
 
             for i in parties: i.close()
-            for i in summons: i.close()
-            for i in weapons: i.close()
-            for i in modifiers: i.close()
             for i in emps: i.close()
 
         print("* Task completed with success!")
@@ -1112,7 +1111,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.5"
+    ver = "v7.6"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
