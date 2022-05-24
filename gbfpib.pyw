@@ -151,19 +151,19 @@ class PartyBuilder():
                     url_handle.close()
         return self.cache[url]
 
-    def pasteImage(self, imgs, file, offset, resize=None, transparency=False): # paste an image onto another
+    def pasteImage(self, imgs, file, offset, resize=None, transparency=False, start=0, end=99999999): # paste an image onto another
         if self.japanese and isinstance(file, str):
             file = file.replace('_EN', '')
         buffers = [Image.open(file)]
         buffers.append(buffers[-1].convert('RGBA'))
         if resize is not None: buffers.append(buffers[-1].resize(resize, Image.Resampling.LANCZOS))
         if not transparency:
-            for img in imgs:
-                img.paste(buffers[-1], offset, buffers[-1])
+            for i in range(start, min(len(imgs), end)):
+                imgs[i].paste(buffers[-1], offset, buffers[-1])
         else:
             layer = self.dummy_layer.copy()
             layer.paste(buffers[-1], offset, buffers[-1])
-            for i in range(len(imgs)):
+            for i in range(start, min(len(imgs), end)):
                 tmp = Image.alpha_composite(imgs[i], layer)
                 imgs[i].close()
                 imgs[i] = tmp
@@ -172,10 +172,10 @@ class PartyBuilder():
         del buffers
         return imgs
 
-    def dlAndPasteImage(self, imgs, url, offset, resize=None, transparency=False): # dl an image and call pasteImage()
+    def dlAndPasteImage(self, imgs, url, offset, resize=None, transparency=False, start=0, end=99999999): # dl an image and call pasteImage()
         data = self.retrieveImage(url)
         with BytesIO(data) as file_jpgdata:
-            return self.pasteImage(imgs, file_jpgdata, offset, resize, transparency)
+            return self.pasteImage(imgs, file_jpgdata, offset, resize, transparency, start, end)
 
     def addTuple(self, A:tuple, B:tuple):
         return (A[0]+B[0], A[1]+B[1])
@@ -294,7 +294,7 @@ class PartyBuilder():
                 stoffset = self.addTuple(ssoffset, (6, 6))
                 plsoffset = self.addTuple(ssoffset, (894, 0))
                 # background
-                self.pasteImage(imgs, "assets/bg.png", self.addTuple(pos, (-30, -30)), (csize[0]*8+80, csize[1]*2+110), transparency=True)
+                self.pasteImage(imgs, "assets/bg.png", self.addTuple(pos, (-30, -30)), (csize[0]*8+80, csize[1]*2+110), transparency=True, start=0, end=1)
             else:
                 offset = (30, 10)
                 nchara = 5
@@ -311,16 +311,20 @@ class PartyBuilder():
                 stoffset = self.addTuple(ssoffset, (6, 6))
                 plsoffset = self.addTuple(ssoffset, (0, -300))
                 # background
-                self.pasteImage(imgs, "assets/bg.png", self.addTuple(pos, (-30, -20)), (50+csize[0]*6+60, csize[1]+350), transparency=True)
+                self.pasteImage(imgs, "assets/bg.png", self.addTuple(pos, (-30, -20)), (50+csize[0]*6+60, csize[1]+350), transparency=True, start=0, end=1)
             
             # mc
             print("[CHA] |--> MC Skin:", export['pcjs'])
             print("[CHA] |--> MC Job:", export['p'])
             # class
-            self.dlAndPasteImage(imgs[:1], "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/s/{}.jpg".format(self.get_mc_job_look(export['pcjs'], export['p'])), pos, csize)
+            class_id = self.get_mc_job_look(export['pcjs'], export['p'])
+            self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/s/{}.jpg".format(class_id), pos, csize, start=0, end=1)
+            # job icon
+            self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True, start=0, end=1)
             # skin
-            self.dlAndPasteImage(imgs[1:], "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/s/{}.jpg".format(export['pcjs']), pos, csize)
-            self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True)
+            if class_id != export['pcjs']:
+                self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/leader/s/{}.jpg".format(export['pcjs']), pos, csize, start=1, end=2)
+                self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True, start=1, end=2)
 
             # allies
             for i in range(0, nchara):
@@ -334,7 +338,7 @@ class PartyBuilder():
                     if i >= 3: pos = self.addTuple(pos, (50, 0))
                 # portrait
                 if i >= len(export['c']) or export['c'][i] is None:
-                    self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize)
+                    self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize, start=0, end=1)
                     continue
                 else:
                     print("[CHA] |--> Ally #{}:".format(i+1), export['c'][i], export['cn'][i], "Lv {}".format(export['cl'][i]), "+{}".format(export['cp'][i]), "Has Ring" if export['cwr'][i] else "No Ring")
@@ -343,24 +347,28 @@ class PartyBuilder():
                         cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['ce'][i])
                     else:
                         cid = "{}_{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]))
-                    self.dlAndPasteImage(imgs[0:], "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/s/{}.jpg".format(cid), pos, csize)
+                    self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/s/{}.jpg".format(cid), pos, csize, start=0, end=1)
                     # skin
-                    self.dlAndPasteImage(imgs[1:], "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/s/{}.jpg".format(export['ci'][i]), pos, csize)
+                    if cid != export['ci'][i]:
+                        self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/npc/s/{}.jpg".format(export['ci'][i]), pos, csize, start=1, end=2)
+                        has_skin = True
+                    else:
+                        has_skin = False
                 # rings
                 if export['cwr'][i] == True:
-                    self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.addTuple(pos, roffset), rsize, transparency=True)
+                    self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.addTuple(pos, roffset), rsize, transparency=True, start=0, end=2 if has_skin else 1)
                 # plus
                 if export['cp'][i] > 0:
-                    self.text(imgs, self.addTuple(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=12, stroke_fill=(0, 0, 0))
+                    self.text(imgs, self.addTuple(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=12, stroke_fill=(0, 0, 0), start=0, end=2 if has_skin else 1)
                 if not self.babyl:
                     # name
-                    self.pasteImage(imgs, "assets/chara_stat.png", self.addTuple(pos, (0, csize[1])), (csize[0], 120), transparency=True)
+                    self.pasteImage(imgs, "assets/chara_stat.png", self.addTuple(pos, (0, csize[1])), (csize[0], 120), transparency=True, start=0, end=1)
                     if len(export['cn'][i]) > 11: name = export['cn'][i][:11] + ".."
                     else: name = export['cn'][i]
-                    self.text(imgs, self.addTuple(pos, noffset), name, fill=(255, 255, 255), font=self.fonts['mini'])
+                    self.text(imgs, self.addTuple(pos, noffset), name, fill=(255, 255, 255), font=self.fonts['mini'], start=0, end=1)
                     # level
-                    self.pasteImage(imgs, "assets/chara_stat.png", self.addTuple(pos, (0, csize[1]+120)), (csize[0], 120), transparency=True)
-                    self.text(imgs, self.addTuple(pos, loffset), "Lv {}".format(export['cl'][i]), fill=(255, 255, 255), font=self.fonts['medium'])
+                    self.pasteImage(imgs, "assets/chara_stat.png", self.addTuple(pos, (0, csize[1]+120)), (csize[0], 120), transparency=True, start=0, end=1)
+                    self.text(imgs, self.addTuple(pos, loffset), "Lv {}".format(export['cl'][i]), fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
 
             # mc sub skills
             self.pasteImage(imgs, "assets/subskills.png", ssoffset, (840, 294), transparency=True)
@@ -392,7 +400,7 @@ class PartyBuilder():
             surls = ["http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/party_main/{}.jpg", "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/summon/party_sub/{}.jpg", "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/summon/m/{}.jpg"]
 
             # background setup
-            self.pasteImage(imgs, "assets/bg.png", self.addTuple(offset, (-30, -30)), (200+sizes[0][0]+sizes[1][0]*2+sizes[0][0]+96, sizes[0][1]+286), transparency=True)
+            self.pasteImage(imgs, "assets/bg.png", self.addTuple(offset, (-30, -30)), (200+sizes[0][0]+sizes[1][0]*2+sizes[0][0]+96, sizes[0][1]+286), transparency=True, start=0, end=1)
 
             for i in range(0, 7):
                 if i == 0:
@@ -404,34 +412,37 @@ class PartyBuilder():
                 else:
                     pos = self.addTuple(offset, (sizes[0][0]+200+2*sizes[1][0]+36, 204+(i-5)*(sizes[2][1]+120)))
                     idx = 2
-                    if i == 5: self.pasteImage(imgs, "assets/subsummon_EN.png", (pos[0]+90, pos[1]-144-60), (360, 144), transparency=True)
+                    if i == 5: self.pasteImage(imgs, "assets/subsummon_EN.png", (pos[0]+90, pos[1]-144-60), (360, 144), transparency=True, start=0, end=1)
                 # portraits
                 if export['s'][i] is None:
-                    self.dlAndPasteImage(imgs, durls[idx], pos, sizes[idx])
+                    self.dlAndPasteImage(imgs, durls[idx], pos, sizes[idx], start=0, end=1)
                     continue
                 else:
                     print("[SUM] |--> Summon #{}:".format(i+1), export['ss'][i], "Uncap Lv{}".format(export['se'][i]), "Lv{}".format(export['sl'][i]))
-                    self.dlAndPasteImage(imgs, surls[idx].format(export['ss'][i]), pos, sizes[idx])
+                    self.dlAndPasteImage(imgs, surls[idx].format(export['ss'][i]), pos, sizes[idx], start=0, end=1)
                 # main summon skin
                 if i == 0 and export['ssm'] is not None:
-                    self.dlAndPasteImage(imgs[1:], surls[idx].format(export['ssm']), pos, sizes[idx])
-                    self.pasteImage(imgs[1:], "assets/skin.png", self.addTuple(pos, (sizes[idx][0]-170, 30)), (153, 171))
+                    self.dlAndPasteImage(imgs, surls[idx].format(export['ssm']), pos, sizes[idx], start=1, end=2)
+                    self.pasteImage(imgs, "assets/skin.png", self.addTuple(pos, (sizes[idx][0]-170, 30)), (153, 171), start=1, end=2)
+                    has_skin = True
+                else:
+                    has_skin = False
                 # star
-                self.pasteImage(imgs, "assets/star_{}.png".format({3:1, 4:2, 5:3, 6:3, 7:3}.get(export['se'][i], 0)), pos, (132, 132), transparency=True)
+                self.pasteImage(imgs, "assets/star_{}.png".format({3:1, 4:2, 5:3, 6:3, 7:3}.get(export['se'][i], 0)), pos, (132, 132), transparency=True, start=0, end=2 if has_skin else 1)
                 # level
-                self.pasteImage(imgs, "assets/chara_stat.png", self.addTuple(pos, (0, sizes[idx][1])), (sizes[idx][0], 120), transparency=True)
-                self.text(imgs, self.addTuple(pos, (12,sizes[idx][1]+18)), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.fonts['small'])
+                self.pasteImage(imgs, "assets/chara_stat.png", self.addTuple(pos, (0, sizes[idx][1])), (sizes[idx][0], 120), transparency=True, start=0, end=1)
+                self.text(imgs, self.addTuple(pos, (12,sizes[idx][1]+18)), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
                 # plus
                 if export['sp'][i] > 0:
-                    self.text(imgs, (pos[0]+sizes[idx][0]-190, pos[1]+sizes[idx][1]-100), "+{}".format(export['sp'][i]), fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                    self.text(imgs, (pos[0]+sizes[idx][0]-190, pos[1]+sizes[idx][1]-100), "+{}".format(export['sp'][i]), fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0), start=0, end=2 if has_skin else 1)
 
             # stats
             spos = self.addTuple(offset, (sizes[0][0]+100+36, sizes[0][1]+120))
-            self.pasteImage(imgs, "assets/chara_stat.png",  spos, (sizes[1][0]*2, 120), transparency=True)
-            self.pasteImage(imgs, "assets/atk.png", self.addTuple(spos, (18, 18)), (180, 78), transparency=True)
-            self.pasteImage(imgs, "assets/hp.png", self.addTuple(spos, (sizes[1][0]+18, 18)), (132, 78), transparency=True)
-            self.text(imgs, self.addTuple(spos, (240, 18)), "{}".format(export['satk']), fill=(255, 255, 255), font=self.fonts['small'])
-            self.text(imgs, self.addTuple(spos, (sizes[1][0]+160, 18)), "{}".format(export['shp']), fill=(255, 255, 255), font=self.fonts['small'])
+            self.pasteImage(imgs, "assets/chara_stat.png",  spos, (sizes[1][0]*2, 120), transparency=True, start=0, end=1)
+            self.pasteImage(imgs, "assets/atk.png", self.addTuple(spos, (18, 18)), (180, 78), transparency=True, start=0, end=1)
+            self.pasteImage(imgs, "assets/hp.png", self.addTuple(spos, (sizes[1][0]+18, 18)), (132, 78), transparency=True, start=0, end=1)
+            self.text(imgs, self.addTuple(spos, (240, 18)), "{}".format(export['satk']), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
+            self.text(imgs, self.addTuple(spos, (sizes[1][0]+160, 18)), "{}".format(export['shp']), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
             return ('summon', imgs)
         except Exception as e:
             imgs[0].close()
@@ -450,9 +461,9 @@ class PartyBuilder():
             ax_separator = skill_box_height
             mh_size = (600, 1260)
             sub_size = (576, 330)
-            self.pasteImage(imgs, "assets/grid_bg.png", self.addTuple(offset, (-30, -30)), (mh_size[0]+(4 if self.sandbox else 3)*sub_size[0]+120, 2520+(480 if self.sandbox else 0)), transparency=True)
+            self.pasteImage(imgs, "assets/grid_bg.png", self.addTuple(offset, (-30, -30)), (mh_size[0]+(4 if self.sandbox else 3)*sub_size[0]+120, 2520+(480 if self.sandbox else 0)), transparency=True, start=0, end=1)
             if self.sandbox:
-                self.pasteImage(imgs, "assets/grid_bg_extra.png", (offset[0]+mh_size[0]+60+sub_size[0]*3, offset[1]), (576, 2290), transparency=True)
+                self.pasteImage(imgs, "assets/grid_bg_extra.png", (offset[0]+mh_size[0]+60+sub_size[0]*3, offset[1]), (576, 2290), transparency=True, start=0, end=1)
 
             for i in range(0, len(export['w'])):
                 wt = "ls" if i == 0 else "m"
@@ -473,13 +484,13 @@ class PartyBuilder():
                     pos = (offset[0]+bsize[0]+60+size[0]*x, offset[1]+(size[1]+skill_box_height)*y)
                 # dual blade class
                 if i <= 1 and export['p'] in self.aux_class:
-                    self.pasteImage(imgs, ("assets/mh_dual.png" if i == 0 else "assets/aux_dual.png"), self.addTuple(pos, (-5, -5)), self.addTuple(size, (10, 10+skill_box_height)), transparency=True)
+                    self.pasteImage(imgs, ("assets/mh_dual.png" if i == 0 else "assets/aux_dual.png"), self.addTuple(pos, (-5, -5)), self.addTuple(size, (10, 10+skill_box_height)), transparency=True, start=0, end=1)
                 # portrait
                 if export['w'][i] is None or export['wl'][i] is None:
                     if i >= 10:
-                        self.pasteImage(imgs, "assets/arca_slot.png", pos, size)
+                        self.pasteImage(imgs, "assets/arca_slot.png", pos, size, start=0, end=1)
                     else:
-                        self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), pos, size)
+                        self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), pos, size, start=0, end=1)
                     continue
                 else:
                     # ax and awakening check
@@ -488,21 +499,23 @@ class PartyBuilder():
                     pos_shift = - skill_icon_size if (has_ax and has_awakening) else 0  # vertical shift of the skill boxes (if both ax and awk are presents)
                     # portrait draw
                     print("[WPN] |--> Weapon #{}".format(i+1), str(export['w'][i])+"00", ", AX:", has_ax, ", Awakening:", has_awakening)
-                    self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/{}00.jpg".format(wt, export['w'][i]), pos, size)
+                    self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/{}00.jpg".format(wt, export['w'][i]), pos, size, start=0, end=1)
                 # skin
+                has_skin = False
                 if i <= 1 and export['wsm'][i] is not None:
                     if i == 0 or (i == 1 and export['p'] in self.aux_class): # aux class check for 2nd weapon
-                        self.dlAndPasteImage(imgs[1:], "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/{}.jpg".format(wt, export['wsm'][i]), pos, size)
-                        imgs[1] = self.pasteImage(imgs[1:], "assets/skin.png", self.addTuple(pos, (size[0]-153, 0)), (153, 171), transparency=True)[0]
+                        self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/weapon/{}/{}.jpg".format(wt, export['wsm'][i]), pos, size, start=1, end=2)
+                        self.pasteImage(imgs, "assets/skin.png", self.addTuple(pos, (size[0]-153, 0)), (153, 171), transparency=True, start=1, end=2)
+                        has_skin = True
                 # skill box
                 nbox = 1 # number of skill boxes to draw
                 if has_ax: nbox += 1
                 if has_awakening: nbox += 1
                 for j in range(nbox):
                     if i != 0 and j == 0 and nbox == 3: # if 3 boxes and we aren't on the mainhand, we draw half of one for the first box
-                        self.pasteImage(imgs, "assets/skill.png", (pos[0]+size[0]//2, pos[1]+size[1]+pos_shift+skill_icon_size*j), (size[0]//2, skill_icon_size), transparency=True)
+                        self.pasteImage(imgs, "assets/skill.png", (pos[0]+size[0]//2, pos[1]+size[1]+pos_shift+skill_icon_size*j), (size[0]//2, skill_icon_size), transparency=True, start=0, end=2 if (has_skin and j == 0) else 1)
                     else:
-                        self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+size[1]+pos_shift+skill_icon_size*j), (size[0], skill_icon_size), transparency=True)
+                        self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+size[1]+pos_shift+skill_icon_size*j), (size[0], skill_icon_size), transparency=True, start=0, end=2 if (has_skin and j == 0) else 1)
                 # plus
                 if export['wp'][i] > 0:
                     # calculate shift of the position if AX and awakening are present
@@ -512,41 +525,41 @@ class PartyBuilder():
                     else:
                         shift = (0, 0)
                     # draw plus text
-                    self.text(imgs, (pos[0]+size[0]-210+shift[0], pos[1]+size[1]-120+shift[1]), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                    self.text(imgs, (pos[0]+size[0]-210+shift[0], pos[1]+size[1]-120+shift[1]), "+{}".format(export['wp'][i]), fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0), start=0, end=2 if has_skin else 1)
                 # skill level
                 if export['wl'][i] is not None and export['wl'][i] > 1:
-                    self.text(imgs, (pos[0]+skill_icon_size*3-102, pos[1]+size[1]+pos_shift+30), "SL {}".format(export['wl'][i]), fill=(255, 255, 255), font=self.fonts['small'])
-                if i == 0 or not has_ax or not has_awakening: # don't draw if ax and awakening ANd not mainhand
+                    self.text(imgs, (pos[0]+skill_icon_size*3-102, pos[1]+size[1]+pos_shift+30), "SL {}".format(export['wl'][i]), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=2 if has_skin else 1)
+                if i == 0 or not has_ax or not has_awakening: # don't draw if ax and awakening and not mainhand
                     # skill icon
                     for j in range(3):
                         if export['wsn'][i][j] is not None:
-                            self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size))
+                            self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
                 pos_shift += skill_icon_size
                 main_ax_icon_size  = int(ax_icon_size * (1.5 if i == 0 else 1) * (0.75 if (has_ax and has_awakening) else 1)) # size of the big AX/Awakening icon
                 # ax skills
                 if has_ax:
-                    self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), pos, (main_ax_icon_size, main_ax_icon_size))
+                    self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), pos, (main_ax_icon_size, main_ax_icon_size), start=0, end=2 if has_skin else 1)
                     for j in range(len(export['waxi'][i])):
-                        self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/skill/{}.png".format(export['waxi'][i][j]), (pos[0]+ax_separator*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size))
-                        self.text(imgs, (pos[0]+ax_separator*j+skill_icon_size+12, pos[1]+size[1]+pos_shift+30), "{}".format(export['wax'][i][0][j]['show_value']).replace('%', '').replace('+', ''), fill=(255, 255, 255), font=self.fonts['small'])
+                        self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/skill/{}.png".format(export['waxi'][i][j]), (pos[0]+ax_separator*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=1)
+                        self.text(imgs, (pos[0]+ax_separator*j+skill_icon_size+12, pos[1]+size[1]+pos_shift+30), "{}".format(export['wax'][i][0][j]['show_value']).replace('%', '').replace('+', ''), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
                     pos_shift += skill_icon_size
                 # awakening
                 if has_awakening:
                     shift = main_ax_icon_size//2 if has_ax else 0 # shift the icon right a bit if also has AX icon
-                    self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), self.addTuple(pos, (shift, 0)), (main_ax_icon_size, main_ax_icon_size))
-                    self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), (pos[0]+skill_icon_size, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size))
-                    self.text(imgs, (pos[0]+skill_icon_size*3-102, pos[1]+size[1]+pos_shift+30), "LV {}".format(export['wakn'][i]['level']), fill=(255, 255, 255), font=self.fonts['small'])
+                    self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), self.addTuple(pos, (shift, 0)), (main_ax_icon_size, main_ax_icon_size), start=0, end=2 if has_skin else 1)
+                    self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), (pos[0]+skill_icon_size, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=1)
+                    self.text(imgs, (pos[0]+skill_icon_size*3-102, pos[1]+size[1]+pos_shift+30), "LV {}".format(export['wakn'][i]['level']), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
 
             if self.sandbox:
-                self.pasteImage(imgs, "assets/sandbox.png", (pos[0], offset[1]+(skill_box_height+sub_size[1])*3), (size[0], int(66*size[0]/159)), transparency=True)
+                self.pasteImage(imgs, "assets/sandbox.png", (pos[0], offset[1]+(skill_box_height+sub_size[1])*3), (size[0], int(66*size[0]/159)), transparency=True, start=0, end=1)
             # stats
             pos = (offset[0], offset[1]+bsize[1]+300)
-            self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]), (bsize[0], 150), transparency=True)
-            self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+150), (bsize[0], 150), transparency=True)
-            self.pasteImage(imgs, "assets/atk.png", (pos[0]+18, pos[1]+30), (180, 78), transparency=True)
-            self.pasteImage(imgs, "assets/hp.png", (pos[0]+18, pos[1]+60+150), (132, 78), transparency=True)
-            self.text(imgs, (pos[0]+222, pos[1]+30), "{}".format(export['watk']), fill=(255, 255, 255), font=self.fonts['medium'])
-            self.text(imgs, (pos[0]+222, pos[1]+30+150), "{}".format(export['whp']), fill=(255, 255, 255), font=self.fonts['medium'])
+            self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]), (bsize[0], 150), transparency=True, start=0, end=1)
+            self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+150), (bsize[0], 150), transparency=True, start=0, end=1)
+            self.pasteImage(imgs, "assets/atk.png", (pos[0]+18, pos[1]+30), (180, 78), transparency=True, start=0, end=1)
+            self.pasteImage(imgs, "assets/hp.png", (pos[0]+18, pos[1]+60+150), (132, 78), transparency=True, start=0, end=1)
+            self.text(imgs, (pos[0]+222, pos[1]+30), "{}".format(export['watk']), fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
+            self.text(imgs, (pos[0]+222, pos[1]+30+150), "{}".format(export['whp']), fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
 
             # estimated damage
             pos = (pos[0]+bsize[0]+30, pos[1]+330)
@@ -558,31 +571,31 @@ class PartyBuilder():
                     supp = self.get_support_summon(export['sps'])
                 if supp is None:
                     print("[WPN] |--> Support summon is", export['sps'], "(Note: searching its ID on gbf.wiki failed)")
-                    self.pasteImage(imgs, "assets/big_stat.png", (pos[0]-bsize[0]-30, 330), (bsize[0], 300), transparency=True)
-                    self.text(imgs, (pos[0]-bsize[0]-30+30 , pos[1]+18*2), ("サポーター" if self.japanese else "Support"), fill=(255, 255, 255), font=self.fonts['medium'])
+                    self.pasteImage(imgs, "assets/big_stat.png", (pos[0]-bsize[0]-30, 330), (bsize[0], 300), transparency=True, start=0, end=1)
+                    self.text(imgs, (pos[0]-bsize[0]-30+30 , pos[1]+18*2), ("サポーター" if self.japanese else "Support"), fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
                     if len(export['sps']) > 10: supp = export['sps'][:10] + "..."
                     else: supp = export['sps']
-                    self.text(imgs, (pos[0]-bsize[0]-30+30 , pos[1]+18*2+120), supp, fill=(255, 255, 255), font=self.fonts['medium'])
+                    self.text(imgs, (pos[0]-bsize[0]-30+30 , pos[1]+18*2+120), supp, fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
                 else:
                     print("[WPN] |--> Support summon ID is", supp)
-                    self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/summon/m/{}.jpg".format(supp), (pos[0]-bsize[0]-30+18, pos[1]), (522, 300))
+                    self.dlAndPasteImage(imgs, "http://game-a1.granbluefantasy.jp/assets_en/img/sp/assets/summon/m/{}.jpg".format(supp), (pos[0]-bsize[0]-30+18, pos[1]), (522, 300), start=0, end=1)
             # weapon grid stats
             est_width = ((size[0]*3)//2)
             for i in range(0, 2):
-                self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width*i , pos[1]), (est_width-30, 300), transparency=True)
-                self.text(imgs, (pos[0]+18+est_width*i, pos[1]+18), "{}".format(export['est'][i+1]), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0))
+                self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width*i , pos[1]), (est_width-30, 300), transparency=True, start=0, end=1)
+                self.text(imgs, (pos[0]+18+est_width*i, pos[1]+18), "{}".format(export['est'][i+1]), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0), start=0, end=1)
                 if i == 0:
-                    self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), ("予測ダメ一ジ" if self.japanese else "Estimated"), fill=(255, 255, 255), font=self.fonts['medium'])
+                    self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), ("予測ダメ一ジ" if self.japanese else "Estimated"), fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
                 elif i == 1:
                     if int(export['est'][0]) <= 4: vs = (int(export['est'][0]) + 2) % 4 + 1
                     else: vs = (int(export['est'][0]) - 5 + 1) % 2 + 5
                     if self.japanese:
-                        self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), "対", fill=(255, 255, 255), font=self.fonts['medium'])
-                        self.text(imgs, (pos[0]+est_width*i+108 , pos[1]+180), "{}属性".format(self.color_strs_jp[vs]), fill=self.colors[vs], font=self.fonts['medium'])
-                        self.text(imgs, (pos[0]+est_width*i+324 , pos[1]+180), "予測ダメ一ジ", fill=(255, 255, 255), font=self.fonts['medium'])
+                        self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), "対", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
+                        self.text(imgs, (pos[0]+est_width*i+108 , pos[1]+180), "{}属性".format(self.color_strs_jp[vs]), fill=self.colors[vs], font=self.fonts['medium'], start=0, end=1)
+                        self.text(imgs, (pos[0]+est_width*i+324 , pos[1]+180), "予測ダメ一ジ", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
                     else:
-                        self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), "vs", fill=(255, 255, 255), font=self.fonts['medium'])
-                        self.text(imgs, (pos[0]+est_width*i+132 , pos[1]+180), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.fonts['medium'])
+                        self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), "vs", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
+                        self.text(imgs, (pos[0]+est_width*i+132 , pos[1]+180), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.fonts['medium'], start=0, end=1)
             return ('weapon', imgs)
         except Exception as e:
             imgs[0].close()
@@ -591,7 +604,7 @@ class PartyBuilder():
 
     def make_modifier(self, export):
         try:
-            imgs = [self.make_canvas(), self.make_canvas()]
+            imgs = [self.make_canvas()]
             print("[MOD] * Drawing Modifiers...")
             if self.babyl:
                 offset = (3120, 20)
@@ -622,7 +635,6 @@ class PartyBuilder():
             return ('modifier', imgs)
         except Exception as e:
             imgs[0].close()
-            imgs[1].close()
             return e
 
     def loadEMP(self, id):
@@ -769,16 +781,20 @@ class PartyBuilder():
             return e
 
     def text(self, imgs, *args, **kwargs):
-        for img in imgs:
-            ImageDraw.Draw(img, 'RGBA').text(*args, **kwargs)
+        start = kwargs.pop('start',0)
+        end = kwargs.pop('end',9999999999)
+        for i in range(start, min(len(imgs), end)):
+            ImageDraw.Draw(imgs[i], 'RGBA').text(*args, **kwargs)
 
     def saveImage(self, img, filename, resize):
         try:
             if resize is not None:
-                img = img.resize(self.definition)
-            img.save(filename, "PNG")
-            img.close()
-            print("|--> '{}' has been generated".format(filename))
+                tmp = img.resize(self.definition)
+                tmp.save(filename, "PNG")
+                tmp.close()
+            else:
+                img.save(filename, "PNG")
+            print("[OUT] *'{}' has been generated".format(filename))
             return None
         except Exception as e:
             return e
@@ -807,6 +823,11 @@ class PartyBuilder():
             self.running = False
             return False
 
+    def AlphaCompositeAndClose(self, base, paste):
+        res = Image.alpha_composite(base, paste)
+        base.close()
+        return res
+
     def make_sub_party(self, export):
         do_emp = self.settings.get('emp', False)
         do_skin = self.settings.get('skin', True)
@@ -814,6 +835,7 @@ class PartyBuilder():
             self.checkDiskCache()
         self.quality = {'720p':1/6, '1080p':1/4, '4k':1/2, '8k':1}.get(self.settings.get('quality', '8K').lower(), 1)
         self.definition = {'720p':(600, 720), '1080p':(900, 1080), '4k':(1800, 2160), '8k':(3600, 4320)}.get(self.settings.get('quality', '8K').lower(), (3600, 4320))
+        resize = None if self.quality == 1 else self.definition
         print("* Image Quality ratio:", self.quality)
         print("* Image Definition:", self.definition)
         self.japanese = (export['lang'] == 'ja')
@@ -843,7 +865,8 @@ class PartyBuilder():
             imgs = {}
             print("* Starting Threads...")
             futures = []
-            if do_emp:
+            futures_save = []
+            if do_emp: # only start if enabled
                 futures.append(executor.submit(self.make_emp, export))
             futures.append(executor.submit(self.make_party, export))
             futures.append(executor.submit(self.make_summon, export))
@@ -852,25 +875,38 @@ class PartyBuilder():
             res = []
             for future in concurrent.futures.as_completed(futures):
                 res.append(future.result())
+            gen_done = False # flag to check if party and skin final image generation started
             for r in res:
-                if isinstance(r, tuple): imgs[r[0]] = r[1]
-                else: raise r
-            print("* Generating final images...")
-            for i in range(2):
-                imgs['party'][i] = Image.alpha_composite(imgs['party'][i], imgs['summon'][i])
-                imgs['summon'][i].close()
-                imgs['party'][i] = Image.alpha_composite(imgs['party'][i], imgs['weapon'][i])
-                imgs['weapon'][i].close()
-                imgs['party'][i] = Image.alpha_composite(imgs['party'][i], imgs['modifier'][i])
-                imgs['modifier'][i].close()
-
-            print("* Saving...")
-            resize = None if self.quality == 1 else self.definition
-            futures = [executor.submit(self.saveImage, imgs['party'][0], "party.png", resize)]
-            if do_skin: futures.append(executor.submit(self.saveImage, imgs['party'][1], "skin.png", resize))
-            if do_emp: futures.append(executor.submit(self.saveImage, imgs['emp'][0], "emp.png", resize))
+                if isinstance(r, tuple):
+                    imgs[r[0]] = r[1]
+                else:
+                    raise r
+                # as soon as available, we start generating the final images while the EMP are being made
+                if not gen_done and 'party' in imgs and 'summon' in imgs and 'weapon' in imgs and 'modifier' in imgs:
+                    gen_done = True
+                    # party - Merge the images and save the resulting image
+                    imgs['party'][0] = self.AlphaCompositeAndClose(imgs['party'][0], imgs['summon'][0])
+                    imgs['summon'][0].close()
+                    imgs['party'][0] = self.AlphaCompositeAndClose(imgs['party'][0], imgs['weapon'][0])
+                    imgs['weapon'][0].close()
+                    imgs['party'][0] = self.AlphaCompositeAndClose(imgs['party'][0], imgs['modifier'][0])
+                    imgs['modifier'][0].close()
+                    futures_save.append(executor.submit(self.saveImage, imgs['party'][0], "party.png", resize))
+                    # skin - Merge the images (if enabled) and save the resulting image
+                    if do_skin:
+                        tmp = imgs['party'][1]
+                        imgs['party'][1] = Image.alpha_composite(imgs['party'][0], tmp) # we don't close imgs['party'][0] in case its save process isn't finished
+                        tmp.close()
+                        imgs['party'][1] = self.AlphaCompositeAndClose(imgs['party'][1], imgs['summon'][1])
+                        imgs['party'][1] = self.AlphaCompositeAndClose(imgs['party'][1], imgs['weapon'][1])
+                        futures_save.append(executor.submit(self.saveImage, imgs['party'][1], "skin.png", resize))
+                    imgs['summon'][1].close()
+                    imgs['weapon'][1].close()
+            # emp - save the resulting image (if enabled)
+            if do_emp:
+                futures_save.append(executor.submit(self.saveImage, imgs['emp'][0], "emp.png", resize))
             res = []
-            for future in concurrent.futures.as_completed(futures):
+            for future in concurrent.futures.as_completed(futures_save):
                 res.append(future.result())
             for r in res:
                 if r is not None: raise r
@@ -1107,7 +1143,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.9"
+    ver = "v7.10"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
