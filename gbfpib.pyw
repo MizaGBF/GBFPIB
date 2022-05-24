@@ -14,6 +14,7 @@ import tkinter.ttk as ttk
 from tkinter import messagebox
 import threading
 import concurrent.futures
+from multiprocessing import Manager
 import shutil
 
 class PartyBuilder():
@@ -23,8 +24,10 @@ class PartyBuilder():
         self.prev_lang = None # Language used in the previous run
         self.babyl = False # True if the data contains more than 5 allies
         self.sandbox = False # True if the data contains more than 10 weapons
-        self.cache = {} # memory cache
-        self.sumcache = {} # wiki summon cache
+        manager = Manager()
+        self.cache = manager.dict() # memory cache
+        self.lock = manager.Lock() # lock object for cache
+        self.sumcache = manager.dict()# wiki summon cache
         self.fonts = {'small':None, 'medium':None, 'big':None, 'mini':None} # font to use during the processing
         self.quality = 1 # quality ratio in use currently
         self.definition = None # image size
@@ -123,6 +126,31 @@ class PartyBuilder():
         except:
             pass
 
+    def retrieveImage(self, url):
+        if self.japanese: url = url.replace('assets_en', 'assets')
+        with self.lock:
+            if url not in self.cache:
+                try: # get from disk cache if enabled
+                    if self.settings.get('caching', False):
+                        with open("cache/" + base64.b64encode(url.encode('utf-8')).decode('utf-8'), "rb") as f:
+                            self.cache[url] = f.read()
+                    else:
+                        raise Exception()
+                except: # else request it from gbf
+                    print("[GET] *Downloading File", url)
+                    req = request.Request(url)
+                    url_handle = request.urlopen(req)
+                    self.cache[url] = url_handle.read()
+                    if self.settings.get('caching', False):
+                        try:
+                            with open("cache/" + base64.b64encode(url.encode('utf-8')).decode('utf-8'), "wb") as f:
+                                f.write(self.cache[url])
+                        except Exception as e:
+                            print(e)
+                            pass
+                    url_handle.close()
+        return self.cache[url]
+
     def pasteImage(self, imgs, file, offset, resize=None, transparency=False): # paste an image onto another
         if self.japanese and isinstance(file, str):
             file = file.replace('_EN', '')
@@ -145,27 +173,7 @@ class PartyBuilder():
         return imgs
 
     def dlAndPasteImage(self, imgs, url, offset, resize=None, transparency=False): # dl an image and call pasteImage()
-        if self.japanese: url = url.replace('assets_en', 'assets')
-        if url not in self.cache:
-            try: # get from disk cache if enabled
-                if self.settings.get('caching', False):
-                    with open("cache/" + base64.b64encode(url.encode('utf-8')).decode('utf-8'), "rb") as f:
-                        self.cache[url] = f.read()
-                else:
-                    raise Exception()
-            except: # else request it from gbf
-                req = request.Request(url)
-                url_handle = request.urlopen(req)
-                self.cache[url] = url_handle.read()
-                if self.settings.get('caching', False):
-                    try:
-                        with open("cache/" + base64.b64encode(url.encode('utf-8')).decode('utf-8'), "wb") as f:
-                            f.write(self.cache[url])
-                    except Exception as e:
-                        print(e)
-                        pass
-                url_handle.close()
-        data = self.cache[url]
+        data = self.retrieveImage(url)
         with BytesIO(data) as file_jpgdata:
             return self.pasteImage(imgs, file_jpgdata, offset, resize, transparency)
 
@@ -258,6 +266,13 @@ class PartyBuilder():
         jid = job // 10000
         if jid not in self.classes: return skin
         return "{}_{}_{}".format(job, self.classes[jid], '_'.join(skin.split('_')[2:]))
+
+    def make_canvas(self, size=(3600, 4320)):
+        i = Image.new('RGB', size, "black")
+        im_a = Image.new("L", size, "black")
+        i.putalpha(im_a)
+        im_a.close()
+        return i
 
     def make_party(self, export):
         try:
@@ -792,13 +807,6 @@ class PartyBuilder():
             self.running = False
             return False
 
-    def make_canvas(self, size=(3600, 4320)):
-        i = Image.new('RGB', size, "black")
-        im_a = Image.new("L", size, "black")
-        i.putalpha(im_a)
-        im_a.close()
-        return i
-
     def make_sub_party(self, export):
         do_emp = self.settings.get('emp', False)
         do_skin = self.settings.get('skin', True)
@@ -1099,7 +1107,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.8"
+    ver = "v7.9"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
