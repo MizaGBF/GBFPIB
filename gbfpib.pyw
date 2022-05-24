@@ -126,34 +126,39 @@ class PartyBuilder():
         except:
             pass
 
-    def retrieveImage(self, url):
-        if self.japanese: url = url.replace('assets_en', 'assets')
+    def retrieveImage(self, path, remote=True):
+        if self.japanese: path = path.replace('assets_en', 'assets')
         with self.lock:
-            if url not in self.cache:
+            if path not in self.cache:
                 try: # get from disk cache if enabled
                     if self.settings.get('caching', False):
-                        with open("cache/" + base64.b64encode(url.encode('utf-8')).decode('utf-8'), "rb") as f:
-                            self.cache[url] = f.read()
+                        with open("cache/" + base64.b64encode(path.encode('utf-8')).decode('utf-8'), "rb") as f:
+                            self.cache[path] = f.read()
                     else:
                         raise Exception()
                 except: # else request it from gbf
-                    print("[GET] *Downloading File", url)
-                    req = request.Request(url)
-                    url_handle = request.urlopen(req)
-                    self.cache[url] = url_handle.read()
-                    if self.settings.get('caching', False):
-                        try:
-                            with open("cache/" + base64.b64encode(url.encode('utf-8')).decode('utf-8'), "wb") as f:
-                                f.write(self.cache[url])
-                        except Exception as e:
-                            print(e)
-                            pass
-                    url_handle.close()
-        return self.cache[url]
+                    if remote:
+                        print("[GET] *Downloading File", path)
+                        req = request.Request(path)
+                        path_handle = request.pathopen(req)
+                        self.cache[path] = path_handle.read()
+                        if self.settings.get('caching', False):
+                            try:
+                                with open("cache/" + base64.b64encode(path.encode('utf-8')).decode('utf-8'), "wb") as f:
+                                    f.write(self.cache[path])
+                            except Exception as e:
+                                print(e)
+                                pass
+                        path_handle.close()
+                    else:
+                        with open(path, "rb") as f:
+                            self.cache[path] = f.read()
+            return self.cache[path]
 
     def pasteImage(self, imgs, file, offset, resize=None, transparency=False, start=0, end=99999999): # paste an image onto another
-        if self.japanese and isinstance(file, str):
-            file = file.replace('_EN', '')
+        if isinstance(file, str):
+            if self.japanese: file = file.replace('_EN', '')
+            file = BytesIO(self.retrieveImage(file, remote=False))
         buffers = [Image.open(file)]
         buffers.append(buffers[-1].convert('RGBA'))
         if resize is not None: buffers.append(buffers[-1].resize(resize, Image.Resampling.LANCZOS))
@@ -170,11 +175,11 @@ class PartyBuilder():
             layer.close()
         for buf in buffers: buf.close()
         del buffers
+        file.close()
         return imgs
 
     def dlAndPasteImage(self, imgs, url, offset, resize=None, transparency=False, start=0, end=99999999): # dl an image and call pasteImage()
-        data = self.retrieveImage(url)
-        with BytesIO(data) as file_jpgdata:
+        with BytesIO(self.retrieveImage(url)) as file_jpgdata:
             return self.pasteImage(imgs, file_jpgdata, offset, resize, transparency, start, end)
 
     def addTuple(self, A:tuple, B:tuple):
@@ -1143,7 +1148,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.10"
+    ver = "v7.11"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
