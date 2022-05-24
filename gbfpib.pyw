@@ -102,7 +102,6 @@ class PartyBuilder():
         self.dummy_layer = self.make_canvas()
         self.settings = {} # settings.json data
         self.load() # loading settings.json
-        self.lock = threading.Lock()
 
     def load(self): # load settings.json
         try:
@@ -150,26 +149,23 @@ class PartyBuilder():
         if url not in self.cache:
             try: # get from disk cache if enabled
                 if self.settings.get('caching', False):
-                    with self.lock:
-                        with open("cache/" + base64.b64encode(url.encode('utf-8')).decode('utf-8'), "rb") as f:
-                            self.cache[url] = f.read()
+                    with open("cache/" + base64.b64encode(url.encode('utf-8')).decode('utf-8'), "rb") as f:
+                        self.cache[url] = f.read()
                 else:
                     raise Exception()
             except: # else request it from gbf
                 req = request.Request(url)
                 url_handle = request.urlopen(req)
-                with self.lock:
-                    self.cache[url] = url_handle.read()
-                    if self.settings.get('caching', False):
-                        try:
-                            with open("cache/" + base64.b64encode(url.encode('utf-8')).decode('utf-8'), "wb") as f:
-                                f.write(self.cache[url])
-                        except Exception as e:
-                            print(e)
-                            pass
+                self.cache[url] = url_handle.read()
+                if self.settings.get('caching', False):
+                    try:
+                        with open("cache/" + base64.b64encode(url.encode('utf-8')).decode('utf-8'), "wb") as f:
+                            f.write(self.cache[url])
+                    except Exception as e:
+                        print(e)
+                        pass
                 url_handle.close()
-        with self.lock:
-            data = self.cache[url]
+        data = self.cache[url]
         with BytesIO(data) as file_jpgdata:
             return self.pasteImage(imgs, file_jpgdata, offset, resize, transparency)
 
@@ -263,8 +259,9 @@ class PartyBuilder():
         if jid not in self.classes: return skin
         return "{}_{}_{}".format(job, self.classes[jid], '_'.join(skin.split('_')[2:]))
 
-    def make_party(self, imgs, export):
+    def make_party(self, export):
         try:
+            imgs = [self.make_canvas(), self.make_canvas()]
             print("[CHA] * Drawing Party...")
             # version number
             self.text(imgs, (3420, 0), self.version, fill=(150, 150, 150, 60), font=self.fonts['mini'])
@@ -364,12 +361,15 @@ class PartyBuilder():
                 self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/shield/s/{}.jpg".format(export['cpl']), plsoffset, (300, 300))
             elif self.babyl: # to fill the blank space
                 self.pasteImage(imgs, "assets/characters_EN.png", self.addTuple(ssoffset, (skill_width, 0)), (552, 150), transparency=True)
-            return None
+            return ('party', imgs)
         except Exception as e:
+            imgs[0].close()
+            imgs[1].close()
             return e
 
-    def make_summon(self, imgs, export):
+    def make_summon(self, export):
         try:
+            imgs = [self.make_canvas(), self.make_canvas()]
             print("[SUM] * Drawing Summons...")
             offset = (340, 850)
             sizes = [(543, 944), (532, 400), (547, 310)]
@@ -417,12 +417,15 @@ class PartyBuilder():
             self.pasteImage(imgs, "assets/hp.png", self.addTuple(spos, (sizes[1][0]+18, 18)), (132, 78), transparency=True)
             self.text(imgs, self.addTuple(spos, (240, 18)), "{}".format(export['satk']), fill=(255, 255, 255), font=self.fonts['small'])
             self.text(imgs, self.addTuple(spos, (sizes[1][0]+160, 18)), "{}".format(export['shp']), fill=(255, 255, 255), font=self.fonts['small'])
-            return None
+            return ('summon', imgs)
         except Exception as e:
+            imgs[0].close()
+            imgs[1].close()
             return e
 
-    def make_weapon(self, imgs, export):
+    def make_weapon(self, export):
         try:
+            imgs = [self.make_canvas(), self.make_canvas()]
             print("[WPN] * Drawing Weapons...")
             if self.sandbox: offset = (50, 2100)
             else: offset = (340, 2100)
@@ -565,12 +568,15 @@ class PartyBuilder():
                     else:
                         self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), "vs", fill=(255, 255, 255), font=self.fonts['medium'])
                         self.text(imgs, (pos[0]+est_width*i+132 , pos[1]+180), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.fonts['medium'])
-            return None
+            return ('weapon', imgs)
         except Exception as e:
+            imgs[0].close()
+            imgs[1].close()
             return e
 
-    def make_modifier(self, imgs, export):
+    def make_modifier(self, export):
         try:
+            imgs = [self.make_canvas(), self.make_canvas()]
             print("[MOD] * Drawing Modifiers...")
             if self.babyl:
                 offset = (3120, 20)
@@ -598,8 +604,10 @@ class PartyBuilder():
                     self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], offset, mod_size[idx], transparency=True)
                     self.text(imgs, (offset[0], offset[1]+mod_text_off[idx][0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.fonts[mod_font[idx]])
                     offset = (offset[0], offset[1]+mod_text_off[idx][1])
-            return None
+            return ('modifier', imgs)
         except Exception as e:
+            imgs[0].close()
+            imgs[1].close()
             return e
 
     def loadEMP(self, id):
@@ -609,8 +617,9 @@ class PartyBuilder():
         except:
             return None
 
-    def make_emp(self, imgs, export):
+    def make_emp(self, export):
         try:
+            imgs = [self.make_canvas()]
             print("[EMP] * Drawing Extended Masteries...")
             offset = (30, 0)
             eoffset = (30, 20)
@@ -739,8 +748,9 @@ class PartyBuilder():
                                     self.text(imgs, apos2,"Domain Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                         else:
                             print("[EMP] |----> Domain not set! Consider updating.")
-            return None
+            return ('emp', imgs)
         except Exception as e:
+            imgs[0].close()
             return e
 
     def text(self, imgs, *args, **kwargs):
@@ -820,48 +830,45 @@ class PartyBuilder():
                 self.fonts['mini'] = ImageFont.truetype("assets/font_english.ttf", 72, encoding="unic")
         self.prev_lang = self.japanese
         
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=5) as executor:
             print("* Preparing Canvas...")
-            parties = [self.make_canvas(), self.make_canvas()]
-            summons = [self.make_canvas(), self.make_canvas()]
-            weapons = [self.make_canvas(), self.make_canvas()]
-            modifiers = [self.make_canvas(), self.make_canvas()]
-            emps = [self.make_canvas()]
+            imgs = {}
             print("* Starting Threads...")
             futures = []
             if do_emp:
-                futures.append(executor.submit(self.make_emp, emps, export))
-            futures.append(executor.submit(self.make_party, parties, export))
-            futures.append(executor.submit(self.make_summon, summons, export))
-            futures.append(executor.submit(self.make_weapon, weapons, export))
-            futures.append(executor.submit(self.make_modifier, modifiers, export))
+                futures.append(executor.submit(self.make_emp, export))
+            futures.append(executor.submit(self.make_party, export))
+            futures.append(executor.submit(self.make_summon, export))
+            futures.append(executor.submit(self.make_weapon, export))
+            futures.append(executor.submit(self.make_modifier, export))
             res = []
             for future in concurrent.futures.as_completed(futures):
                 res.append(future.result())
             for r in res:
-                if r is not None: raise r
+                if isinstance(r, tuple): imgs[r[0]] = r[1]
+                else: raise r
             print("* Generating final images...")
             for i in range(2):
-                parties[i] = Image.alpha_composite(parties[i], summons[i])
-                summons[i].close()
-                parties[i] = Image.alpha_composite(parties[i], weapons[i])
-                weapons[i].close()
-                parties[i] = Image.alpha_composite(parties[i], modifiers[i])
-                modifiers[i].close()
+                imgs['party'][i] = Image.alpha_composite(imgs['party'][i], imgs['summon'][i])
+                imgs['summon'][i].close()
+                imgs['party'][i] = Image.alpha_composite(imgs['party'][i], imgs['weapon'][i])
+                imgs['weapon'][i].close()
+                imgs['party'][i] = Image.alpha_composite(imgs['party'][i], imgs['modifier'][i])
+                imgs['modifier'][i].close()
 
             print("* Saving...")
             resize = None if self.quality == 1 else self.definition
-            futures = [executor.submit(self.saveImage, parties[0], "party.png", resize)]
-            if do_skin: futures.append(executor.submit(self.saveImage, parties[1], "skin.png", resize))
-            if do_emp: futures.append(executor.submit(self.saveImage, emps[0], "emp.png", resize))
+            futures = [executor.submit(self.saveImage, imgs['party'][0], "party.png", resize)]
+            if do_skin: futures.append(executor.submit(self.saveImage, imgs['party'][1], "skin.png", resize))
+            if do_emp: futures.append(executor.submit(self.saveImage, imgs['emp'][0], "emp.png", resize))
             res = []
             for future in concurrent.futures.as_completed(futures):
                 res.append(future.result())
             for r in res:
                 if r is not None: raise r
 
-            for i in parties: i.close()
-            for i in emps: i.close()
+            for i in imgs['party']: i.close()
+            for i in imgs.get('emp', []): i.close()
 
         print("* Task completed with success!")
 
@@ -1111,7 +1118,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.6"
+    ver = "v7.7"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
