@@ -8,7 +8,7 @@
 ### Setup  
 1. Install the requirements with the command above.  
 2. Double click on `gbfpib.pyw`.  
-3. Click on the `Party Bookmark` button. A javascript code will be copied to your clipboard.  
+3. Click on the `Bookmark` button. A javascript code will be copied to your clipboard.  
 4. On the Chrome (or equivalent) browser you are using, make a new bookmark.  
 5. Right click that bookmark, select `edit`.  
 6. Paste the javascript code into the url field.  
@@ -40,16 +40,8 @@ You only need to enable the option to make it work.
 If some of those images are updated in game, all you need is to delete the cache folder so they are redownloaded later.  
 You can also delete the folder if it gets too big.  
 ### EMP  
-The setup for Characters Extended Mastery Perks is similar to the initial one:
-1. Double click on `gbfpib.pyw`.  
-2. Click on the `EMP Bookmark` button. A javascript code will be copied to your clipboard.  
-3. On the Chrome (or equivalent) browser you are using, make a new bookmark.  
-4. Right click that bookmark, select `edit`.  
-5. Paste the javascript code into the url field.  
-6. Change the bookmark name if you want to.  
-  
-Next, when you want to save a Character's EMP:  
-1. Go to its EMP page.  
+No additional setup is required, it uses the same bookmark.  
+1. Go to character EMP page.  
 2. Click the bookmarklet. If nothing happens, everything went well.  
 3. In `gbfpib.pyw`, click on the `Add EMP` button.  
   
