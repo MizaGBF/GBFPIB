@@ -140,7 +140,7 @@ class PartyBuilder():
                     if remote:
                         print("[GET] *Downloading File", path)
                         req = request.Request(path)
-                        path_handle = request.pathopen(req)
+                        path_handle = request.urlopen(req)
                         self.cache[path] = path_handle.read()
                         if self.settings.get('caching', False):
                             try:
@@ -1112,7 +1112,7 @@ class Interface(Tk.Tk): # interface
             messagebox.showinfo("Info", "Wait for the current processing to finish")
             return
         self.thread = threading.Thread(target=self.buildThread)
-        self.thread.setDaemon(True)
+        self.thread.daemon = True
         self.thread.start()
 
     def buildThread(self):
