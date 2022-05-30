@@ -626,8 +626,8 @@ class PartyBuilder():
                 mod_size = [(300, 77), (348, 90), (462, 120)]
                 mod_text_off = [(70, 132), (90, 168), (120, 210)]
                 
-                if len(export['mods']) > limit[0]: idx = 0 # smallest size for more mods
-                elif len(export['mods']) > limit[1]: idx = 1
+                if len(export['mods']) >= limit[0]: idx = 0 # smallest size for more mods
+                elif len(export['mods']) >= limit[1]: idx = 1
                 else: idx = 2 # biggest size
                 
                 self.pasteImage(imgs, "assets/mod_bg.png", (offset[0]-mod_off[idx], offset[1]-mod_off[idx]//2), mod_bg_size[idx])
@@ -1148,7 +1148,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.11"
+    ver = "v7.12"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
