@@ -649,26 +649,14 @@ class PartyBuilder():
         except:
             return None
 
-    def make_emp(self, export):
+    def make_emp(self, export, ccount, nchara, odd):
         try:
             imgs = [self.make_canvas()]
-            print("[EMP] * Drawing Extended Masteries...")
             offset = (30, 0)
             eoffset = (30, 20)
             ersize = (160, 160)
             roffset = (-20, -20)
             rsize = (180, 180)
-            # check the number of character in the party
-            ccount = 0
-            if self.babyl:
-                nchara = 12 # max number for babyl (mc included)
-            else:
-                nchara = 5 # max number of allies
-            for i in range(0, nchara):
-                if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
-                if i >= len(export['c']) or export['c'][i] is None: continue
-                ccount += 1
-            print("[EMP] *", ccount, "character(s) to draw")
             # set positions and offsets we'll need
             if ccount > 5:
                 if ccount > 8: compact = 2
@@ -694,6 +682,7 @@ class PartyBuilder():
                 if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
                 if i < len(export['c']) and export['c'][i] is not None:
                     pos = self.addTuple(pos, (0, csize[1]+shift)) # set chara position
+                    if i % 2 == odd: continue
                     print("[EMP] |--> Ally #{}".format(i+1))
                     # portrait
                     if export['c'][i] in self.nullchar: 
@@ -780,7 +769,7 @@ class PartyBuilder():
                                     self.text(imgs, apos2,"Domain Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                         else:
                             print("[EMP] |----> Domain not set! Consider updating.")
-            return ('emp', imgs)
+            return ('emp{}'.format(odd), imgs)
         except Exception as e:
             imgs[0].close()
             return e
@@ -865,14 +854,27 @@ class PartyBuilder():
                 self.fonts['mini'] = ImageFont.truetype("assets/font_english.ttf", 72, encoding="unic")
         self.prev_lang = self.japanese
         
-        with concurrent.futures.ProcessPoolExecutor(max_workers=5) as executor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=6) as executor:
             print("* Preparing Canvas...")
             imgs = {}
             print("* Starting Threads...")
             futures = []
             futures_save = []
             if do_emp: # only start if enabled
-                futures.append(executor.submit(self.make_emp, export))
+                # split in two to speed up the process
+                print("[EMP] * Drawing Extended Masteries...")
+                # check the number of character in the party
+                ccount = 0
+                if self.babyl:
+                    nchara = 12 # max number for babyl (mc included)
+                else:
+                    nchara = 5 # max number of allies
+                for i in range(0, nchara):
+                    if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
+                    if i >= len(export['c']) or export['c'][i] is None: continue
+                    ccount += 1
+                futures.append(executor.submit(self.make_emp, export, ccount, nchara, 0))
+                futures.append(executor.submit(self.make_emp, export, ccount, nchara, 1))
             futures.append(executor.submit(self.make_party, export))
             futures.append(executor.submit(self.make_summon, export))
             futures.append(executor.submit(self.make_weapon, export))
@@ -886,7 +888,7 @@ class PartyBuilder():
                     imgs[r[0]] = r[1]
                 else:
                     raise r
-                # as soon as available, we start generating the final images while the EMP are being made
+                # as soon as available, we start generating the final images
                 if not gen_done and 'party' in imgs and 'summon' in imgs and 'weapon' in imgs and 'modifier' in imgs:
                     gen_done = True
                     # party - Merge the images and save the resulting image
@@ -909,7 +911,9 @@ class PartyBuilder():
                     imgs['weapon'][1].close()
             # emp - save the resulting image (if enabled)
             if do_emp:
-                futures_save.append(executor.submit(self.saveImage, imgs['emp'][0], "emp.png", resize))
+                emp_img = self.AlphaCompositeAndClose(imgs['emp0'][0], imgs['emp1'][0])
+                futures_save.append(executor.submit(self.saveImage, emp_img, "emp.png", resize))
+                imgs['emp1'][0].close()
             res = []
             for future in concurrent.futures.as_completed(futures_save):
                 res.append(future.result())
@@ -917,7 +921,8 @@ class PartyBuilder():
                 if r is not None: raise r
 
             for i in imgs['party']: i.close()
-            for i in imgs.get('emp', []): i.close()
+            try: emp_img.close()
+            except: pass
 
         print("* Task completed with success!")
 
@@ -1148,7 +1153,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.12"
+    ver = "v7.13"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
