@@ -699,7 +699,6 @@ class PartyBuilder():
                 if i < len(export['c']) and export['c'][i] is not None:
                     pos = self.addTuple(pos, (0, csize[1]+shift)) # set chara position
                     if i % 2 == odd: continue
-                    print("[EMP] |--> Ally #{}".format(i+1))
                     # portrait
                     if export['c'][i] in self.nullchar: 
                         cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['ce'][i])
@@ -717,12 +716,12 @@ class PartyBuilder():
                     # load EMP file
                     data = self.loadEMP(export['c'][i])
                     if data is None or self.japanese != (data['lang'] == 'ja'): # skip if we can't find EMPs OR if the language doesn't match
-                        print("[EMP] |----> {}.json can't be loaded".format(export['c'][i]))
+                        print("[EMP] |--> Ally #{}: {}.json can't be loaded".format(i+1, export['c'][i]))
                         self.text(imgs, self.addTuple(pos, (csize[0]+100, csize[1]//3)), "EMP not set", fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                         continue
                     # main EMP
                     nemp = len(data['emp'])
-                    print("[EMP] |----> {} EMPs".format(nemp))
+                    print("[EMP] |--> Ally #{}: {} EMPs, {} Ring EMPs, {}, {}".format(i+1, nemp, len(data['ring']), ('{} Lv{}'.format(data['awaktype'], data['awakening'].split('lv')[-1]) if 'awakening' in data else 'Awakening not found'), ('Has Domain' if ('domain' in data and len(data['domain']) > 0) else 'No Domain')))
                     if nemp > 15: # transcended eternal only (for now)
                         idx = 1
                         off = ((esizes[0][0] - esizes[1][0]) * 5) // 2
@@ -745,7 +744,6 @@ class PartyBuilder():
                             else:
                                 self.pasteImage(imgs, "assets/emp_unused.png", epos, esizes[idx], transparency=True)
                     # ring EMP
-                    print("[EMP] |----> {} Ring EMPs".format(len(data['ring'])))
                     for j, ring in enumerate(data['ring']):
                         if compact:
                             epos = self.addTuple(pos, (csize[0]+30+(400+ersize[0])*j, csize[1]-ersize[1]-30))
@@ -766,13 +764,10 @@ class PartyBuilder():
                             apos2 = (imgs[0].size[0] - 800, pos[1]+150)
                         # awakening
                         if data.get('awakening', None) is not None:
-                            print("[EMP] |----> Awakening", data['awakening'].split('lv')[-1], data['awaktype'])
                             if self.japanese:
                                 self.text(imgs, apos1, data['awaktype'] + "Lv" + data['awakening'].split('lv')[-1], fill=self.color_awakening_jp[data['awaktype']], font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                             else:
                                 self.text(imgs, apos1, data['awaktype'] + " Lv" + data['awakening'].split('lv')[-1], fill=self.color_awakening[data['awaktype']], font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
-                        else:
-                            print("[EMP] |----> Awakening not set! Consider updating.")
                         # domain
                         if data.get('domain', None) is not None:
                             if len(data['domain']) > 0:
@@ -783,8 +778,6 @@ class PartyBuilder():
                                     self.text(imgs, apos2,"至賢Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                                 else:
                                     self.text(imgs, apos2,"Domain Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
-                        else:
-                            print("[EMP] |----> Domain not set! Consider updating.")
             return ('emp{}'.format(odd), imgs)
         except Exception as e:
             imgs[0].close()
