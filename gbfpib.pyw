@@ -649,6 +649,22 @@ class PartyBuilder():
         except:
             return None
 
+    def make_emp_start(self, executor, futures, export):
+        # split in two to speed up the process
+        print("[EMP] * Drawing Extended Masteries...")
+        # check the number of character in the party
+        ccount = 0
+        if self.babyl:
+            nchara = 12 # max number for babyl (mc included)
+        else:
+            nchara = 5 # max number of allies
+        for i in range(0, nchara):
+            if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
+            if i >= len(export['c']) or export['c'][i] is None: continue
+            ccount += 1
+        futures.append(executor.submit(self.make_emp, export, ccount, nchara, 0))
+        futures.append(executor.submit(self.make_emp, export, ccount, nchara, 1))
+
     def make_emp(self, export, ccount, nchara, odd):
         try:
             imgs = [self.make_canvas()]
@@ -822,6 +838,26 @@ class PartyBuilder():
         base.close()
         return res
 
+    def completeBaseImages(self, imgs, do_skin, executor, futures_save, resize):
+        # party - Merge the images and save the resulting image
+        imgs['party'][0] = self.AlphaCompositeAndClose(imgs['party'][0], imgs['summon'][0])
+        imgs['summon'][0].close()
+        imgs['party'][0] = self.AlphaCompositeAndClose(imgs['party'][0], imgs['weapon'][0])
+        imgs['weapon'][0].close()
+        imgs['party'][0] = self.AlphaCompositeAndClose(imgs['party'][0], imgs['modifier'][0])
+        imgs['modifier'][0].close()
+        futures_save.append(executor.submit(self.saveImage, imgs['party'][0], "party.png", resize))
+        # skin - Merge the images (if enabled) and save the resulting image
+        if do_skin:
+            tmp = imgs['party'][1]
+            imgs['party'][1] = Image.alpha_composite(imgs['party'][0], tmp) # we don't close imgs['party'][0] in case its save process isn't finished
+            tmp.close()
+            imgs['party'][1] = self.AlphaCompositeAndClose(imgs['party'][1], imgs['summon'][1])
+            imgs['party'][1] = self.AlphaCompositeAndClose(imgs['party'][1], imgs['weapon'][1])
+            futures_save.append(executor.submit(self.saveImage, imgs['party'][1], "skin.png", resize))
+        imgs['summon'][1].close()
+        imgs['weapon'][1].close()
+
     def make_sub_party(self, export):
         do_emp = self.settings.get('emp', False)
         do_skin = self.settings.get('skin', True)
@@ -861,20 +897,7 @@ class PartyBuilder():
             futures = []
             futures_save = []
             if do_emp: # only start if enabled
-                # split in two to speed up the process
-                print("[EMP] * Drawing Extended Masteries...")
-                # check the number of character in the party
-                ccount = 0
-                if self.babyl:
-                    nchara = 12 # max number for babyl (mc included)
-                else:
-                    nchara = 5 # max number of allies
-                for i in range(0, nchara):
-                    if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
-                    if i >= len(export['c']) or export['c'][i] is None: continue
-                    ccount += 1
-                futures.append(executor.submit(self.make_emp, export, ccount, nchara, 0))
-                futures.append(executor.submit(self.make_emp, export, ccount, nchara, 1))
+                self.make_emp_start(executor, futures, export)
             futures.append(executor.submit(self.make_party, export))
             futures.append(executor.submit(self.make_summon, export))
             futures.append(executor.submit(self.make_weapon, export))
@@ -886,29 +909,12 @@ class PartyBuilder():
             for r in res:
                 if isinstance(r, tuple):
                     imgs[r[0]] = r[1]
-                else:
+                else: # exception check
                     raise r
                 # as soon as available, we start generating the final images
                 if not gen_done and 'party' in imgs and 'summon' in imgs and 'weapon' in imgs and 'modifier' in imgs:
                     gen_done = True
-                    # party - Merge the images and save the resulting image
-                    imgs['party'][0] = self.AlphaCompositeAndClose(imgs['party'][0], imgs['summon'][0])
-                    imgs['summon'][0].close()
-                    imgs['party'][0] = self.AlphaCompositeAndClose(imgs['party'][0], imgs['weapon'][0])
-                    imgs['weapon'][0].close()
-                    imgs['party'][0] = self.AlphaCompositeAndClose(imgs['party'][0], imgs['modifier'][0])
-                    imgs['modifier'][0].close()
-                    futures_save.append(executor.submit(self.saveImage, imgs['party'][0], "party.png", resize))
-                    # skin - Merge the images (if enabled) and save the resulting image
-                    if do_skin:
-                        tmp = imgs['party'][1]
-                        imgs['party'][1] = Image.alpha_composite(imgs['party'][0], tmp) # we don't close imgs['party'][0] in case its save process isn't finished
-                        tmp.close()
-                        imgs['party'][1] = self.AlphaCompositeAndClose(imgs['party'][1], imgs['summon'][1])
-                        imgs['party'][1] = self.AlphaCompositeAndClose(imgs['party'][1], imgs['weapon'][1])
-                        futures_save.append(executor.submit(self.saveImage, imgs['party'][1], "skin.png", resize))
-                    imgs['summon'][1].close()
-                    imgs['weapon'][1].close()
+                    self.completeBaseImages(imgs, do_skin, executor, futures_save, resize)
             # emp - save the resulting image (if enabled)
             if do_emp:
                 emp_img = self.AlphaCompositeAndClose(imgs['emp0'][0], imgs['emp1'][0])
@@ -917,9 +923,8 @@ class PartyBuilder():
             res = []
             for future in concurrent.futures.as_completed(futures_save):
                 res.append(future.result())
-            for r in res:
+            for r in res: # exception check
                 if r is not None: raise r
-
             for i in imgs['party']: i.close()
             try: emp_img.close()
             except: pass
@@ -1153,7 +1158,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.13"
+    ver = "v7.14"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
