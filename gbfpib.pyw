@@ -500,7 +500,7 @@ class PartyBuilder():
                 else:
                     # ax and awakening check
                     has_ax = len(export['waxt'][i]) > 0
-                    has_awakening = (export['wakn'][i] is not None and export['wakn'][i]['is_arousal_weapon'])
+                    has_awakening = (export['wakn'][i] is not None and export['wakn'][i]['is_arousal_weapon'] and export['wakn'][i]['level'] is not None)
                     pos_shift = - skill_icon_size if (has_ax and has_awakening) else 0  # vertical shift of the skill boxes (if both ax and awk are presents)
                     # portrait draw
                     print("[WPN] |--> Weapon #{}".format(i+1), str(export['w'][i])+"00", ", AX:", has_ax, ", Awakening:", has_awakening)
@@ -1151,7 +1151,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v7.14"
+    ver = "v7.15"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
