@@ -601,7 +601,7 @@ class PartyBuilder():
                     else:
                         self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), "vs", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
                         self.text(imgs, (pos[0]+est_width*i+132 , pos[1]+180), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.fonts['medium'], start=0, end=1)
-            self.multiline_text(imgs, (2850, 4250), "Miza's GBFPIB " + self.version, fill=(200, 200, 200, 255), font=self.fonts['mini'], align="right")
+            self.multiline_text(imgs, (2850, 4250), "Miza's GBFPIB " + self.version, fill=(150, 150, 150, 255), font=self.fonts['mini'])
             return ('weapon', imgs)
         except Exception as e:
             imgs[0].close()
