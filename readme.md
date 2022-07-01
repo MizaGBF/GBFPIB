@@ -51,7 +51,13 @@ To update it, simply repeat the process.
 Keep in mind:
 1. The `Do EMP` setting must be enabled or `emp.png` won't be generated when clicking `Build Images`.  
 2. Your game language must be the same at the time you saved the EMP and when generating a Party image. EMP saved as japanese won't work for an english party image and vice versa.  
+### Estimate Damage settings  
+If you click the bookmarklet with the Estimated Damage calculator open, it will grab the current supported settings:
+1. HP percent (ignored if set to 100%).  
+2. Buff count (ignored if set to 0).  
+3. Debuff count (ignored if set to 0).  
   
+The settings will appear on top of the modifier list.  
 ### Support Summon  
 By default, the game doesn't provide you the ID of the support summon set in your damage calculator.  
 There are a few ways to go around this issue:  
