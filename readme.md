@@ -64,6 +64,11 @@ There are a few ways to go around this issue:
 1. If you open the damage calculator BEFORE clicking the bookmarklet, the ID will be fetched properly. You need to open it again if you change the party without reloading the page or the last loaded one will stay.  
 2. Alternatively, the bookmarklet will fetch the name of the support summon and search its ID on [gbf.wiki](https://gbf.wiki/). However, be warned this method isn't perfect, especially if you are playing in japanese.  
 3. If the above two methods don't work, the name of the support summon will simply be written instead.  
+### GBFTM  
+My other project [GBFTM](https://github.com/MizaGBF/GBFTM) can be imported to also generate a thumbnail.  
+Simply click `Set Path` and select the folder where GBFTM is located.  
+GBFTM must has been set beforehand (Twitter credentials included) or it might not work properly.  
+It's also currently compatible only with version 1.15 and higher.  
 ### Updating  
 When updating this script with a new version, be sure to update your bookmarklet, or issues might occur.  
 You might also want to rerun the `pip install -r requirements.txt` command if the required modules got updated.  

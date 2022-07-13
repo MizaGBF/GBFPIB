@@ -1,2 +1,2 @@
 pyperclip>=1.8.2
-pillow>=9.1.0
+pillow>=9.2.0

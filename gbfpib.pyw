@@ -12,11 +12,31 @@ import base64
 import tkinter as Tk
 import tkinter.ttk as ttk
 from tkinter import messagebox
+from tkinter import filedialog
 import threading
 import concurrent.futures
 from multiprocessing import Manager
 import shutil
 import traceback
+
+import importlib.util
+GBFTM_instance = None
+
+def importGBFTM(path):
+    global GBFTM_instance
+    try:
+        if GBFTM_instance is not None: return True
+        module_name = "gbftm.py"
+        class_name = "GBFTM"
+
+        spec = importlib.util.spec_from_file_location("GBFTM.gbftm", path + module_name)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["GBFTM.gbftm"] = module
+        spec.loader.exec_module(module)
+        GBFTM_instance = module.GBFTM(path)
+        return True
+    except:
+        return False
 
 class PartyBuilder():
     def __init__(self, ver):
@@ -106,6 +126,8 @@ class PartyBuilder():
         self.dummy_layer = self.make_canvas()
         self.settings = {} # settings.json data
         self.load() # loading settings.json
+        if importGBFTM(self.settings.get('gbftm_path', '')):
+            print("GBFTM imported with success")
 
     def load(self): # load settings.json
         try:
@@ -349,7 +371,10 @@ class PartyBuilder():
                     print("[CHA] |--> Ally #{}:".format(i+1), export['c'][i], export['cn'][i], "Lv {}".format(export['cl'][i]), "+{}".format(export['cp'][i]), "Has Ring" if export['cwr'][i] else "No Ring")
                     # portrait
                     if export['c'][i] in self.nullchar: 
-                        cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['ce'][i])
+                        if export['ce'][i] == 99:
+                            cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['pce'])
+                        else:
+                            cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['ce'][i])
                     else:
                         cid = "{}_{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]))
                     self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/npc/s/{}.jpg".format(cid), pos, csize, start=0, end=1)
@@ -568,7 +593,7 @@ class PartyBuilder():
 
             # estimated damage
             pos = (pos[0]+bsize[0]+30, pos[1]+330)
-            if export['sps'] is not None and export['sps'] != '':
+            if (export['sps'] is not None and export['sps'] != '') or export['spsid'] is not None:
                 # support summon
                 if export['spsid'] is not None:
                     supp = export['spsid']
@@ -641,7 +666,6 @@ class PartyBuilder():
                 estc += 1
             estx = '\n'.join(estx)
             
-            print(len(export['mods']), estc)
             # weapon modifier list
             if len(export['mods']) > 0 or estc > 0:
                 mod_font = ['mini', 'small', 'medium']
@@ -664,7 +688,7 @@ class PartyBuilder():
                 except:
                     self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], 100+offset[1]+mod_off[idx]+mod_text_off[idx][1]*(len(export['mods'])-1)+shift), mod_bg_size[idx])
                 # estimate damage setting draw
-                self.multiline_text(imgs, (offset[0], offset[1]), estx, fill=(255, 255, 255, 255), font=self.fonts[mod_font[idx]])
+                self.multiline_text(imgs, (offset[0], offset[1]), estx, fill=(255, 100, 100, 255), font=self.fonts[mod_font[idx]])
                 offset = (offset[0], offset[1]+shift)
                 # modifier draw
                 for m in export['mods']:
@@ -734,8 +758,11 @@ class PartyBuilder():
                     pos = self.addTuple(pos, (0, csize[1]+shift)) # set chara position
                     if i % 2 == odd: continue
                     # portrait
-                    if export['c'][i] in self.nullchar: 
-                        cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['ce'][i])
+                    if export['c'][i] in self.nullchar:
+                        if export['ce'][i] == 99:
+                            cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['pce'])
+                        else:
+                            cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['ce'][i])
                     else:
                         cid = "{}_{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]))
                     self.dlAndPasteImage(imgs, "http://game-a.granbluefantasy.jp/assets_en/img/sp/assets/npc/{}/{}.jpg".format(portrait_type, cid), pos, csize)
@@ -845,6 +872,58 @@ class PartyBuilder():
     def clipboardToJSON(self):
         return json.loads(pyperclip.paste())
 
+    def make_gbftm(self, choice1, choice2, export, bg = None, opttext = None):
+        match choice1:
+            case '0':
+                preset = ['-bg', '-input', '-fadein', '-party', '-position', 'top', '-ratio', '1.4', '-offset', '-70,140', '-text', '-input', '-position', 'bottomleft', '-offset', '30,-30', '-fontsize', '100', '-bold']
+                auto_pos = '100,300'
+            case '1':
+                preset = ['-bg', '-input', '-fadein', '-party_mainsummon', '-position', 'topleft', '-offset', '38,433', '-ratio', '1.25', '-text', '-input', '-position', 'topleft', '-offset', '70,100', '-fontsize', '190', '-bold', '-outcolor', '0,0,0', '-outsize', '8']
+                auto_pos = '100,330'
+            case '2':
+                preset = ['-bg', '-input', '-fadein', '-party_noskin', '-position', 'top', '-ratio', '1.2', '-offset', '50,180', '-text', '-input', '-position', 'topleft', '-offset', '80,350', '-color', '255,196,0', '-outcolor', '0,0,0', '-fontsize', '80', '-bold']
+                auto_pos = '100,270'
+            case '3':
+                preset = ['-bg', 'NM100.jpg',  '-nm150', '-party_noskin', '-position', 'top', '-ratio', '1.2', '-offset', '50,180', '-text', '-input', '-position', 'topleft', '-offset', '80,350', '-color', '255,196,0', '-outcolor', '0,0,0', '-fontsize', '80', '-bold']
+                auto_pos = '100,270'
+            case '4':
+                preset = ['-bg', 'NM100.jpg', '-nm200', '-party_noskin', '-position', 'top', '-ratio', '1.2', '-offset', '50,180', '-text', '-input', '-position', 'topleft', '-offset', '80,350', '-color', '255,196,0', '-outcolor', '0,0,0', '-fontsize', '80', '-bold']
+                auto_pos = '100,270'
+            case '5':
+                preset = ['-bg', 'tower_of_babyl.png', '-fill', '-text', '-input', '-position', 'topleft', '-offset', '20,20', '-fontsize', '100', '-bold', '-color', '255,255,255', '-outcolor', '0,0,0', '-outsize', '8', '-party_noskin', '-position', 'top', '-ratio', '1.4', '-offset', '50,60', '-text', '-input', '-position', 'bottomleft', '-offset', '30,-30', '-fontsize', '100', '-bold']
+                auto_pos = '100,140'
+            case '6':
+                preset = ['-bg', 'proving', '-fill', '-text', '-input', '-position', 'topleft', '-offset', '20,20', '-fontsize', '100', '-bold', '-color', '255,255,255', '-outcolor', '0,0,0', '-outsize', '8', '-party_mainsummon', '-position', 'topleft', '-offset', '38,433', '-ratio', '1.25', '-text', '-input', '-position', 'bottomleft', '-offset', '420,-100', '-fontsize', '100', '-bold']
+                auto_pos = '100,330'
+            case _:
+                preset = None
+        if preset is not None:
+            match choice2:
+                case '0':
+                    preset += ['-element', '-add', 'auto.png', '-ratio', '3', '-position', 'topleft', '-offset', auto_pos]
+                case '1':
+                    preset += ['-element', '-add', 'fa.png', '-ratio', '3', '-position', 'topleft', '-offset', auto_pos]
+                case '2':
+                    preset += ['-element', '-add', 'fa_guard.png', '-ratio', '3', '-position', 'topleft', '-offset', auto_pos]
+                case _:
+                    pass
+            if bg is not None:
+                for i in range(0, len(preset)):
+                    if preset[i] == '-input' and preset[i-1] == '-bg':
+                        preset[i] = bg
+                        break
+            if opttext is not None:
+                index = 0
+                i = 0
+                while i < len(preset) and index < len(opttext):
+                    if preset[i] == '-input' and preset[i-1] == '-text':
+                        preset[i] = '-content'
+                        preset.insert(i+1, opttext[index])
+                        index += 1
+                        i += 1
+                    i += 1
+            GBFTM_instance.auto(preset, nowait=True, auto_import=export)
+
     def make(self, fast=False): # main function
         try:
             if not fast:
@@ -856,7 +935,31 @@ class PartyBuilder():
             self.running = True
             export = self.clipboardToJSON() # get the data from clipboard
             if 'emp' in export: self.make_sub_emp(export)
-            else: self.make_sub_party(export)
+            else:
+                self.make_sub_party(export)
+                if GBFTM_instance is not None and self.settings.get('gbftm_use', False):
+                    print("Do you want to make a thumbnail with this party? (Y to confirm)")
+                    s = input()
+                    if s.lower() == "y":
+                        preset = []
+                        print("Please select a preset")
+                        print("[0] Party Showcase")
+                        print("[1] End Game Raid")
+                        print("[2] Unite and Fight")
+                        print("[3] Unite and Fight NM150")
+                        print("[4] Unite and Fight NM200")
+                        print("[5] Tower of Babyl")
+                        print("[6] Proving Grounds")
+                        print("[Any] Cancel")
+                        c1 = input()
+                        if c1 in ['0', '1', '2', '3', '4', '5', '6']:
+                            print("Please select the type")
+                            print("[0] Auto")
+                            print("[1] Full Auto")
+                            print("[2] Full Auto Guard")
+                            print("[Any] Manual")
+                            c2 = input()
+                            self.make_gbftm(c1, c2, export)
             self.running = False
             return True
         except Exception as e:
@@ -990,8 +1093,10 @@ class PartyBuilder():
             print("[1] Enable Disk Caching ( Current:", self.settings.get('caching', False),")")
             print("[2] Generate skin.png ( Current:", self.settings.get('skin', True),")")
             print("[3] Generate emp.png ( Current:", self.settings.get('emp', False),")")
-            print("[4] Empty Cache")
-            print("[5] Empty EMP")
+            print("[4] Set GBFTM Path ( Current:", self.settings.get('gbftm_path', ''),")")
+            print("[5] Use GBFTM if imported ( Current:", self.settings.get('gbftm_use', False),")")
+            print("[6] Empty Cache")
+            print("[7] Empty EMP")
             print("[Any] Back")
             s = input()
             if s == "0":
@@ -1004,8 +1109,23 @@ class PartyBuilder():
             elif s == "3":
                 self.settings['emp'] = not self.settings.get('emp', False)
             elif s == "4":
-                self.emptyCache()
+                print("Input the path of the GBFTM folder (Leave blank to cancel): ")
+                folder = input()
+                if folder != "":
+                    folder = folder.replace('\\', '/').replace('//', '/')
+                    if not folder.endswith('/'): folder += '/'
+                    self.settings['gbftm_path'] = folder
+                    if GBFTM_instance is not None:
+                        print("The change will take effect the next time")
+                    elif importGBFTM(self.settings['gbftm_path']):
+                        print("GBFTM is imported with success")
+                    else:
+                        print("Failed to import GBFTM")
             elif s == "5":
+                self.settings['gbftm_use'] = not self.settings.get('gbftm_use', False)
+            elif s == "6":
+                self.emptyCache()
+            elif s == "7":
                 self.emptyCache()
             else:
                 return
@@ -1035,7 +1155,7 @@ class PartyBuilder():
     def cpyBookmark(self):
         # check bookmarklet.txt for a more readable version
         # note: when updating it in this piece of code, you need to double the \
-        pyperclip.copy("javascript:(function(){if(window.location.hash.startsWith(\"#party/index/\")||window.location.hash.startsWith(\"#party/expectancy_damage/index\")||window.location.hash.startsWith(\"#tower/party/index/\")||(window.location.hash.startsWith(\"#event/sequenceraid\")&&window.location.hash.indexOf(\"/party/index/\")>0)&&!window.location.hash.startsWith(\"#tower/party/expectancy_damage/index/\")){let obj={lang:window.Game.lang,p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],c:[],ce:[],ci:[],cn:[],cl:[],cs:[],cp:[],cwr:[],cpl:window.Game.view.deck_model.attributes.deck.pc.shield_id,s:[],sl:[],ss:[],se:[],sp:[],ssm:window.Game.view.deck_model.attributes.deck.pc.skin_summon_id,w:[],wsm:[window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id, window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id_2],wl:[],wsn:[],wll:[],wp:[],wakn:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage],estx:[],mods:window.Game.view.deck_model.attributes.deck.pc.damage_info.effect_value_info,sps:(window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name?window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name:null),spsid:(Game.view.expectancyDamageData?(Game.view.expectancyDamageData.imageId?Game.view.expectancyDamageData.imageId:null):null)};try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.sub_summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.wakn.push(e.param?e.param.arousal:null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});Array.from(document.getElementsByClassName(\"txt-gauge-num\")).forEach(x=>{obj.estx.push([x.classList[1], x.textContent])});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");} else if(window.location.hash.startsWith(\"#zenith/npc\")||window.location.hash.startsWith(\"#tower/zenith/npc\")){let obj={lang:window.Game.lang,id:parseInt(window.Game.view.npcId,10),emp:window.Game.view.bonusListModel.attributes.bonus_list,ring:window.Game.view.npcaugmentData.param_data,awakening:null,awaktype:null,domain:[]};try{obj.awakening=document.getElementsByClassName(\"prt-current-awakening-lv\")[0].firstChild.className;obj.awaktype=document.getElementsByClassName(\"prt-arousal-form-info\")[0].children[1].textContent;domains = document.getElementById(\"prt-domain-evoker-list\").getElementsByClassName(\"prt-bonus-detail\");for(let i=0;i<domains.length;++i){obj.domain.push([domains[i].children[0].className, domains[i].children[1].textContent, domains[i].children[2]?domains[i].children[2].textContent:null]);}}catch(error){};let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}else{alert('Please go to a GBF Party or EMP screen');}}())")
+        pyperclip.copy("javascript:(function(){if(window.location.hash.startsWith(\"#party/index/\")||window.location.hash.startsWith(\"#party/expectancy_damage/index\")||window.location.hash.startsWith(\"#tower/party/index/\")||(window.location.hash.startsWith(\"#event/sequenceraid\")&&window.location.hash.indexOf(\"/party/index/\")>0)&&!window.location.hash.startsWith(\"#tower/party/expectancy_damage/index/\")){let obj={lang:window.Game.lang,p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],pce:window.Game.view.deck_model.attributes.deck.pc.param.attribute,c:[],ce:[],ci:[],cn:[],cl:[],cs:[],cp:[],cwr:[],cpl:window.Game.view.deck_model.attributes.deck.pc.shield_id,s:[],sl:[],ss:[],se:[],sp:[],ssm:window.Game.view.deck_model.attributes.deck.pc.skin_summon_id,w:[],wsm:[window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id, window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id_2],wl:[],wsn:[],wll:[],wp:[],wakn:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage],estx:[],mods:window.Game.view.deck_model.attributes.deck.pc.damage_info.effect_value_info,sps:(window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name?window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name:null),spsid:(Game.view.expectancyDamageData?(Game.view.expectancyDamageData.imageId?Game.view.expectancyDamageData.imageId:null):null)};try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.sub_summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.wakn.push(e.param?e.param.arousal:null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});Array.from(document.getElementsByClassName(\"txt-gauge-num\")).forEach(x=>{obj.estx.push([x.classList[1], x.textContent])});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");} else if(window.location.hash.startsWith(\"#zenith/npc\")||window.location.hash.startsWith(\"#tower/zenith/npc\")||/^#event\/sequenceraid\d+\/zenith\/npc/.test(window.location.hash)){let obj={lang:window.Game.lang,id:parseInt(window.Game.view.npcId,10),emp:window.Game.view.bonusListModel.attributes.bonus_list,ring:window.Game.view.npcaugmentData.param_data,awakening:null,awaktype:null,domain:[]};try{obj.awakening=document.getElementsByClassName(\"prt-current-awakening-lv\")[0].firstChild.className;obj.awaktype=document.getElementsByClassName(\"prt-arousal-form-info\")[0].children[1].textContent;domains = document.getElementById(\"prt-domain-evoker-list\").getElementsByClassName(\"prt-bonus-detail\");for(let i=0;i<domains.length;++i){obj.domain.push([domains[i].children[0].className, domains[i].children[1].textContent, domains[i].children[2]?domains[i].children[2].textContent:null]);}}catch(error){};let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}else{alert('Please go to a GBF Party or EMP screen');}}())")
 
     def run(self): # old command line menu
         while True:
@@ -1068,12 +1188,62 @@ class PartyBuilder():
                 self.save()
                 return
 
+class GBFTM_Select(Tk.Toplevel):
+    def __init__(self, parent):
+        # window
+        self.parent = parent
+        self.export = self.parent.gbftm_export
+        self.parent.gbftm_export = None
+        Tk.Toplevel.__init__(self,parent)
+        self.title("Thumbnail")
+        self.resizable(width=False, height=False) # not resizable
+        self.var1 = Tk.StringVar()
+        self.var1.set("Party Showcase")
+        self.choices1 = {"Party Showcase":'0', "End Game Raid":'1', "Unite and Fight":'2', "Unite and Fight NM150":'3', "Unite and Fight NM200":'4', "Tower of Babyl":'5', "Proving Grounds":'6'}
+        Tk.Label(self, text="Type").grid(row=0, column=0, sticky="w")
+        Tk.OptionMenu(self, self.var1, *list(self.choices1.keys())).grid(row=0, column=1, stick="ws")
+        
+        self.var2 = Tk.StringVar()
+        self.var2.set("Manual")
+        self.choices2 = {"Auto":'0', "Full Auto":'1', "Full Auto Guard":'2', "Manual":'3'}
+        Tk.Label(self, text="Auto").grid(row=1, column=0, sticky="w")
+        Tk.OptionMenu(self, self.var2, *list(self.choices2.keys())).grid(row=1, column=1, stick="ws")
+
+        Tk.Label(self, text="Settings").grid(row=2, column=0, sticky="w")
+
+        Tk.Label(self, text="Background").grid(row=3, column=0, sticky="w")
+        self.var3 = Tk.StringVar(self)
+        Tk.Entry(self, textvariable=self.var3).grid(row=3, column=1, columnspan=3, sticky="we")
+
+        Tk.Label(self, text="Text 1").grid(row=4, column=0, sticky="w")
+        self.var4 = Tk.StringVar(self)
+        Tk.Entry(self, textvariable=self.var4).grid(row=4, column=1, columnspan=3, sticky="we")
+        Tk.Label(self, text="Text 2").grid(row=5, column=0, sticky="w")
+        self.var5 = Tk.StringVar(self)
+        Tk.Entry(self, textvariable=self.var5).grid(row=5, column=1, columnspan=3, sticky="we")
+
+        Tk.Button(self, text="Make", command=self.confirm).grid(row=6, column=0, sticky="we")
+        Tk.Button(self, text="Ignore", command=self.cancel).grid(row=6, column=1, sticky="we")
+        
+        self.protocol("WM_DELETE_WINDOW", self.cancel)
+
+    def confirm(self):
+        try: self.parent.pb.make_gbftm(self.choices1[self.var1.get()], self.choices2[self.var2.get()], self.export, self.var3.get(), [self.var4.get(), self.var5.get()])
+        except: self.parent.events.append(("Error", "An error occured, impossible to generate the thumbnail"))
+        self.parent.gbftm_state = 3
+        self.cancel()
+
+    def cancel(self):
+        self.destroy()
+
 class Interface(Tk.Tk): # interface
     def __init__(self, pb, ver):
         Tk.Tk.__init__(self,None)
         self.parent = None
         self.pb = pb
         self.apprunning = True
+        self.gbftm_state = 0
+        self.gbftm_export = None
         self.iconbitmap('icon.ico')
         self.title("GBFPIB {}".format(ver))
         self.resizable(width=False, height=False) # not resizable
@@ -1085,9 +1255,9 @@ class Interface(Tk.Tk): # interface
         tabs.grid(row=1, column=0, rowspan=2, sticky="we")
         tabcontent = Tk.Frame(tabs)
         tabs.add(tabcontent, text="Run")
-        Tk.Button(tabcontent, text="Build Images", command=self.build).grid(row=0, column=0, sticky="we")
-        Tk.Button(tabcontent, text="Add EMP", command=self.add_emp).grid(row=1, column=0, sticky="we")
-        Tk.Button(tabcontent, text="Bookmark", command=self.bookmark).grid(row=2, column=0, sticky="we")
+        Tk.Button(tabcontent, text="Build Images", command=self.build, width=15).grid(row=0, column=0, sticky="we")
+        Tk.Button(tabcontent, text="Add EMP", command=self.add_emp, width=15).grid(row=1, column=0, sticky="we")
+        Tk.Button(tabcontent, text="Bookmark", command=self.bookmark, width=15).grid(row=2, column=0, sticky="we")
         
         # setting part
         tabs = ttk.Notebook(self)
@@ -1114,6 +1284,19 @@ class Interface(Tk.Tk): # interface
         Tk.Label(tabcontent, text="Do EMP").grid(row=3, column=0)
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.emp_var, command=self.toggleEMP))
         self.to_disable[-1].grid(row=3, column=1)
+        ### GBFTM plugin
+        tabcontent = Tk.Frame(tabs)
+        tabs.add(tabcontent, text="GBFTM")
+        self.to_disable.append(Tk.Button(tabcontent, text="Set Path", width=12, command=self.setGBFTM))
+        self.to_disable[-1].grid(row=0, column=0, columnspan=2, sticky="we")
+        self.gbftm_var = Tk.IntVar(value=self.pb.settings.get('gbftm_use', False))
+        self.gbftm_status = Tk.Label(tabcontent, text="Not Imported")
+        self.gbftm_status.grid(row=1, column=0)
+        Tk.Label(tabcontent, text="Enable").grid(row=2, column=0)
+        self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.gbftm_var, command=self.toggleGBFTM))
+        self.to_disable[-1].grid(row=2, column=1)
+        if GBFTM_instance is not None:
+            self.gbftm_status.config(text="Imported")
         
         # other
         self.status = Tk.Label(self, text="Starting")
@@ -1126,6 +1309,12 @@ class Interface(Tk.Tk): # interface
         # main loop
         run_flag = False
         while self.apprunning:
+            if self.gbftm_state == 1:
+                if messagebox.askyesno(title="Thumbnail", message="Do you want to make a thumbnail?"):
+                    self.gbftm_state = 2
+                    GBFTM_Select(self)
+                else:
+                    self.gbftm_state = 3
             if len(self.events) > 0:
                 ev = self.events.pop(0)
                 if ev[0] == "Info": messagebox.showinfo(ev[0], ev[1])
@@ -1160,10 +1349,22 @@ class Interface(Tk.Tk): # interface
 
     def buildThread(self):
         try:
-            self.pb.make_sub_party(self.pb.clipboardToJSON())
+            self.gbftm_state = 0
+            wait = False
+            gbftm_use = self.pb.settings.get('gbftm_use', False)
+            export = self.pb.clipboardToJSON()
+            if GBFTM_instance and gbftm_use:
+                self.gbftm_export = export
+                self.gbftm_state = 1
+                wait = True
+            self.pb.make_sub_party(export)
+            while wait and self.gbftm_state != 3:
+                time.sleep(1)
+            self.gbftm_state = 0
             self.events.append(("Info", "Image(s) generated with success"))
         except:
-            self.events.append(("Error", "An error occured, did you press the Party bookmark before starting?"))
+            self.gbftm_state = 0
+            self.events.append(("Error", "An error occured, did you press the bookmark?"))
         self.thread = None
 
     def add_emp(self):
@@ -1171,7 +1372,7 @@ class Interface(Tk.Tk): # interface
             self.pb.make_sub_emp(self.pb.clipboardToJSON())
             self.events.append(("Info", "EMP saved with success"))
         except:
-            self.events.append(("Error", "An error occured, did you press the EMP bookmark before starting?"))
+            self.events.append(("Error", "An error occured, did you press the bookmark?"))
 
     def bookmark(self):
         self.pb.cpyBookmark()
@@ -1189,9 +1390,27 @@ class Interface(Tk.Tk): # interface
     def toggleEMP(self):
         self.pb.settings['emp'] = (self.emp_var.get() != 0)
 
+    def toggleGBFTM(self):
+        self.pb.settings['gbftm_use'] = (self.gbftm_var.get() != 0)
+
+    def setGBFTM(self):
+        global GBFTM_instance
+        folder_selected = filedialog.askdirectory(title="Select the GBFTM folder")
+        if folder_selected == '': return
+        self.pb.settings['gbftm_path'] = folder_selected + "/"
+        if GBFTM_instance is not None:
+            messagebox.showinfo("Info", "GBFTM is already loaded, the change will take affect at the next startup")
+        else:
+            importGBFTM(self.pb.settings.get('gbftm_path', ''))
+            if GBFTM_instance is not None:
+                messagebox.showinfo("Info", "Imported GBFTM with success")
+                self.gbftm_status.config(text="Imported")
+            else:
+                messagebox.showinfo("Error", "Failed to import GBFTM")
+
 # entry point
 if __name__ == "__main__":
-    ver = "v7.16"
+    ver = "v8.0"
     if '-fast' in sys.argv:
         print("Granblue Fantasy Party Image Builder", ver)
         pb = PartyBuilder(ver)
