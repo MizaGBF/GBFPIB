@@ -1278,7 +1278,7 @@ class GBFTM_Select(Tk.Toplevel):
         self.destroy()
 
 class Interface(Tk.Tk): # interface
-    def __init__(self, pb, ver):
+    def __init__(self, pb):
         Tk.Tk.__init__(self,None)
         self.parent = None
         self.pb = pb
@@ -1286,7 +1286,7 @@ class Interface(Tk.Tk): # interface
         self.gbftm_state = 0
         self.gbftm_export = None
         self.iconbitmap('icon.ico')
-        self.title("GBFPIB {}".format(ver))
+        self.title("GBFPIB {}".format(self.pb.version))
         self.resizable(width=False, height=False) # not resizable
         self.protocol("WM_DELETE_WINDOW", self.close) # call close() if we close the window
         self.to_disable = []
@@ -1484,5 +1484,5 @@ if __name__ == "__main__":
     elif '-cmd' in sys.argv:
         pb.run()
     else:
-        ui = Interface(pb, ver)
+        ui = Interface(pb)
         ui.run()
