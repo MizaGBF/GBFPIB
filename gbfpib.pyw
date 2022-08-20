@@ -38,8 +38,11 @@ def importGBFTM(path):
         return False
 
 class PartyBuilder():
-    def __init__(self, ver):
+    def __init__(self, ver, debug):
+        print("Granblue Fantasy Party Image Builder", ver)
+        if debug: print("DEBUG enabled")
         self.version = ver
+        self.debug = debug
         self.japanese = False # True if the data is japanese, False if not
         self.prev_lang = None # Language used in the previous run
         self.babyl = False # True if the data contains more than 5 allies
@@ -127,6 +130,7 @@ class PartyBuilder():
         self.load() # loading settings.json
         if importGBFTM(self.settings.get('gbftm_path', '')):
             print("GBFTM imported with success")
+        self.wtm = base64.b64decode("TWl6YSdzIEdCRlBJQiA=").decode('utf-8')+ver
 
     def load(self): # load settings.json
         try:
@@ -491,6 +495,7 @@ class PartyBuilder():
             ax_separator = skill_box_height
             mh_size = (600, 1260)
             sub_size = (576, 330)
+            self.multiline_text(imgs, (2850, 4250), self.wtm, fill=(120, 120, 120, 255), font=self.fonts['mini'])
             self.pasteImage(imgs, "assets/grid_bg.png", self.addTuple(offset, (-30, -30)), (mh_size[0]+(4 if self.sandbox else 3)*sub_size[0]+120, 2520+(480 if self.sandbox else 0)), transparency=True, start=0, end=1)
             if self.sandbox:
                 self.pasteImage(imgs, "assets/grid_bg_extra.png", (offset[0]+mh_size[0]+60+sub_size[0]*3, offset[1]), (576, 2290), transparency=True, start=0, end=1)
@@ -593,6 +598,12 @@ class PartyBuilder():
 
             # estimated damage
             pos = (pos[0]+bsize[0]+30, pos[1]+330)
+            # getting grid crit value
+            crit = 0
+            for m in export['mods']:
+                if 'critical' in m['icon_img']:
+                    crit = round(float(m['value'][:-1]))
+                    break
             if (export['sps'] is not None and export['sps'] != '') or export['spsid'] is not None:
                 # support summon
                 if export['spsid'] is not None:
@@ -612,21 +623,29 @@ class PartyBuilder():
             # weapon grid stats
             est_width = ((size[0]*3)//2)
             for i in range(0, 2):
-                self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width*i , pos[1]), (est_width-30, 300), transparency=True, start=0, end=1)
-                self.text(imgs, (pos[0]+18+est_width*i, pos[1]+18), "{}".format(export['est'][i+1]), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0), start=0, end=1)
+                if i == 0 or crit == 0 or crit == 100:
+                    self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width*i , pos[1]), (est_width-30, 300), transparency=True, start=0, end=1)
+                    self.text(imgs, (pos[0]+18+est_width*i, pos[1]+18), "{}".format(export['est'][i+1]), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0), start=0, end=1)
+                    do_crit = False
+                else:
+                    self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width , pos[1]), (est_width-30, 300), transparency=True, start=0, end=2)
+                    self.text(imgs, (pos[0]+18+est_width, pos[1]+18), "{}".format(export['est'][i+1]), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0), start=0, end=1)
+                    # skin.png
+                    self.text(imgs, (pos[0]+18+est_width, pos[1]+18), "{}".format((export['est'][i+1]*150)//100), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0), start=1, end=2)
+                    self.pasteImage(imgs, "assets/critical.png", (pos[0]+size[0]+est_width+140, pos[1]), (200, 200), transparency=True, start=1, end=2)
+                    do_crit = True
                 if i == 0:
                     self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), ("予測ダメ一ジ" if self.japanese else "Estimated"), fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
                 elif i == 1:
                     if int(export['est'][0]) <= 4: vs = (int(export['est'][0]) + 2) % 4 + 1
                     else: vs = (int(export['est'][0]) - 5 + 1) % 2 + 5
                     if self.japanese:
-                        self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), "対", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
-                        self.text(imgs, (pos[0]+est_width*i+108 , pos[1]+180), "{}属性".format(self.color_strs_jp[vs]), fill=self.colors[vs], font=self.fonts['medium'], start=0, end=1)
-                        self.text(imgs, (pos[0]+est_width*i+324 , pos[1]+180), "予測ダメ一ジ", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
+                        self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), "対", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
+                        self.text(imgs, (pos[0]+est_width*i+108 , pos[1]+180), "{}属性".format(self.color_strs_jp[vs]), fill=self.colors[vs], font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
+                        self.text(imgs, (pos[0]+est_width*i+324 , pos[1]+180), "予測ダメ一ジ", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
                     else:
-                        self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), "vs", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
-                        self.text(imgs, (pos[0]+est_width*i+132 , pos[1]+180), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.fonts['medium'], start=0, end=1)
-            self.multiline_text(imgs, (2850, 4250), "Miza's GBFPIB " + self.version, fill=(150, 150, 150, 255), font=self.fonts['mini'])
+                        self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), "vs", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
+                        self.text(imgs, (pos[0]+est_width*i+132 , pos[1]+180), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
             return ('weapon', imgs)
         except Exception as e:
             imgs[0].close()
@@ -966,7 +985,6 @@ class PartyBuilder():
             print("An error occured")
             print("exception message:", e)
             print("Did you follow the instructions?")
-            #print("".join(traceback.format_exception(type(e), e, e.__traceback__))) # Uncomment for debugging
             self.running = False
             return False
 
@@ -1047,6 +1065,8 @@ class PartyBuilder():
                 if isinstance(r, tuple):
                     imgs[r[0]] = r[1]
                 else: # exception check
+                    if self.debug:
+                        print("".join(traceback.format_exception(type(r), r, r.__traceback__)))
                     raise r
                 # as soon as available, we start generating the final images
                 if not gen_done and 'party' in imgs and 'summon' in imgs and 'weapon' in imgs and 'modifier' in imgs:
@@ -1455,18 +1475,14 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    ver = "v8.1"
+    pb = PartyBuilder("v8.2", '-debug' in sys.argv)
     if '-fast' in sys.argv:
-        print("Granblue Fantasy Party Image Builder", ver)
-        pb = PartyBuilder(ver)
         pb.make(fast=True)
         if '-nowait' not in sys.argv:
             print("Closing in 10 seconds...")
             time.sleep(10)
     elif '-cmd' in sys.argv:
-        print("Granblue Fantasy Party Image Builder", ver)
-        pb = PartyBuilder(ver)
         pb.run()
     else:
-        ui = Interface(PartyBuilder(ver), ver)
+        ui = Interface(pb, ver)
         ui.run()
