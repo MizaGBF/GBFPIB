@@ -53,10 +53,8 @@ Keep in mind:
 2. Your game language must be the same at the time you saved the EMP and when generating a Party image. EMP saved as japanese won't work for an english party image and vice versa.  
 ### Estimate Damage settings  
 If you click the bookmarklet with the Estimated Damage calculator open, it will grab the current HP percentage and display it on `skin.png`, instead of the off-element estimated damage.  
-  
 ### Critical Estimate Damage  
 If your weapon grid has a critical modifier inferior to 100%, it will display the critical estimated damage on `skin.png`, instead of the on-element estimated damage.  
-  
 ### Support Summon  
 By default, the game doesn't provide you the ID of the support summon set in your damage calculator.  
 There are a few ways to go around this issue:  
@@ -71,7 +69,14 @@ It's also currently compatible only with version 1.16 and higher.
 ### Updating  
 When updating this script with a new version, be sure to update your bookmarklet, or issues might occur.  
 You might also want to rerun the `pip install -r requirements.txt` command if the required modules got updated.  
-In doubt, check the commit history to see which files changed, I won't maintain a changelog.
+In doubt, check the commit history to see which files changed, I won't maintain a changelog.  
+### Using it in your videos  
+Like the licence specifies, you are free to use this software as you want, free of charge.  
+Do note:  
+1) If you want to credit me, you can link this page or name me (Mizako or Miza).  
+2) If you want to report a bug, open an issue or contact me on [Twitter](https://twitter.com/mizak0), as long as I continue to develop and improve it.  
+3) I DON'T take feature requests. This tool is developped for my own use first and foremost. This is why I don't advertise it.  
+  
 ### Result  
 Here's what the resulting images look like:  
 (Screenshots taken on version 8.3)  
