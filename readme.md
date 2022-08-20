@@ -52,12 +52,11 @@ Keep in mind:
 1. The `Do EMP` setting must be enabled or `emp.png` won't be generated when clicking `Build Images`.  
 2. Your game language must be the same at the time you saved the EMP and when generating a Party image. EMP saved as japanese won't work for an english party image and vice versa.  
 ### Estimate Damage settings  
-If you click the bookmarklet with the Estimated Damage calculator open, it will grab the current supported settings:
-1. HP percent (ignored if set to 100%).  
-2. Buff count (ignored if set to 0).  
-3. Debuff count (ignored if set to 0).  
+If you click the bookmarklet with the Estimated Damage calculator open, it will grab the current HP percentage and display it on `skin.png`, instead of the off-element estimated damage.  
   
-The settings will appear on top of the modifier list.  
+### Critical Estimate Damage  
+If your weapon grid has a critical modifier inferior to 100%, it will display the critical estimated damage on `skin.png`, instead of the on-element estimated damage.  
+  
 ### Support Summon  
 By default, the game doesn't provide you the ID of the support summon set in your damage calculator.  
 There are a few ways to go around this issue:  
@@ -76,5 +75,5 @@ In doubt, check the commit history to see which files changed, I won't maintain 
 ### Result  
 Here's what the resulting images look like:  
 (Screenshots taken on version 7.5)  
-![Party Example](https://cdn.discordapp.com/attachments/614716155646705676/969934493274210354/party.png)  
-![EMP Example](https://cdn.discordapp.com/attachments/614716155646705676/969934493815287889/emp.png)  
+![Party and Skin Example](https://cdn.discordapp.com/attachments/614716155646705676/1010681871425880074/result.gif)  
+![EMP Example](https://cdn.discordapp.com/attachments/614716155646705676/1010681871732068444/emp.png)  

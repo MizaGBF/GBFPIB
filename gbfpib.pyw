@@ -182,11 +182,13 @@ class PartyBuilder():
                             self.cache[path] = f.read()
             return self.cache[path]
 
-    def pasteImage(self, imgs, file, offset, resize=None, transparency=False, start=0, end=99999999): # paste an image onto another
+    def pasteImage(self, imgs, file, offset, resize=None, transparency=False, start=0, end=99999999, crop=None): # paste an image onto another
         if isinstance(file, str):
             if self.japanese: file = file.replace('_EN', '')
             file = BytesIO(self.retrieveImage(file, remote=False))
         buffers = [Image.open(file)]
+        if crop is not None:
+            buffers.append(buffers[-1].crop((0, 0, crop[0], crop[1])))
         buffers.append(buffers[-1].convert('RGBA'))
         if resize is not None: buffers.append(buffers[-1].resize(resize, Image.Resampling.LANCZOS))
         if not transparency:
@@ -646,6 +648,22 @@ class PartyBuilder():
                     else:
                         self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), "vs", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
                         self.text(imgs, (pos[0]+est_width*i+132 , pos[1]+180), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
+            # hp gauge
+            hpratio = None
+            for et in export['estx']:
+                if et[0].replace('txt-gauge-num ', '') == 'hp':
+                    hpratio = et[1]
+                    break
+            if hpratio is not None:
+                self.pasteImage(imgs, "assets/big_stat.png", (pos[0] ,pos[1]), (est_width-30, 300), transparency=True, start=1, end=2)
+                if self.japanese:
+                    self.text(imgs, (pos[0]+50 , pos[1]+50), "HP{}%".format(hpratio), fill=(255, 255, 255), font=self.fonts['medium'], start=1, end=2)
+                else:
+                    self.text(imgs, (pos[0]+50 , pos[1]+50), "{}% HP".format(hpratio), fill=(255, 255, 255), font=self.fonts['medium'], start=1, end=2)
+                self.pasteImage(imgs, "assets/hp_bottom.png", (pos[0]+50 , pos[1]+180), (726, 90), transparency=True, start=1, end=2)
+                self.pasteImage(imgs, "assets/hp_mid.png", (pos[0]+50 , pos[1]+180), (int(726*int(hpratio)/100), 90), transparency=True, start=1, end=2, crop=(int(484*int(hpratio)/100), 23))
+                self.pasteImage(imgs, "assets/hp_top.png", (pos[0]+50 , pos[1]+180), (726, 90), transparency=True, start=1, end=2)
+                
             return ('weapon', imgs)
         except Exception as e:
             imgs[0].close()
@@ -663,30 +681,9 @@ class PartyBuilder():
                 offset = (3120, 830)
                 limit = (21, 16)
             print("[MOD] |--> Found", len(export['mods']), "modifier(s)...")
-            if len(export['estx']) > 0: print("[MOD] |--> Estimate Damage settings found....")
-            
-            # estimate damage setting check
-            estx = []
-            estc = 0
-            for et in export['estx']:
-                etype = et[0].replace('txt-gauge-num ', '')
-                match etype:
-                    case 'hp':
-                        estx.insert(0, "HP{}%".format(et[1]) if self.japanese else "HP {}%".format(et[1]))
-                    case 'debuff':
-                        if et[1] == "0": continue
-                        estx.append("{}弱体効果".format(et[1]) if self.japanese else "{} Debuffs".format(et[1]))
-                    case 'buff':
-                        if et[1] == "0": continue
-                        estx.append("{}強化効果".format(et[1]) if self.japanese else "{} Buffs".format(et[1]))
-                    case _:
-                        print("[MOD] |--> UNSUPPORTED ESTIMATE DAMAGE SETTING:", etype)
-                        continue
-                estc += 1
-            estx = '\n'.join(estx)
             
             # weapon modifier list
-            if len(export['mods']) > 0 or estc > 0:
+            if len(export['mods']) > 0:
                 mod_font = ['mini', 'small', 'medium']
                 mod_off =[30, 54, 30]
                 mod_bg_size = [(370, 228), (444, 228), (516, 228)]
@@ -694,21 +691,18 @@ class PartyBuilder():
                 mod_text_off = [(70, 132), (90, 168), (120, 210)]
                 
                 # auto sizing
-                if len(export['mods']) + estc/2 >= limit[0]: idx = 0 # smallest size for more mods
-                elif len(export['mods']) + estc/2 >= limit[1]: idx = 1
+                if len(export['mods'])>= limit[0]: idx = 0 # smallest size for more mods
+                elif len(export['mods'])>= limit[1]: idx = 1
                 else: idx = 2 # biggest size
-                shift = int(estc * mod_text_off[idx][1] / 2)
                 
                 # background
                 self.pasteImage(imgs, "assets/mod_bg.png", (offset[0]-mod_off[idx], offset[1]-mod_off[idx]//2), mod_bg_size[idx])
                 try:
-                    self.pasteImage(imgs, "assets/mod_bg_supp.png", (offset[0]-mod_off[idx], offset[1]-mod_off[idx]+mod_bg_size[idx][1]), (mod_bg_size[idx][0], mod_text_off[idx][1] * (len(export['mods'])-1)+shift))
-                    self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], offset[1]+mod_off[idx]+mod_text_off[idx][1]*(len(export['mods'])-1)+shift), mod_bg_size[idx])
+                    self.pasteImage(imgs, "assets/mod_bg_supp.png", (offset[0]-mod_off[idx], offset[1]-mod_off[idx]+mod_bg_size[idx][1]), (mod_bg_size[idx][0], mod_text_off[idx][1] * (len(export['mods'])-1)))
+                    self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], offset[1]+mod_off[idx]+mod_text_off[idx][1]*(len(export['mods'])-1)), mod_bg_size[idx])
                 except:
-                    self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], 100+offset[1]+mod_off[idx]+mod_text_off[idx][1]*(len(export['mods'])-1)+shift), mod_bg_size[idx])
-                # estimate damage setting draw
-                self.multiline_text(imgs, (offset[0], offset[1]), estx, fill=(255, 100, 100, 255), font=self.fonts[mod_font[idx]])
-                offset = (offset[0], offset[1]+shift)
+                    self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], 100+offset[1]+mod_off[idx]+mod_text_off[idx][1]*(len(export['mods'])-1)), mod_bg_size[idx])
+                offset = (offset[0], offset[1])
                 # modifier draw
                 for m in export['mods']:
                     self.dlAndPasteImage(imgs, "assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], offset, mod_size[idx], transparency=True)
@@ -1475,7 +1469,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    pb = PartyBuilder("v8.2", '-debug' in sys.argv)
+    pb = PartyBuilder("v8.3", '-debug' in sys.argv)
     if '-fast' in sys.argv:
         pb.make(fast=True)
         if '-nowait' not in sys.argv:
