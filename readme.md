@@ -55,6 +55,7 @@ Keep in mind:
 If you click the bookmarklet with the Estimated Damage calculator open, it will grab the current HP percentage and display it on `skin.png`, instead of the off-element estimated damage.  
 ### Critical Estimate Damage  
 If your weapon grid has a critical modifier inferior to 100%, it will display the critical estimated damage on `skin.png`, instead of the on-element estimated damage.  
+Do note the calcul isn't perfect: It won't account for cap up or craft skills (or other critical supplementals).  
 ### Support Summon  
 By default, the game doesn't provide you the ID of the support summon set in your damage calculator.  
 There are a few ways to go around this issue:  

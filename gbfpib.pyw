@@ -38,11 +38,11 @@ def importGBFTM(path):
         return False
 
 class PartyBuilder():
-    def __init__(self, ver, debug):
-        print("Granblue Fantasy Party Image Builder", ver)
-        if debug: print("DEBUG enabled")
-        self.version = ver
+    def __init__(self, debug):
+        self.version = "v8.4"
+        print("Granblue Fantasy Party Image Builder", self.version)
         self.debug = debug
+        if self.debug: print("DEBUG enabled")
         self.japanese = False # True if the data is japanese, False if not
         self.prev_lang = None # Language used in the previous run
         self.babyl = False # True if the data contains more than 5 allies
@@ -601,11 +601,14 @@ class PartyBuilder():
             # estimated damage
             pos = (pos[0]+bsize[0]+30, pos[1]+330)
             # getting grid crit value
-            crit = 0
+            mod_crit = 0
+            mod_supp = 0
             for m in export['mods']:
-                if 'critical' in m['icon_img']:
-                    crit = round(float(m['value'][:-1]))
-                    break
+                match m['icon_img']:
+                    case '01_icon_critical.png':
+                        mod_crit = round(float(m['value'][:-1]))
+                    case '04_icon_dmg_supp.png':
+                        mod_supp = int(m['value'].replace('+', ''))
             if (export['sps'] is not None and export['sps'] != '') or export['spsid'] is not None:
                 # support summon
                 if export['spsid'] is not None:
@@ -625,7 +628,7 @@ class PartyBuilder():
             # weapon grid stats
             est_width = ((size[0]*3)//2)
             for i in range(0, 2):
-                if i == 0 or crit == 0 or crit == 100:
+                if i == 0 or mod_crit == 0 or mod_crit == 100:
                     self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width*i , pos[1]), (est_width-30, 300), transparency=True, start=0, end=1)
                     self.text(imgs, (pos[0]+18+est_width*i, pos[1]+18), "{}".format(export['est'][i+1]), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0), start=0, end=1)
                     do_crit = False
@@ -633,7 +636,7 @@ class PartyBuilder():
                     self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width , pos[1]), (est_width-30, 300), transparency=True, start=0, end=2)
                     self.text(imgs, (pos[0]+18+est_width, pos[1]+18), "{}".format(export['est'][i+1]), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0), start=0, end=1)
                     # skin.png
-                    self.text(imgs, (pos[0]+18+est_width, pos[1]+18), "{}".format((export['est'][i+1]*150)//100), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0), start=1, end=2)
+                    self.text(imgs, (pos[0]+18+est_width, pos[1]+18), "{}".format(mod_supp+((export['est'][i+1]-mod_supp)*150)//100), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0), start=1, end=2)
                     self.pasteImage(imgs, "assets/critical.png", (pos[0]+size[0]+est_width+140, pos[1]), (200, 200), transparency=True, start=1, end=2)
                     do_crit = True
                 if i == 0:
@@ -1469,7 +1472,7 @@ class Interface(Tk.Tk): # interface
 
 # entry point
 if __name__ == "__main__":
-    pb = PartyBuilder("v8.3", '-debug' in sys.argv)
+    pb = PartyBuilder('-debug' in sys.argv)
     if '-fast' in sys.argv:
         pb.make(fast=True)
         if '-nowait' not in sys.argv:
