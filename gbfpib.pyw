@@ -130,7 +130,7 @@ class PartyBuilder():
         self.load() # loading settings.json
         if importGBFTM(self.settings.get('gbftm_path', '')):
             print("GBFTM imported with success")
-        self.wtm = base64.b64decode("TWl6YSdzIEdCRlBJQiA=").decode('utf-8')+ver
+        self.wtm = base64.b64decode("TWl6YSdzIEdCRlBJQiA=").decode('utf-8')+self.version
 
     def load(self): # load settings.json
         try:
