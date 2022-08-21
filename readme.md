@@ -26,14 +26,16 @@ You are done.
 The process take around 1 GB of memory and can take up to one minute (if your computer is slow and the script needs to download assets).  
 ### Settings  
 1. `Quality`: let you control the output size (default is 8K, minimum is 720p).  
-2. `Disk Caching`: if enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  
+2. `Caching`: if enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  
 3. `Do Skins`: if enabled, it will also generate `skin.png`.  
 4. `Do EMP`: if enabled, it will also generate `emp.png`.  
+5. `Use HTTPS`: if enabled, it will use HTTPS when downloading assets. Do note you can change the used asset server with the button on the left (in case they change the address again in the future).  
 ### Command Line  
 For advanced users:  
 1. `-fast`: Automatically start the image building process. Be sure to have the party data ready in your clipboard. If EMP datas are found instead, it will be saved in the `emp` folder.  
 2. `-nowait`: Skip the 10 seconds waiting time at the end when using `-fast`.  
-2. `-cmd`: Let you access the old command line menu. Can't be used with `-fast`.  
+3. `-cmd`: Let you access the command line menu. Can't be used with `-fast`.  
+4. `-debug`: For debugging purpose.  
 ### Cache  
 Images from the GBF asset servers can be saved for later uses.  
 You only need to enable the option to make it work.  
@@ -74,10 +76,14 @@ In doubt, check the commit history to see which files changed, I won't maintain 
 ### Using it in your videos  
 Like the licence specifies, you are free to use this software as you want, free of charge.  
 Do note:  
-1) If you want to credit me, you can link this page or name me (Mizako or Miza).  
-2) If you want to report a bug, open an issue or contact me on [Twitter](https://twitter.com/mizak0), as long as I continue to develop and improve it.  
-3) I DON'T take feature requests. This tool is developped for my own use first and foremost. This is why I don't advertise it.  
-  
+1. If you want to credit me, you can link this page or name me (Mizako or Miza).  
+2. If you want to report a bug, open an issue or contact me on [Twitter](https://twitter.com/mizak0), as long as I continue to develop and improve it.  
+3. I DON'T take feature requests. This tool is developped for my own use first and foremost. This is why I don't advertise it.  
+### Inner Workings  
+Some insights on how the image processing works:
+1. Upon starting, it reads your clipboard and check if there is any valid data exported with the bookmark.  
+2. Because Python multithreading is terribly slow, it relies on multiprocessing instead: Up to 6 new proccesses are created. One purely for the party, one for the summons, one for the weapon grid, one for the weapon modifiers and one for EMPs. Each process returns the images, which are then assembled in another process as simple layers, by putting them one on top of each other.  
+3. For memory usage and speed reasons, `skin.png` is also composed of some simple layers, which are added on top of a copy of `party.png`. This way, we don't "redraw" `party.png` twice. Do note, however, the `skin.png` processing takes place even when the setting is disabled.  
 ### Result  
 Here's what the resulting images look like:  
 (Screenshots taken on version 8.3)  
