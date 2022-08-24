@@ -39,7 +39,7 @@ def importGBFTM(path):
 
 class PartyBuilder():
     def __init__(self, debug):
-        self.version = "v8.4"
+        self.version = "v8.5"
         print("Granblue Fantasy Party Image Builder", self.version)
         self.debug = debug
         if self.debug: print("DEBUG enabled")
@@ -909,7 +909,7 @@ class PartyBuilder():
                 preset = ['-bg', 'tower_of_babyl.png', '-fill', '-text', '-input', '-position', 'topleft', '-offset', '20,20', '-fontsize', '100', '-bold', '-color', '255,255,255', '-outcolor', '0,0,0', '-outsize', '8', '-party_noskin', '-position', 'top', '-ratio', '1.4', '-offset', '50,60', '-text', '-input', '-position', 'bottomleft', '-offset', '30,-30', '-fontsize', '100', '-bold']
                 auto_pos = '100,140'
             case '6':
-                preset = ['-bg', 'proving', '-fill', '-text', '-input', '-position', 'topleft', '-offset', '20,20', '-fontsize', '100', '-bold', '-color', '255,255,255', '-outcolor', '0,0,0', '-outsize', '8', '-party_mainsummon', '-position', 'topleft', '-offset', '38,433', '-ratio', '1.25', '-text', '-input', '-position', 'bottomleft', '-offset', '420,-120', '-fontsize', '100', '-bold']
+                preset = ['-bg', 'proving', '-fill', '-text', '-input', '-position', 'topleft', '-offset', '20,20', '-fontsize', '100', '-bold', '-color', '255,255,255', '-outcolor', '0,0,0', '-outsize', '8', '-party_mainsummon', '-position', 'topleft', '-offset', '38,433', '-ratio', '1.25', '-text', '-input', '-position', 'bottomleft', '-offset', '420,-100', '-fontsize', '100', '-bold']
                 auto_pos = '100,330'
             case _:
                 preset = None
