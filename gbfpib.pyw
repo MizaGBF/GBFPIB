@@ -120,7 +120,7 @@ class PartyBuilder():
             28: 'kn',
             29: 'gu'
         }
-        self.aux_class = [100401, 300301, 300201] # aux classes
+        self.aux_class = [100401, 300301, 300201, 120401] # aux classes
         self.supp_summon_re = [ # regex used for the wiki support summon id search
             re.compile('(20[0-9]{8})\\.'),
             re.compile('(20[0-9]{8}_02)\\.')
