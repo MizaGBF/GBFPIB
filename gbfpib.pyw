@@ -8,7 +8,7 @@ import re
 import sys
 import time
 import os
-import base64
+from base64 import b64decode, b64encode
 import tkinter as Tk
 import tkinter.ttk as ttk
 from tkinter import messagebox, filedialog, simpledialog
@@ -39,7 +39,7 @@ def importGBFTM(path):
 
 class PartyBuilder():
     def __init__(self, debug):
-        self.version = "v8.5"
+        self.version = "v8.6"
         print("Granblue Fantasy Party Image Builder", self.version)
         self.debug = debug
         if self.debug: print("DEBUG enabled")
@@ -130,7 +130,7 @@ class PartyBuilder():
         self.load() # loading settings.json
         if importGBFTM(self.settings.get('gbftm_path', '')):
             print("GBFTM imported with success")
-        self.wtm = base64.b64decode("TWl6YSdzIEdCRlBJQiA=").decode('utf-8')+self.version
+        self.wtm = b64decode("TWl6YSdzIEdCRlBJQiA=").decode('utf-8')+self.version
 
     def load(self): # load settings.json
         try:
@@ -159,7 +159,7 @@ class PartyBuilder():
                 try: # get from disk cache if enabled
                     if forceDownload: raise Exception()
                     if self.settings.get('caching', False):
-                        with open("cache/" + base64.b64encode(path.encode('utf-8')).decode('utf-8'), "rb") as f:
+                        with open("cache/" + b64encode(path.encode('utf-8')).decode('utf-8'), "rb") as f:
                             self.cache[path] = f.read()
                     else:
                         raise Exception()
@@ -171,7 +171,7 @@ class PartyBuilder():
                         self.cache[path] = path_handle.read()
                         if self.settings.get('caching', False):
                             try:
-                                with open("cache/" + base64.b64encode(path.encode('utf-8')).decode('utf-8'), "wb") as f:
+                                with open("cache/" + b64encode(path.encode('utf-8')).decode('utf-8'), "wb") as f:
                                     f.write(self.cache[path])
                             except Exception as e:
                                 print(e)
@@ -296,6 +296,10 @@ class PartyBuilder():
     def get_uncap_id(self, cs): # to get character portraits based on uncap levels
         return {2:'02', 3:'02', 4:'02', 5:'03', 6:'04'}.get(cs, '01')
 
+    def get_style_noskin(self, c1, c2): # return style portrait instead of normal portrait if detected
+        if c2.startswith(c1.split('_')[0]) and '_st' in c2: return c2
+        return c1
+
     def get_mc_job_look(self, skin, job): # get the MC unskined filename based on id
         jid = job // 10000
         if jid not in self.classes: return skin
@@ -382,7 +386,7 @@ class PartyBuilder():
                         else:
                             cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['ce'][i])
                     else:
-                        cid = "{}_{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]))
+                        cid = self.get_style_noskin("{}_{}".format(export['c'][i], self.get_uncap_id(export['cs'][i])), export['ci'][i])
                     self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(cid), pos, csize, start=0, end=1)
                     # skin
                     if cid != export['ci'][i]:
@@ -780,7 +784,7 @@ class PartyBuilder():
                         else:
                             cid = "{}_{}_0{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]), export['ce'][i])
                     else:
-                        cid = "{}_{}".format(export['c'][i], self.get_uncap_id(export['cs'][i]))
+                        cid = self.get_style_noskin("{}_{}".format(export['c'][i], self.get_uncap_id(export['cs'][i])), export['ci'][i])
                     self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/npc/{}/{}.jpg".format(portrait_type, cid), pos, csize)
                     # rings
                     if export['cwr'][i] == True:
