@@ -39,7 +39,7 @@ def importGBFTM(path):
 
 class PartyBuilder():
     def __init__(self, debug):
-        self.version = "v8.8"
+        self.version = "v8.9"
         print("Granblue Fantasy Party Image Builder", self.version)
         self.debug = debug
         if self.debug: print("DEBUG enabled")
@@ -421,9 +421,9 @@ class PartyBuilder():
                     count += 1
             # paladin shield
             if export['cpl'][0] is not None:
-                print("[CHA] |--> Paladin shield:".format(i), export['cpl'])
+                print("[CHA] |--> Paladin shields:", export['cpl'][0], "|", export['cpl'][1])
                 self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/shield/s/{}.jpg".format(export['cpl'][0]), plsoffset, (300, 300), start=0, end=1)
-                if export['cpl'][1] is not None and export['cpl'][1] != export['cpl'][0]: # skin
+                if export['cpl'][1] is not None and export['cpl'][1] != export['cpl'][0] and export['cpl'][1] > 0: # skin
                     self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/shield/s/{}.jpg".format(export['cpl'][1]), plsoffset, (300, 300), start=1, end=2)
                     self.pasteImage(imgs, "assets/skin.png", self.addTuple(plsoffset, (0, -70)), (153, 171), start=1, end=2)
             elif self.babyl: # to fill the blank space
