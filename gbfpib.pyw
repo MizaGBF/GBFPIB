@@ -39,7 +39,7 @@ def importGBFTM(path):
 
 class PartyBuilder():
     def __init__(self, debug):
-        self.version = "v8.9"
+        self.version = "v8.10"
         print("Granblue Fantasy Party Image Builder", self.version)
         self.debug = debug
         if self.debug: print("DEBUG enabled")
@@ -945,7 +945,12 @@ class PartyBuilder():
                 index = 0
                 i = 0
                 while i < len(preset) and index < len(opttext):
-                    if preset[i] == '-input' and preset[i-1] == '-text':
+                    if preset[i] == '-nm150' or preset[i] == '-nm200':
+                        preset[i] += '_auto'
+                        preset.insert(i+1, opttext[index])
+                        index += 1
+                        i += 1
+                    elif preset[i] == '-input' and preset[i-1] == '-text':
                         preset[i] = '-content'
                         preset.insert(i+1, opttext[index])
                         index += 1
@@ -1281,10 +1286,10 @@ class GBFTM_Select(Tk.Toplevel):
     def confirm(self):
         try: self.parent.pb.make_gbftm(self.choices1[self.var1.get()], self.choices2[self.var2.get()], self.export, self.var3.get(), [self.var4.get(), self.var5.get()])
         except: self.parent.events.append(("Error", "An error occured, impossible to generate the thumbnail"))
-        self.parent.gbftm_state = 3
         self.cancel()
 
     def cancel(self):
+        self.parent.gbftm_state = 3
         self.destroy()
 
 class Interface(Tk.Tk): # interface

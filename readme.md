@@ -68,7 +68,7 @@ There are a few ways to go around this issue:
 My other project [GBFTM](https://github.com/MizaGBF/GBFTM) can be imported to also generate a thumbnail.  
 Simply click `Set Path` and select the folder where GBFTM is located.  
 GBFTM must has been set beforehand (Twitter credentials included) or it might not work properly.  
-It's also currently compatible only with version 1.16 and higher.  
+It's also currently compatible only with version 1.16 and higher (Ideally, always use the latest version to have the latest bugfixes).  
 ### Updating  
 When updating this script with a new version, be sure to update your bookmarklet, or issues might occur.  
 You might also want to rerun the `pip install -r requirements.txt` command if the required modules got updated.  
