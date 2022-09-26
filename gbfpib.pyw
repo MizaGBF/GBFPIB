@@ -39,7 +39,7 @@ def importGBFTM(path):
 
 class PartyBuilder():
     def __init__(self, debug):
-        self.version = "v8.10"
+        self.version = "v8.11"
         print("Granblue Fantasy Party Image Builder", self.version)
         self.debug = debug
         if self.debug: print("DEBUG enabled")
@@ -166,7 +166,7 @@ class PartyBuilder():
                 except: # else request it from gbf
                     if remote:
                         print("[GET] *Downloading File", path)
-                        req = request.Request(('https://' if self.settings.get('https', True) else 'http://') + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path)
+                        req = request.Request('https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path)
                         path_handle = request.urlopen(req)
                         self.cache[path] = path_handle.read()
                         if self.settings.get('caching', False):
@@ -1130,11 +1130,10 @@ class PartyBuilder():
             print("[2] Generate skin.png ( Current:", self.settings.get('skin', True),")")
             print("[3] Generate emp.png ( Current:", self.settings.get('emp', False),")")
             print("[4] Set Asset Server ( Current:", self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net'),")")
-            print("[5] Use HTTPS ( Current:", self.settings.get('https', True),")")
-            print("[6] Set GBFTM Path ( Current:", self.settings.get('gbftm_path', ''),")")
-            print("[7] Use GBFTM if imported ( Current:", self.settings.get('gbftm_use', False),")")
-            print("[8] Empty Cache")
-            print("[9] Empty EMP")
+            print("[5] Set GBFTM Path ( Current:", self.settings.get('gbftm_path', ''),")")
+            print("[6] Use GBFTM if imported ( Current:", self.settings.get('gbftm_use', False),")")
+            print("[7] Empty Cache")
+            print("[8] Empty EMP")
             print("[Any] Back")
             s = input()
             if s == "0":
@@ -1163,8 +1162,6 @@ class PartyBuilder():
                         print("Asset Server test: Failed")
                         print("Did you input the right url?")
             elif s == "5":
-                self.settings['https'] = not self.settings.get('https', True)
-            elif s == "6":
                 print("Input the path of the GBFTM folder (Leave blank to cancel): ")
                 folder = input()
                 if folder != "":
@@ -1177,11 +1174,11 @@ class PartyBuilder():
                         print("GBFTM is imported with success")
                     else:
                         print("Failed to import GBFTM")
-            elif s == "7":
+            elif s == "6":
                 self.settings['gbftm_use'] = not self.settings.get('gbftm_use', False)
-            elif s == "8":
+            elif s == "7":
                 self.emptyCache()
-            elif s == "9":
+            elif s == "8":
                 self.emptyCache()
             else:
                 return
@@ -1342,10 +1339,6 @@ class Interface(Tk.Tk): # interface
         Tk.Label(tabcontent, text="Do EMP").grid(row=3, column=0)
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.emp_var, command=self.toggleEMP))
         self.to_disable[-1].grid(row=3, column=1)
-        self.https_var = Tk.IntVar(value=self.pb.settings.get('https', True))
-        Tk.Label(tabcontent, text="Use HTTPS").grid(row=4, column=0)
-        self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.https_var, command=self.toggleHTTPS))
-        self.to_disable[-1].grid(row=4, column=1)
         ### GBFTM plugin
         tabcontent = Tk.Frame(tabs)
         tabs.add(tabcontent, text="GBFTM")
@@ -1451,9 +1444,6 @@ class Interface(Tk.Tk): # interface
 
     def toggleEMP(self):
         self.pb.settings['emp'] = (self.emp_var.get() != 0)
-
-    def toggleHTTPS(self):
-        self.pb.settings['https'] = (self.https_var.get() != 0)
 
     def toggleGBFTM(self):
         self.pb.settings['gbftm_use'] = (self.gbftm_var.get() != 0)
