@@ -1,5 +1,6 @@
-from urllib import request, parse
+from urllib import parse
 from urllib.parse import quote
+import httpx
 import json
 from PIL import Image, ImageFont, ImageDraw
 from io import BytesIO
@@ -39,7 +40,7 @@ def importGBFTM(path):
 
 class PartyBuilder():
     def __init__(self, debug):
-        self.version = "v8.11"
+        self.version = "v8.12"
         print("Granblue Fantasy Party Image Builder", self.version)
         self.debug = debug
         if self.debug: print("DEBUG enabled")
@@ -152,7 +153,7 @@ class PartyBuilder():
         except:
             pass
 
-    def retrieveImage(self, path, remote=True, forceDownload=False):
+    def retrieveImage(self, path, client=None, remote=True, forceDownload=False):
         if self.japanese: path = path.replace('assets_en', 'assets')
         with self.lock:
             if forceDownload or path not in self.cache:
@@ -166,9 +167,9 @@ class PartyBuilder():
                 except: # else request it from gbf
                     if remote:
                         print("[GET] *Downloading File", path)
-                        req = request.Request('https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path)
-                        path_handle = request.urlopen(req)
-                        self.cache[path] = path_handle.read()
+                        response = client.get('https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path, headers={'connection':'keep-alive'})
+                        if response.status_code != 200: raise Exception()
+                        self.cache[path] = response.content
                         if self.settings.get('caching', False):
                             try:
                                 with open("cache/" + b64encode(path.encode('utf-8')).decode('utf-8'), "wb") as f:
@@ -176,7 +177,6 @@ class PartyBuilder():
                             except Exception as e:
                                 print(e)
                                 pass
-                        path_handle.close()
                     else:
                         with open(path, "rb") as f:
                             self.cache[path] = f.read()
@@ -207,8 +207,8 @@ class PartyBuilder():
         file.close()
         return imgs
 
-    def dlAndPasteImage(self, imgs, url, offset, resize=None, transparency=False, start=0, end=99999999): # dl an image and call pasteImage()
-        with BytesIO(self.retrieveImage(url)) as file_jpgdata:
+    def dlAndPasteImage(self, client, imgs, url, offset, resize=None, transparency=False, start=0, end=99999999): # dl an image and call pasteImage()
+        with BytesIO(self.retrieveImage(url, client=client)) as file_jpgdata:
             return self.pasteImage(imgs, file_jpgdata, offset, resize, transparency, start, end)
 
     def addTuple(self, A:tuple, B:tuple):
@@ -250,13 +250,12 @@ class PartyBuilder():
             fixeds.append(fixed)
         return "_".join(fixeds) # return the result
 
-    def get_support_summon(self, sps): # search on gbf.wiki to match a summon name to its id
+    def get_support_summon(self, client, sps): # search on gbf.wiki to match a summon name to its id
         try:
             if sps in self.sumcache: return self.sumcache[sps]
-            req = request.Request("https://gbf.wiki/" + quote(self.fixCase(sps)))
-            url_handle = request.urlopen(req)
-            data = url_handle.read().decode('utf-8')
-            url_handle.close()
+            response = client.get("https://gbf.wiki/" + quote(self.fixCase(sps)), headers={'connection':'keep-alive'})
+            if response.status_code != 200: raise Exception()
+            data = response.content.decode('utf-8')
             group = self.supp_summon_re[1].findall(data)
             if len(group) > 0:
                 self.sumcache[sps] = group[0]
@@ -266,20 +265,19 @@ class PartyBuilder():
             return group[0]
         except:
             if "(summon)" not in sps.lower():
-                return self.get_support_summon(sps + ' (Summon)')
+                return self.get_support_summon(client, sps + ' (Summon)')
             else:
                 try:
-                    return self.advanced_support_summon_search(sps.replace(' (Summon)', ''))
+                    return self.advanced_support_summon_search(client, sps.replace(' (Summon)', ''))
                 except:
                     pass
             return None
 
-    def advanced_support_summon_search(self, summon_name): # advanced search on gbf.wiki to match a summon name to its id
+    def advanced_support_summon_search(self, client, summon_name): # advanced search on gbf.wiki to match a summon name to its id
         try:
-            req = request.Request("https://gbf.wiki/index.php?title=Special:Search&search=" + quote(summon_name))
-            url_handle = request.urlopen(req)
-            data = url_handle.read().decode('utf-8')
-            url_handle.close()
+            response = client.get("https://gbf.wiki/index.php?title=Special:Search&search=" + quote(summon_name), headers={'connection':'keep-alive'})
+            if response.status_code != 200: raise Exception()
+            data = response.content.decode('utf-8')
             cur = 0
             while True: # iterate search results for an id
                 x = data.find("<div class='searchresult'>ID ", cur)
@@ -292,6 +290,10 @@ class PartyBuilder():
         except Exception as e:
             print(e)
             return None
+
+    def initHTTPClient(self):
+        limits = httpx.Limits(max_keepalive_connections=100, max_connections=100, keepalive_expiry=10)
+        return httpx.Client(http2=True, limits=limits)
 
     def get_uncap_id(self, cs): # to get character portraits based on uncap levels
         return {2:'02', 3:'02', 4:'02', 5:'03', 6:'04'}.get(cs, '01')
@@ -310,6 +312,7 @@ class PartyBuilder():
 
     def make_party(self, export):
         try:
+            client = self.initHTTPClient()
             imgs = [self.make_canvas(), self.make_canvas()]
             print("[CHA] * Drawing Party...")
             # version number
@@ -351,13 +354,13 @@ class PartyBuilder():
             print("[CHA] |--> MC Job:", export['p'])
             # class
             class_id = self.get_mc_job_look(export['pcjs'], export['p'])
-            self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/leader/s/{}.jpg".format(class_id), pos, csize, start=0, end=1)
+            self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/leader/s/{}.jpg".format(class_id), pos, csize, start=0, end=1)
             # job icon
-            self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True, start=0, end=1)
+            self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True, start=0, end=1)
             # skin
             if class_id != export['pcjs']:
-                self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/leader/s/{}.jpg".format(export['pcjs']), pos, csize, start=1, end=2)
-                self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True, start=1, end=2)
+                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/leader/s/{}.jpg".format(export['pcjs']), pos, csize, start=1, end=2)
+                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True, start=1, end=2)
 
             # allies
             for i in range(0, nchara):
@@ -371,7 +374,7 @@ class PartyBuilder():
                     if i >= 3: pos = self.addTuple(pos, (50, 0))
                 # portrait
                 if i >= len(export['c']) or export['c'][i] is None:
-                    self.dlAndPasteImage(imgs, "assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize, start=0, end=1)
+                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize, start=0, end=1)
                     continue
                 else:
                     print("[CHA] |--> Ally #{}:".format(i+1), export['c'][i], export['cn'][i], "Lv {}".format(export['cl'][i]), "+{}".format(export['cp'][i]), "Has Ring" if export['cwr'][i] else "No Ring")
@@ -388,16 +391,16 @@ class PartyBuilder():
                             cid = "{}_{}{}_0{}".format(export['c'][i], uncap, style, export['ce'][i])
                     else:
                         cid = "{}_{}{}".format(export['c'][i], uncap, style)
-                    self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(cid), pos, csize, start=0, end=1)
+                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(cid), pos, csize, start=0, end=1)
                     # skin
                     if cid != export['ci'][i]:
-                        self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(export['ci'][i]), pos, csize, start=1, end=2)
+                        self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(export['ci'][i]), pos, csize, start=1, end=2)
                         has_skin = True
                     else:
                         has_skin = False
                 # rings
                 if export['cwr'][i] == True:
-                    self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.addTuple(pos, roffset), rsize, transparency=True, start=0, end=2 if has_skin else 1)
+                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.addTuple(pos, roffset), rsize, transparency=True, start=0, end=2 if has_skin else 1)
                 # plus
                 if export['cp'][i] > 0:
                     self.text(imgs, self.addTuple(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=12, stroke_fill=(0, 0, 0), start=0, end=2 if has_skin else 1)
@@ -422,9 +425,9 @@ class PartyBuilder():
             # paladin shield
             if export['cpl'][0] is not None:
                 print("[CHA] |--> Paladin shields:", export['cpl'][0], "|", export['cpl'][1])
-                self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/shield/s/{}.jpg".format(export['cpl'][0]), plsoffset, (300, 300), start=0, end=1)
+                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/shield/s/{}.jpg".format(export['cpl'][0]), plsoffset, (300, 300), start=0, end=1)
                 if export['cpl'][1] is not None and export['cpl'][1] != export['cpl'][0] and export['cpl'][1] > 0: # skin
-                    self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/shield/s/{}.jpg".format(export['cpl'][1]), plsoffset, (300, 300), start=1, end=2)
+                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/shield/s/{}.jpg".format(export['cpl'][1]), plsoffset, (300, 300), start=1, end=2)
                     self.pasteImage(imgs, "assets/skin.png", self.addTuple(plsoffset, (0, -70)), (153, 171), start=1, end=2)
             elif self.babyl: # to fill the blank space
                 self.pasteImage(imgs, "assets/characters_EN.png", self.addTuple(ssoffset, (skill_width, 0)), (552, 150), transparency=True)
@@ -436,6 +439,7 @@ class PartyBuilder():
 
     def make_summon(self, export):
         try:
+            client = self.initHTTPClient()
             imgs = [self.make_canvas(), self.make_canvas()]
             print("[SUM] * Drawing Summons...")
             offset = (340, 850)
@@ -459,14 +463,14 @@ class PartyBuilder():
                     if i == 5: self.pasteImage(imgs, "assets/subsummon_EN.png", (pos[0]+90, pos[1]-144-60), (360, 144), transparency=True, start=0, end=1)
                 # portraits
                 if export['s'][i] is None:
-                    self.dlAndPasteImage(imgs, durls[idx], pos, sizes[idx], start=0, end=1)
+                    self.dlAndPasteImage(client, imgs, durls[idx], pos, sizes[idx], start=0, end=1)
                     continue
                 else:
                     print("[SUM] |--> Summon #{}:".format(i+1), export['ss'][i], "Uncap Lv{}".format(export['se'][i]), "Lv{}".format(export['sl'][i]))
-                    self.dlAndPasteImage(imgs, surls[idx].format(export['ss'][i]), pos, sizes[idx], start=0, end=1)
+                    self.dlAndPasteImage(client, imgs, surls[idx].format(export['ss'][i]), pos, sizes[idx], start=0, end=1)
                 # main summon skin
                 if i == 0 and export['ssm'] is not None:
-                    self.dlAndPasteImage(imgs, surls[idx].format(export['ssm']), pos, sizes[idx], start=1, end=2)
+                    self.dlAndPasteImage(client, imgs, surls[idx].format(export['ssm']), pos, sizes[idx], start=1, end=2)
                     self.pasteImage(imgs, "assets/skin.png", self.addTuple(pos, (sizes[idx][0]-170, 30)), (153, 171), start=1, end=2)
                     has_skin = True
                 else:
@@ -495,6 +499,7 @@ class PartyBuilder():
 
     def make_weapon(self, export):
         try:
+            client = self.initHTTPClient()
             imgs = [self.make_canvas(), self.make_canvas()]
             print("[WPN] * Drawing Weapons...")
             if self.sandbox: offset = (50, 2100)
@@ -535,7 +540,7 @@ class PartyBuilder():
                     if i >= 10:
                         self.pasteImage(imgs, "assets/arca_slot.png", pos, size, start=0, end=1)
                     else:
-                        self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), pos, size, start=0, end=1)
+                        self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), pos, size, start=0, end=1)
                     continue
                 else:
                     # ax and awakening check
@@ -544,12 +549,12 @@ class PartyBuilder():
                     pos_shift = - skill_icon_size if (has_ax and has_awakening) else 0  # vertical shift of the skill boxes (if both ax and awk are presents)
                     # portrait draw
                     print("[WPN] |--> Weapon #{}".format(i+1), str(export['w'][i])+"00", ", AX:", has_ax, ", Awakening:", has_awakening)
-                    self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/weapon/{}/{}00.jpg".format(wt, export['w'][i]), pos, size, start=0, end=1)
+                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/weapon/{}/{}00.jpg".format(wt, export['w'][i]), pos, size, start=0, end=1)
                 # skin
                 has_skin = False
                 if i <= 1 and export['wsm'][i] is not None:
                     if i == 0 or (i == 1 and export['p'] in self.aux_class): # aux class check for 2nd weapon
-                        self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/weapon/{}/{}.jpg".format(wt, export['wsm'][i]), pos, size, start=1, end=2)
+                        self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/weapon/{}/{}.jpg".format(wt, export['wsm'][i]), pos, size, start=1, end=2)
                         self.pasteImage(imgs, "assets/skin.png", self.addTuple(pos, (size[0]-153, 0)), (153, 171), transparency=True, start=1, end=2)
                         has_skin = True
                 # skill box
@@ -578,21 +583,21 @@ class PartyBuilder():
                     # skill icon
                     for j in range(3):
                         if export['wsn'][i][j] is not None:
-                            self.dlAndPasteImage(imgs, "assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
+                            self.dlAndPasteImage(client, imgs, "assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
                 pos_shift += skill_icon_size
                 main_ax_icon_size  = int(ax_icon_size * (1.5 if i == 0 else 1) * (0.75 if (has_ax and has_awakening) else 1)) # size of the big AX/Awakening icon
                 # ax skills
                 if has_ax:
-                    self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), pos, (main_ax_icon_size, main_ax_icon_size), start=0, end=2 if has_skin else 1)
+                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), pos, (main_ax_icon_size, main_ax_icon_size), start=0, end=2 if has_skin else 1)
                     for j in range(len(export['waxi'][i])):
-                        self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/skill/{}.png".format(export['waxi'][i][j]), (pos[0]+ax_separator*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=1)
+                        self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/skill/{}.png".format(export['waxi'][i][j]), (pos[0]+ax_separator*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=1)
                         self.text(imgs, (pos[0]+ax_separator*j+skill_icon_size+12, pos[1]+size[1]+pos_shift+30), "{}".format(export['wax'][i][0][j]['show_value']).replace('%', '').replace('+', ''), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
                     pos_shift += skill_icon_size
                 # awakening
                 if has_awakening:
                     shift = main_ax_icon_size//2 if has_ax else 0 # shift the icon right a bit if also has AX icon
-                    self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), self.addTuple(pos, (shift, 0)), (main_ax_icon_size, main_ax_icon_size), start=0, end=2 if has_skin else 1)
-                    self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), (pos[0]+skill_icon_size, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=1)
+                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), self.addTuple(pos, (shift, 0)), (main_ax_icon_size, main_ax_icon_size), start=0, end=2 if has_skin else 1)
+                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), (pos[0]+skill_icon_size, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=1)
                     self.text(imgs, (pos[0]+skill_icon_size*3-102, pos[1]+size[1]+pos_shift+30), "LV {}".format(export['wakn'][i]['level']), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
 
             if self.sandbox:
@@ -622,7 +627,7 @@ class PartyBuilder():
                 if export['spsid'] is not None:
                     supp = export['spsid']
                 else:
-                    supp = self.get_support_summon(export['sps'])
+                    supp = self.get_support_summon(client, export['sps'])
                 if supp is None:
                     print("[WPN] |--> Support summon is", export['sps'], "(Note: searching its ID on gbf.wiki failed)")
                     self.pasteImage(imgs, "assets/big_stat.png", (pos[0]-bsize[0]-30, 330), (bsize[0], 300), transparency=True, start=0, end=1)
@@ -632,7 +637,7 @@ class PartyBuilder():
                     self.text(imgs, (pos[0]-bsize[0]-30+30 , pos[1]+18*2+120), supp, fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
                 else:
                     print("[WPN] |--> Support summon ID is", supp)
-                    self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/summon/m/{}.jpg".format(supp), (pos[0]-bsize[0]-30+18, pos[1]), (522, 300), start=0, end=1)
+                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/summon/m/{}.jpg".format(supp), (pos[0]-bsize[0]-30+18, pos[1]), (522, 300), start=0, end=1)
             # weapon grid stats
             est_width = ((size[0]*3)//2)
             for i in range(0, 2):
@@ -683,6 +688,7 @@ class PartyBuilder():
 
     def make_modifier(self, export):
         try:
+            client = self.initHTTPClient()
             imgs = [self.make_canvas()]
             print("[MOD] * Drawing Modifiers...")
             if self.babyl:
@@ -716,7 +722,7 @@ class PartyBuilder():
                 offset = (offset[0], offset[1])
                 # modifier draw
                 for m in export['mods']:
-                    self.dlAndPasteImage(imgs, "assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], offset, mod_size[idx], transparency=True)
+                    self.dlAndPasteImage(client, imgs, "assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], offset, mod_size[idx], transparency=True)
                     self.text(imgs, (offset[0], offset[1]+mod_text_off[idx][0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.fonts[mod_font[idx]])
                     offset = (offset[0], offset[1]+mod_text_off[idx][1])
             return ('modifier', imgs)
@@ -749,6 +755,7 @@ class PartyBuilder():
 
     def make_emp(self, export, ccount, nchara, odd):
         try:
+            client = self.initHTTPClient()
             imgs = [self.make_canvas()]
             offset = (30, 0)
             eoffset = (30, 20)
@@ -794,10 +801,10 @@ class PartyBuilder():
                             cid = "{}_{}{}_0{}".format(export['c'][i], uncap, style, export['ce'][i])
                     else:
                         cid = "{}_{}{}".format(export['c'][i], uncap, style)
-                    self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/npc/{}/{}.jpg".format(portrait_type, cid), pos, csize)
+                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/npc/{}/{}.jpg".format(portrait_type, cid), pos, csize)
                     # rings
                     if export['cwr'][i] == True:
-                        self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.addTuple(pos, roffset), rsize, transparency=True)
+                        self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.addTuple(pos, roffset), rsize, transparency=True)
                     # plus
                     if export['cp'][i] > 0:
                         self.text(imgs, self.addTuple(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=12, stroke_fill=(0, 0, 0))
@@ -826,9 +833,9 @@ class PartyBuilder():
                         else:
                             epos = self.addTuple(epos, (esizes[idx][0], 0))
                         if emp.get('is_lock', False):
-                            self.dlAndPasteImage(imgs, "assets_en/img/sp/zenith/assets/ability/lock.png", epos, esizes[idx])
+                            self.dlAndPasteImage(client, imgs, "assets_en/img/sp/zenith/assets/ability/lock.png", epos, esizes[idx])
                         else:
-                            self.dlAndPasteImage(imgs, "assets_en/img/sp/zenith/assets/ability/{}.png".format(emp['image']), epos, esizes[idx])
+                            self.dlAndPasteImage(client, imgs, "assets_en/img/sp/zenith/assets/ability/{}.png".format(emp['image']), epos, esizes[idx])
                             if str(emp['current_level']) != "0":
                                 self.text(imgs, self.addTuple(epos, eoffset), str(emp['current_level']), fill=(235, 227, 250), font=self.fonts['medium'] if compact and nemp > 15 else self.fonts['big'], stroke_width=12, stroke_fill=(0, 0, 0))
                             else:
@@ -1029,6 +1036,7 @@ class PartyBuilder():
         imgs['weapon'][1].close()
 
     def make_sub_party(self, export):
+        start = time.time()
         do_emp = self.settings.get('emp', False)
         do_skin = self.settings.get('skin', True)
         if self.settings.get('caching', False):
@@ -1100,8 +1108,9 @@ class PartyBuilder():
             for i in imgs['party']: i.close()
             try: emp_img.close()
             except: pass
-
+        end = time.time()
         print("* Task completed with success!")
+        print("* Ended in {:.2f} seconds".format(end - start))
 
     def make_sub_emp(self, export):
         if 'emp' not in export or 'id' not in export or 'ring' not in export: raise Exception("Invalid EMP data, check your bookmark")
