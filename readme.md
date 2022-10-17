@@ -4,6 +4,7 @@
 * Tested on Python 3.10.  
 * [pyperclip](https://pypi.org/project/pyperclip/) to read/write the clipboard.  
 * [Pillow](https://pillow.readthedocs.io/en/stable/) for image processing.  
+* [httpx](https://www.python-httpx.org/) for faster asset downloads.  
 * `pip install -r requirements.txt` to install all the modules.  
 ### Setup  
 1. Install the requirements with the command above.  
