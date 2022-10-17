@@ -40,7 +40,7 @@ def importGBFTM(path):
 
 class PartyBuilder():
     def __init__(self, debug):
-        self.version = "v8.12"
+        self.version = "v8.13"
         print("Granblue Fantasy Party Image Builder", self.version)
         self.debug = debug
         if self.debug: print("DEBUG enabled")
@@ -621,7 +621,7 @@ class PartyBuilder():
                     case '01_icon_critical.png':
                         mod_crit = round(float(m['value'][:-1]))
                     case '04_icon_dmg_supp.png':
-                        mod_supp = int(m['value'].replace('+', ''))
+                        mod_supp = int(str(m['value']).replace('+', ''))
             if (export['sps'] is not None and export['sps'] != '') or export['spsid'] is not None:
                 # support summon
                 if export['spsid'] is not None:
