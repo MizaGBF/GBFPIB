@@ -40,7 +40,7 @@ def importGBFTM(path):
 
 class PartyBuilder():
     def __init__(self, debug):
-        self.version = "v8.13"
+        self.version = "v8.14"
         print("Granblue Fantasy Party Image Builder", self.version)
         self.debug = debug
         if self.debug: print("DEBUG enabled")
@@ -361,7 +361,6 @@ class PartyBuilder():
             if class_id != export['pcjs']:
                 self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/leader/s/{}.jpg".format(export['pcjs']), pos, csize, start=1, end=2)
                 self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True, start=1, end=2)
-
             # allies
             for i in range(0, nchara):
                 if self.babyl:
@@ -379,7 +378,7 @@ class PartyBuilder():
                 else:
                     print("[CHA] |--> Ally #{}:".format(i+1), export['c'][i], export['cn'][i], "Lv {}".format(export['cl'][i]), "+{}".format(export['cp'][i]), "Has Ring" if export['cwr'][i] else "No Ring")
                     # portrait
-                    style = ("" if export['cst'][i] == 1 else "_st{}".format(export['cst'][i])) # style
+                    style = ("" if str(export['cst'][i]) == '1' else "_st{}".format(export['cst'][i])) # style
                     if style != "":
                         uncap = "01"
                     else:
@@ -621,7 +620,10 @@ class PartyBuilder():
                     case '01_icon_critical.png':
                         mod_crit = round(float(m['value'][:-1]))
                     case '04_icon_dmg_supp.png':
-                        mod_supp = int(str(m['value']).replace('+', ''))
+                        try:
+                            mod_supp = int(str(m['value']).replace('+', ''))
+                        except:
+                            mod_supp = int(str(m['value']).replace('+', ''))
             if (export['sps'] is not None and export['sps'] != '') or export['spsid'] is not None:
                 # support summon
                 if export['spsid'] is not None:
@@ -789,7 +791,7 @@ class PartyBuilder():
                     pos = self.addTuple(pos, (0, csize[1]+shift)) # set chara position
                     if i % 2 == odd: continue
                     # portrait
-                    style = ("" if export['cst'][i] == 1 else "_st{}".format(export['cst'][i])) # style
+                    style = ("" if str(export['cst'][i]) == '1' else "_st{}".format(export['cst'][i])) # style
                     if style != "":
                         uncap = "01"
                     else:
