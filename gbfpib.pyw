@@ -1349,6 +1349,8 @@ class GBFTM_Select(Tk.Toplevel):
         self.destroy()
 
 class Interface(Tk.Tk): # interface
+    BW = 15
+    BH = 1
     def __init__(self, pb):
         Tk.Tk.__init__(self,None)
         self.parent = None
@@ -1367,11 +1369,12 @@ class Interface(Tk.Tk): # interface
         tabs.grid(row=1, column=0, rowspan=2, sticky="nwe")
         tabcontent = Tk.Frame(tabs)
         tabs.add(tabcontent, text="Run")
-        Tk.Button(tabcontent, text="Build Images", command=self.build, width=15).grid(row=0, column=0, sticky="we")
-        Tk.Button(tabcontent, text="Add EMP", command=self.add_emp, width=15).grid(row=1, column=0, sticky="we")
-        Tk.Button(tabcontent, text="Bookmark", command=self.bookmark, width=15).grid(row=2, column=0, sticky="we")
-        self.to_disable.append(Tk.Button(tabcontent, text="Set Server", command=self.setserver, width=15))
+        Tk.Button(tabcontent, text="Build Images", command=self.build, width=self.BW, height=self.BH).grid(row=0, column=0, sticky="we")
+        Tk.Button(tabcontent, text="Add EMP", command=self.add_emp, width=self.BW, height=self.BH).grid(row=1, column=0, sticky="we")
+        Tk.Button(tabcontent, text="Bookmark", command=self.bookmark, width=self.BW, height=self.BH).grid(row=2, column=0, sticky="we")
+        self.to_disable.append(Tk.Button(tabcontent, text="Set Server", command=self.setserver, width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=3, column=0, sticky="we")
+        Tk.Button(tabcontent, text="Check Update", command=self.checkUpdate, width=self.BW, height=self.BH).grid(row=4, column=0, sticky="we")
         
         # setting part
         tabs = ttk.Notebook(self)
@@ -1398,10 +1401,13 @@ class Interface(Tk.Tk): # interface
         Tk.Label(tabcontent, text="Do EMP").grid(row=3, column=0)
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.emp_var, command=self.toggleEMP))
         self.to_disable[-1].grid(row=3, column=1)
+        self.update_var = Tk.IntVar(value=self.pb.settings.get('update', False))
+        Tk.Label(tabcontent, text="Auto Update").grid(row=4, column=0)
+        Tk.Checkbutton(tabcontent, variable=self.update_var, command=self.toggleUpdate).grid(row=4, column=1)
         ### GBFTM plugin
         tabcontent = Tk.Frame(tabs)
         tabs.add(tabcontent, text="GBFTM")
-        self.to_disable.append(Tk.Button(tabcontent, text="Set Path", width=12, command=self.setGBFTM))
+        self.to_disable.append(Tk.Button(tabcontent, text="Set Path", command=self.setGBFTM, width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=0, column=0, columnspan=2, sticky="we")
         self.gbftm_var = Tk.IntVar(value=self.pb.settings.get('gbftm_use', False))
         self.gbftm_status = Tk.Label(tabcontent, text="Not Imported")
@@ -1419,7 +1425,8 @@ class Interface(Tk.Tk): # interface
         self.thread = None
         self.events = []
         
-        self.autoUpdate()
+        if self.pb.settings.get('update', True):
+            self.autoUpdate()
 
     def run(self):
         # main loop
@@ -1506,6 +1513,9 @@ class Interface(Tk.Tk): # interface
     def toggleEMP(self):
         self.pb.settings['emp'] = (self.emp_var.get() != 0)
 
+    def toggleUpdate(self):
+        self.pb.settings['update'] = (self.update_var.get() != 0)
+
     def toggleGBFTM(self):
         self.pb.settings['gbftm_use'] = (self.gbftm_var.get() != 0)
 
@@ -1524,6 +1534,9 @@ class Interface(Tk.Tk): # interface
                 self.pb.settings['endpoint'] = tmp
                 messagebox.showerror("Error", "Failed to find the specified server:\n" + url + "\nCheck if the url is correct")
 
+    def checkUpdate(self):
+        self.autoUpdate(silent=False)
+
     def setGBFTM(self):
         global GBFTM_instance
         folder_selected = filedialog.askdirectory(title="Select the GBFTM folder")
@@ -1539,7 +1552,7 @@ class Interface(Tk.Tk): # interface
             else:
                 messagebox.showinfo("Error", "Failed to import GBFTM")
 
-    def autoUpdate(self):
+    def autoUpdate(self, silent=True):
         update_started = False
         try:
             response = httpx.get("https://raw.githubusercontent.com/MizaGBF/GBFPIB/main/manifest.json")
@@ -1569,6 +1582,8 @@ class Interface(Tk.Tk): # interface
                         messagebox.showinfo("Info", "Update successful and the app will now restart.")
                     os.execv(sys.executable, [sys.executable, __file__] + sys.argv)
                     exit(0)
+            elif not silent:
+                messagebox.showinfo("Info", "You already have the latest version.")
         except:
             if update_started:
                 messagebox.showinfo("Error", "An unexpected error occured.")
@@ -1576,6 +1591,8 @@ class Interface(Tk.Tk): # interface
                     shutil.rmtree(os.path.join(root, "GBFPIB-main"))
                 except:
                     pass
+            elif not silent:
+                messagebox.showinfo("Error", "An unexpected error occured.\nTry again later or update manually.")
 
 # entry point
 if __name__ == "__main__":
