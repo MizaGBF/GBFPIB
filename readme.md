@@ -16,6 +16,7 @@
 7. Change the bookmark name if you want to.  
   
 You are done.  
+Do note, if requirements haven't been installed properly, the script will automatically try to install them. It might ask for administrator rights, if required.  
 ### How-to  
 1. Go on the party screen you want to export.  
 2. Click the bookmarklet. If nothing happens, everything went well.  
@@ -71,9 +72,9 @@ Simply click `Set Path` and select the folder where GBFTM is located.
 GBFTM must has been set beforehand (Twitter credentials included) or it might not work properly.  
 It's also currently compatible only with version 1.16 and higher (Ideally, always use the latest version to have the latest bugfixes).  
 ### Updating  
-When updating this script with a new version, be sure to update your bookmarklet, or issues might occur.  
-You might also want to rerun the `pip install -r requirements.txt` command if the required modules got updated.  
-In doubt, check the commit history to see which files changed, I won't maintain a changelog.  
+The script has a built-in auto updater.  
+I recommend using it, for ease of use.  
+If you can't or don't want to use it, simply download the latest version and redo the Setup steps.  
 ### Using it in your videos  
 Like the licence specifies, you are free to use this software as you want, free of charge.  
 Do note:  
