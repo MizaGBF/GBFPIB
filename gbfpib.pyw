@@ -1,10 +1,7 @@
 from urllib import parse
 from urllib.parse import quote
-import httpx
 import json
-from PIL import Image, ImageFont, ImageDraw
 from io import BytesIO
-import pyperclip
 import re
 import sys
 import time
@@ -18,6 +15,62 @@ import concurrent.futures
 from multiprocessing import Manager
 import shutil
 import traceback
+import platform
+import subprocess
+from zipfile import ZipFile
+
+# auto install
+SVER = None
+RVER = None
+
+def installRequirements(): # run requirements.txt through pip
+    subprocess.check_call([py_interpreter, "-m", "pip", "install", "-r", "requirements.txt"])
+
+def cmpVer(mver, tver): # compare version strings, True if greater or equal, else False
+    me = mver.split('.')
+    te = tver.split('.')
+    for i in range(0, min(len(me), len(te))):
+        if int(me[i]) < int(te[i]):
+            return False
+    return True
+
+if __name__ == "__main__":
+    try:
+        import httpx
+        from PIL import Image, ImageFont, ImageDraw
+        import pyperclip
+    except:
+        if os.name == 'nt':
+            py_interpreter = os.path.join(os.__file__.split("lib\\")[0],"python")
+        else:
+            py_interpreter = "python"
+        try:
+            installRequirements()
+            import httpx
+            from PIL import Image, ImageFont, ImageDraw
+            import pyperclip
+        except: # failed again, we exit
+            if sys.platform == "win32":
+                import ctypes
+                try: is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+                except: is_admin = False
+                if not is_admin:
+                    ctypes.windll.shell32.ShellExecuteW(None, "runas", py_interpreter, " ".join(sys.argv), None, 1)
+                else:
+                    print("Can't install the requirements")
+                exit(0)
+    try:
+        with open('manifest.json', encoding="utf-8") as f:
+            manifest = json.load(f)
+            SVER = manifest['version']
+            RVER = manifest['requirements']
+    except:
+        SVER = None
+        RVER = None
+else:
+    import httpx
+    from PIL import Image, ImageFont, ImageDraw
+    import pyperclip
 
 import importlib.util
 GBFTM_instance = None
@@ -40,8 +93,7 @@ def importGBFTM(path):
 
 class PartyBuilder():
     def __init__(self, debug):
-        self.version = "v8.15"
-        print("Granblue Fantasy Party Image Builder", self.version)
+        print("Granblue Fantasy Party Image Builder", SVER)
         self.debug = debug
         if self.debug: print("DEBUG enabled")
         self.japanese = False # True if the data is japanese, False if not
@@ -131,7 +183,7 @@ class PartyBuilder():
         self.load() # loading settings.json
         if importGBFTM(self.settings.get('gbftm_path', '')):
             print("GBFTM imported with success")
-        self.wtm = b64decode("TWl6YSdzIEdCRlBJQiA=").decode('utf-8')+self.version
+        self.wtm = b64decode("TWl6YSdzIEdCRlBJQiA=").decode('utf-8')+SVER
 
     def pexc(self, e):
         return "".join(traceback.format_exception(type(e), e, e.__traceback__))
@@ -1309,7 +1361,7 @@ class Interface(Tk.Tk): # interface
         self.gbftm_state = 0
         self.gbftm_export = None
         self.iconbitmap('icon.ico')
-        self.title("GBFPIB {}".format(self.pb.version))
+        self.title("GBFPIB {}".format(SVER))
         self.resizable(width=False, height=False) # not resizable
         self.protocol("WM_DELETE_WINDOW", self.close) # call close() if we close the window
         self.to_disable = []
@@ -1370,6 +1422,8 @@ class Interface(Tk.Tk): # interface
         
         self.thread = None
         self.events = []
+        
+        self.autoUpdate()
 
     def run(self):
         # main loop
@@ -1488,6 +1542,36 @@ class Interface(Tk.Tk): # interface
                 self.gbftm_status.config(text="Imported")
             else:
                 messagebox.showinfo("Error", "Failed to import GBFTM")
+
+    def autoUpdate(self):
+        try:
+            response = httpx.get("https://raw.githubusercontent.com/MizaGBF/GBFPIB/main/manifest.json")
+            if response.status_code != 200: raise Exception()
+            manifest = response.json()
+            if not cmpVer(SVER, manifest['version']):
+                if messagebox.askyesno(title="Update", message="An update is available.\nUpdate now?"):
+                    response = httpx.get("https://github.com/MizaGBF/GBFPIB/archive/refs/heads/main.zip", follow_redirects=True)
+                    if response.status_code != 200:
+                        messagebox.showinfo("Error", "Can't download the new version.\nFeel free to do it manually by going to https://github.com/MizaGBF/GBFPIB")
+                        raise Exception()
+                    myzip = ZipFile(BytesIO(response.content))
+                    myzip.extractall()
+                    root = ''
+                    for filename in os.listdir(os.path.join(root, "GBFPIB-main")):
+                        shutil.move(os.path.join(root, "GBFPIB-main", filename), os.path.join(root, filename))
+                    os.rmdir(os.path.join(root, "GBFPIB-main"))
+                    if not cmpVer(RVER, manifest['requirements']):
+                        try:
+                            installRequirements()
+                            messagebox.showinfo("Info", "Update successful and new requirements have been installed.\nThe app will now restart.")
+                        except:
+                            messagebox.showinfo("Info", "Update successful but new requirements couldn't be installed.\nTry to do 'python -m pip install -r requirements.txt' from a command prompt in the same folder.\nThe app will now restart.")
+                    else:
+                        messagebox.showinfo("Info", "Update successful and the app will now restart.")
+                    os.execv(sys.argv[0], sys.argv)
+                    exit(0)
+        except:
+            pass
 
 # entry point
 if __name__ == "__main__":
