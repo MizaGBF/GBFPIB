@@ -24,7 +24,7 @@ SVER = None
 RVER = None
 
 def installRequirements(): # run requirements.txt through pip
-    subprocess.check_call([py_interpreter, "-m", "pip", "install", "-r", "requirements.txt"])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
 
 def cmpVer(mver, tver): # compare version strings, True if greater or equal, else False
     me = mver.split('.')
@@ -40,10 +40,6 @@ if __name__ == "__main__":
         from PIL import Image, ImageFont, ImageDraw
         import pyperclip
     except:
-        if os.name == 'nt':
-            py_interpreter = os.path.join(os.__file__.split("lib\\")[0],"python")
-        else:
-            py_interpreter = "python"
         try:
             installRequirements()
             import httpx
@@ -55,7 +51,7 @@ if __name__ == "__main__":
                 try: is_admin = ctypes.windll.shell32.IsUserAnAdmin()
                 except: is_admin = False
                 if not is_admin:
-                    ctypes.windll.shell32.ShellExecuteW(None, "runas", py_interpreter, " ".join(sys.argv), None, 1)
+                    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
                 else:
                     print("Can't install the requirements")
                 exit(0)
@@ -1544,22 +1540,25 @@ class Interface(Tk.Tk): # interface
                 messagebox.showinfo("Error", "Failed to import GBFTM")
 
     def autoUpdate(self):
+        update_started = False
         try:
             response = httpx.get("https://raw.githubusercontent.com/MizaGBF/GBFPIB/main/manifest.json")
             if response.status_code != 200: raise Exception()
             manifest = response.json()
             if not cmpVer(SVER, manifest['version']):
                 if messagebox.askyesno(title="Update", message="An update is available.\nUpdate now?"):
+                    update_started = True
                     response = httpx.get("https://github.com/MizaGBF/GBFPIB/archive/refs/heads/main.zip", follow_redirects=True)
                     if response.status_code != 200:
                         messagebox.showinfo("Error", "Can't download the new version.\nFeel free to do it manually by going to https://github.com/MizaGBF/GBFPIB")
-                        raise Exception()
+                        return
                     myzip = ZipFile(BytesIO(response.content))
                     myzip.extractall()
-                    root = ''
+                    root = os.getcwd()
+                    shutil.rmtree(os.path.join(root, "assets"))
                     for filename in os.listdir(os.path.join(root, "GBFPIB-main")):
                         shutil.move(os.path.join(root, "GBFPIB-main", filename), os.path.join(root, filename))
-                    os.rmdir(os.path.join(root, "GBFPIB-main"))
+                    shutil.rmtree(os.path.join(root, "GBFPIB-main"))
                     if not cmpVer(RVER, manifest['requirements']):
                         try:
                             installRequirements()
@@ -1568,10 +1567,15 @@ class Interface(Tk.Tk): # interface
                             messagebox.showinfo("Info", "Update successful but new requirements couldn't be installed.\nTry to do 'python -m pip install -r requirements.txt' from a command prompt in the same folder.\nThe app will now restart.")
                     else:
                         messagebox.showinfo("Info", "Update successful and the app will now restart.")
-                    os.execv(sys.argv[0], sys.argv)
+                    os.execv(sys.executable, [sys.executable, __file__] + sys.argv)
                     exit(0)
         except:
-            pass
+            if update_started:
+                messagebox.showinfo("Error", "An unexpected error occured.")
+                try:
+                    shutil.rmtree(os.path.join(root, "GBFPIB-main"))
+                except:
+                    pass
 
 # entry point
 if __name__ == "__main__":
