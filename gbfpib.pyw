@@ -40,7 +40,7 @@ def importGBFTM(path):
 
 class PartyBuilder():
     def __init__(self, debug):
-        self.version = "v8.14"
+        self.version = "v8.15"
         print("Granblue Fantasy Party Image Builder", self.version)
         self.debug = debug
         if self.debug: print("DEBUG enabled")
@@ -133,6 +133,9 @@ class PartyBuilder():
             print("GBFTM imported with success")
         self.wtm = b64decode("TWl6YSdzIEdCRlBJQiA=").decode('utf-8')+self.version
 
+    def pexc(self, e):
+        return "".join(traceback.format_exception(type(e), e, e.__traceback__))
+
     def load(self): # load settings.json
         try:
             with open('settings.json') as f:
@@ -168,7 +171,7 @@ class PartyBuilder():
                     if remote:
                         print("[GET] *Downloading File", path)
                         response = client.get('https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path, headers={'connection':'keep-alive'})
-                        if response.status_code != 200: raise Exception()
+                        if response.status_code != 200: raise Exception("HTTP Error code {} for url: {}".format(response.status_code, 'https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path))
                         self.cache[path] = response.content
                         if self.settings.get('caching', False):
                             try:
@@ -287,8 +290,7 @@ class PartyBuilder():
                     return data[x:x+10]
                 cur = x
             return None
-        except Exception as e:
-            print(e)
+        except:
             return None
 
     def initHTTPClient(self):
@@ -434,7 +436,7 @@ class PartyBuilder():
         except Exception as e:
             imgs[0].close()
             imgs[1].close()
-            return e
+            return self.pexc(e)
 
     def make_summon(self, export):
         try:
@@ -494,7 +496,7 @@ class PartyBuilder():
         except Exception as e:
             imgs[0].close()
             imgs[1].close()
-            return e
+            return self.pexc(e)
 
     def make_weapon(self, export):
         try:
@@ -686,7 +688,7 @@ class PartyBuilder():
         except Exception as e:
             imgs[0].close()
             imgs[1].close()
-            return e
+            return self.pexc(e)
 
     def make_modifier(self, export):
         try:
@@ -730,7 +732,7 @@ class PartyBuilder():
             return ('modifier', imgs)
         except Exception as e:
             imgs[0].close()
-            return e
+            return self.pexc(e)
 
     def loadEMP(self, id):
         try:
@@ -880,7 +882,7 @@ class PartyBuilder():
             return ('emp{}'.format(odd), imgs)
         except Exception as e:
             imgs[0].close()
-            return e
+            return self.pexc(e)
 
     def text(self, imgs, *args, **kwargs):
         start = kwargs.pop('start',0)
@@ -905,7 +907,7 @@ class PartyBuilder():
             print("[OUT] *'{}' has been generated".format(filename))
             return None
         except Exception as e:
-            return e
+            return self.pexc(e)
 
     def clipboardToJSON(self):
         return json.loads(pyperclip.paste())
@@ -1007,7 +1009,7 @@ class PartyBuilder():
             return True
         except Exception as e:
             print("An error occured")
-            print("exception message:", e)
+            print(e)
             print("Did you follow the instructions?")
             self.running = False
             return False
@@ -1090,9 +1092,7 @@ class PartyBuilder():
                 if isinstance(r, tuple):
                     imgs[r[0]] = r[1]
                 else: # exception check
-                    if self.debug:
-                        print("".join(traceback.format_exception(type(r), r, r.__traceback__)))
-                    raise r
+                    raise Exception("Exception error and traceback:\n" + r)
                 # as soon as available, we start generating the final images
                 if not gen_done and 'party' in imgs and 'summon' in imgs and 'weapon' in imgs and 'modifier' in imgs:
                     gen_done = True
@@ -1106,7 +1106,7 @@ class PartyBuilder():
             for future in concurrent.futures.as_completed(futures_save):
                 res.append(future.result())
             for r in res: # exception check
-                if r is not None: raise r
+                if r is not None: raise Exception(r)
             for i in imgs['party']: i.close()
             try: emp_img.close()
             except: pass
