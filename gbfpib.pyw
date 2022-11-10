@@ -973,10 +973,10 @@ class PartyBuilder():
                 auto_pos = '100,270'
             case '3':
                 preset = ['-bg', 'NM100.jpg',  '-nm150', '-party_noskin', '-position', 'top', '-ratio', '1.2', '-offset', '50,180', '-text', '-input', '-position', 'topleft', '-offset', '80,250', '-color', '255,196,0', '-outcolor', '0,0,0', '-fontsize', '80', '-bold']
-                auto_pos = '100,270'
+                auto_pos = '100,150'
             case '4':
                 preset = ['-bg', 'NM100.jpg', '-nm200', '-party_noskin', '-position', 'top', '-ratio', '1.2', '-offset', '50,180', '-text', '-input', '-position', 'topleft', '-offset', '80,250', '-color', '255,196,0', '-outcolor', '0,0,0', '-fontsize', '80', '-bold']
-                auto_pos = '100,270'
+                auto_pos = '100,150'
             case '5':
                 preset = ['-bg', 'tower_of_babyl.png', '-fill', '-text', '-input', '-position', 'topleft', '-offset', '20,20', '-fontsize', '100', '-bold', '-color', '255,255,255', '-outcolor', '0,0,0', '-outsize', '8', '-party_noskin', '-position', 'top', '-ratio', '1.4', '-offset', '50,60', '-text', '-input', '-position', 'bottomleft', '-offset', '30,-30', '-fontsize', '100', '-bold']
                 auto_pos = '100,140'
