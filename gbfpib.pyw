@@ -171,8 +171,9 @@ class PartyBuilder():
         }
         self.aux_class = [100401, 300301, 300201, 120401] # aux classes
         self.supp_summon_re = [ # regex used for the wiki support summon id search
-            re.compile('(20[0-9]{8})\\.'),
-            re.compile('(20[0-9]{8}_02)\\.')
+            re.compile('(20[0-9]{8}_03)\\.'),
+            re.compile('(20[0-9]{8}_02)\\.'),
+            re.compile('(20[0-9]{8})\\.')
         ]
         self.dummy_layer = self.make_canvas()
         self.settings = {} # settings.json data
@@ -307,11 +308,9 @@ class PartyBuilder():
             response = client.get("https://gbf.wiki/" + quote(self.fixCase(sps)), headers={'connection':'keep-alive'})
             if response.status_code != 200: raise Exception()
             data = response.content.decode('utf-8')
-            group = self.supp_summon_re[1].findall(data)
-            if len(group) > 0:
-                self.sumcache[sps] = group[0]
-                return group[0]
-            group = self.supp_summon_re[0].findall(data)
+            for ss in self.supp_summon_re:
+                group = ss.findall(data)
+                if len(group) > 0: break
             self.sumcache[sps] = group[0]
             return group[0]
         except:
@@ -679,6 +678,7 @@ class PartyBuilder():
                 if export['spsid'] is not None:
                     supp = export['spsid']
                 else:
+                    print("[WPN] |--> Looking up summon ID of", export['sps'], "on the wiki")
                     supp = self.get_support_summon(client, export['sps'])
                 if supp is None:
                     print("[WPN] |--> Support summon is", export['sps'], "(Note: searching its ID on gbf.wiki failed)")
