@@ -1,4 +1,3 @@
-from urllib import parse
 from urllib.parse import quote
 import json
 from io import BytesIO
@@ -15,7 +14,6 @@ import concurrent.futures
 from multiprocessing import Manager
 import shutil
 import traceback
-import platform
 import subprocess
 from zipfile import ZipFile
 
@@ -76,15 +74,18 @@ def importGBFTM(path):
     try:
         if GBFTM_instance is not None: return True
         module_name = "gbftm.py"
-        class_name = "GBFTM"
 
         spec = importlib.util.spec_from_file_location("GBFTM.gbftm", path + module_name)
         module = importlib.util.module_from_spec(spec)
         sys.modules["GBFTM.gbftm"] = module
         spec.loader.exec_module(module)
         GBFTM_instance = module.GBFTM(path)
-        return True
+        if GBFTM_instance.version[0] >= 1 and GBFTM_instance.version[1] >= 16:
+            return True
+        GBFTM_instance = None
+        return False
     except:
+        GBFTM_instance = None
         return False
 
 class PartyBuilder():
@@ -189,7 +190,7 @@ class PartyBuilder():
         try:
             with open('settings.json') as f:
                 self.settings = json.load(f)
-        except Exception as e:
+        except:
             print("Failed to load settings.json")
             while True:
                 print("An empty settings.json file will be created, continue? (y/n)")
@@ -861,7 +862,7 @@ class PartyBuilder():
                     if export['cp'][i] > 0:
                         self.text(imgs, self.addTuple(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=12, stroke_fill=(0, 0, 0))
                     # background
-                    self.pasteImage(imgs, "assets/bg_emp.png".format(cid), self.addTuple(pos, (csize[0], 0)), bg_size, transparency=True)
+                    self.pasteImage(imgs, "assets/bg_emp.png", self.addTuple(pos, (csize[0], 0)), bg_size, transparency=True)
                     # load EMP file
                     data = self.loadEMP(export['c'][i])
                     if data is None or self.japanese != (data['lang'] == 'ja'): # skip if we can't find EMPs OR if the language doesn't match
@@ -1034,7 +1035,6 @@ class PartyBuilder():
                     print("Do you want to make a thumbnail with this party? (Y to confirm)")
                     s = input()
                     if s.lower() == "y":
-                        preset = []
                         print("Please select a preset")
                         print("[0] Party Showcase")
                         print("[1] End Game Raid")
