@@ -525,7 +525,7 @@ class PartyBuilder():
                 else:
                     has_skin = False
                 # star
-                self.pasteImage(imgs, "assets/star_{}.png".format({3:1, 4:2, 5:3, 6:3, 7:3}.get(export['se'][i], 0)), pos, (132, 132), transparency=True, start=0, end=2 if has_skin else 1)
+                self.pasteImage(imgs, "assets/star_{}.png".format({3:1, 4:2, 5:3, 6:4, 7:4}.get(export['se'][i], 0)), pos, (132, 132), transparency=True, start=0, end=2 if has_skin else 1)
                 # level
                 self.pasteImage(imgs, "assets/chara_stat.png", self.addTuple(pos, (0, sizes[idx][1])), (sizes[idx][0], 120), transparency=True, start=0, end=1)
                 self.text(imgs, self.addTuple(pos, (12,sizes[idx][1]+18)), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
