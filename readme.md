@@ -86,6 +86,8 @@ Some insights on how the image processing works:
 1. Upon starting, it reads your clipboard and check if there is any valid data exported with the bookmark.  
 2. Because Python multithreading is terribly slow, it relies on multiprocessing instead: Up to 6 new proccesses are created. One purely for the party, one for the summons, one for the weapon grid, one for the weapon modifiers and one for EMPs. Each process returns the images, which are then assembled in another process as simple layers, by putting them one on top of each other.  
 3. For memory usage and speed reasons, `skin.png` is also composed of some simple layers, which are added on top of a copy of `party.png`. This way, we don't "redraw" `party.png` twice. Do note, however, the `skin.png` processing takes place even when the setting is disabled.  
+### Known Issues  
+The app will crash when using some alternate portrait from some skins such as Cidala's. A workaround is applied in the function `fix_character_look()`. I'll add more if I find more but you can add it yourself here or report them to me.  
 ### Result  
 Here's what the resulting images look like:  
 (Screenshots taken on version 8.3)  

@@ -348,6 +348,85 @@ class PartyBuilder():
     def get_uncap_id(self, cs): # to get character portraits based on uncap levels
         return {2:'02', 3:'02', 4:'02', 5:'03', 6:'04'}.get(cs, '01')
 
+    def get_uncap_star(self, cs, cl): # to get character star based on uncap levels
+        match cs:
+            case 4: return "assets/star_1.png"
+            case 5: return "assets/star_2.png"
+            case 6:
+                if cl <= 110: return "assets/star_4_1.png"
+                elif cl <= 120: return "assets/star_4_2.png"
+                elif cl <= 130: return "assets/star_4_3.png"
+                elif cl <= 140: return "assets/star_4_4.png"
+                elif cl <= 150: return "assets/star_4_5.png"
+            case _: return "assets/star_0.png"
+
+    def get_summon_star(self, se, sl): # to get summon star based on uncap levels
+        match se:
+            case 3: return "assets/star_1.png"
+            case 4: return "assets/star_2.png"
+            case 5: return "assets/star_3.png"
+            case 6:
+                if sl <= 210: return "assets/star_4_1.png"
+                elif sl <= 220: return "assets/star_4_2.png"
+                elif sl <= 230: return "assets/star_4_3.png"
+                elif sl <= 240: return "assets/star_4_4.png"
+                elif sl <= 250: return "assets/star_4_5.png"
+            case _: return "assets/star_0.png"
+
+    def fix_character_look(self, export, i):
+        style = ("" if str(export['cst'][i]) == '1' else "_st{}".format(export['cst'][i])) # style
+        if style != "":
+            uncap = "01"
+        else:
+            uncap = self.get_uncap_id(export['cs'][i])
+        cid = export['c'][i]
+        # SKIN FIX START ##################
+        if str(cid).startswith('371'):
+            match cid:
+                case 3710098000: # seox skin
+                    if export['cl'][i] > 80: cid = 3040035000 # eternal seox
+                    else: cid = 3040262000 # event seox
+                case 3710122000: # seofon skin
+                    cid = 3040036000 # eternal seofon
+                case 3710143000: # vikala skin
+                    if export['ce'][i] == 3: cid = 3040408000 # apply earth vikala
+                    elif export['ce'][i] == 6:
+                        if export['cl'][i] > 50: cid = 3040252000 # SSR dark vikala
+                        else: cid = 3020073000 # R dark vikala
+                case 3710154000: # clarisse skin
+                    match export['ce'][i]:
+                        case 2: cid = 3040413000 # water
+                        case 3: cid = 3040067000 # earth
+                        case 5: cid = 3040121000 # light
+                        case 6: cid = 3040206000 # dark
+                        case _: cid = 3040046000 # fire
+                case 3710165000: # diantha skin
+                    match export['ce'][i]:
+                        case 2:
+                            if export['cl'][i] > 70: cid = 3040129000 # water SSR
+                            else: cid = 3030150000 # water SR
+                        case 3: cid = 3040296000 # earth
+                case 3710172000: # tsubasa skin
+                    cid = 3040180000
+                case 3710176000: # mimlemel skin
+                    if export['ce'][i] == 1: cid = 3040292000 # apply fire mimlemel
+                    elif export['ce'][i] == 3: cid = 3030220000 # apply earth halloween mimlemel
+                    elif export['ce'][i] == 4:
+                        if export['cn'][i] in ['Mimlemel', 'ミムルメモル']: cid = 3030043000 # first sr wind mimlemel
+                        else: cid = 3030166000 # second sr wind mimlemel
+                case 3710191000: # cidala skin 1
+                    if export['ce'][i] == 3: cid = 3040377000 # apply earth cidala
+                case 3710195000: # cidala skin 2
+                    if export['ce'][i] == 3: cid = 3040377000 # apply earth cidala
+        # SKIN FIX END ##################
+        if cid in self.nullchar: 
+            if export['ce'][i] == 99:
+                return "{}_{}{}_0{}".format(cid, uncap, style, export['pce'])
+            else:
+                return "{}_{}{}_0{}".format(cid, uncap, style, export['ce'][i])
+        else:
+            return "{}_{}{}".format(cid, uncap, style)
+
     def get_mc_job_look(self, skin, job): # get the MC unskined filename based on id
         jid = job // 10000
         if jid not in self.classes: return skin
@@ -375,6 +454,8 @@ class PartyBuilder():
                 jsize = (108, 90)
                 roffset = (-12, -12)
                 rsize = (120, 120)
+                ssize = (100, 100)
+                soffset = self.addTuple(csize, (-csize[0], -ssize[1]*5//3))
                 poffset = self.addTuple(csize, (-210, -90))
                 ssoffset = self.addTuple(pos, (0, 20+csize[1]))
                 stoffset = self.addTuple(ssoffset, (6, 6))
@@ -390,6 +471,8 @@ class PartyBuilder():
                 jsize = (144, 120)
                 roffset = (-20, -20)
                 rsize = (180, 180)
+                ssize = (132, 132)
+                soffset = self.addTuple(csize, (-csize[0]+ssize[0]//2, -ssize[1]))
                 poffset = self.addTuple(csize, (-220, -80))
                 noffset = (18, csize[1]+20)
                 loffset = (20, csize[1]+12+120)
@@ -422,31 +505,21 @@ class PartyBuilder():
                     pos = self.addTuple(offset, (skill_width+csize[0]*(i+1-1), 0))
                     if i >= 3: pos = self.addTuple(pos, (50, 0))
                 # portrait
-                if i >= len(export['c']) or export['c'][i] is None:
+                if i >= len(export['c']) or export['c'][i] is None: # empty
                     self.dlAndPasteImage(client, imgs, "assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize, start=0, end=1)
                     continue
+                print("[CHA] |--> Ally #{}:".format(i+1), export['c'][i], export['cn'][i], "Lv {}".format(export['cl'][i]), "Uncap-{}".format(export['cs'][i]), "+{}".format(export['cp'][i]), "Has Ring" if export['cwr'][i] else "No Ring")
+                # portrait
+                cid = self.fix_character_look(export, i)
+                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(cid), pos, csize, start=0, end=1)
+                # skin
+                if cid != export['ci'][i]:
+                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(export['ci'][i]), pos, csize, start=1, end=2)
+                    has_skin = True
                 else:
-                    print("[CHA] |--> Ally #{}:".format(i+1), export['c'][i], export['cn'][i], "Lv {}".format(export['cl'][i]), "+{}".format(export['cp'][i]), "Has Ring" if export['cwr'][i] else "No Ring")
-                    # portrait
-                    style = ("" if str(export['cst'][i]) == '1' else "_st{}".format(export['cst'][i])) # style
-                    if style != "":
-                        uncap = "01"
-                    else:
-                        uncap = self.get_uncap_id(export['cs'][i])
-                    if export['c'][i] in self.nullchar: 
-                        if export['ce'][i] == 99:
-                            cid = "{}_{}{}_0{}".format(export['c'][i], uncap, style, export['pce'])
-                        else:
-                            cid = "{}_{}{}_0{}".format(export['c'][i], uncap, style, export['ce'][i])
-                    else:
-                        cid = "{}_{}{}".format(export['c'][i], uncap, style)
-                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(cid), pos, csize, start=0, end=1)
-                    # skin
-                    if cid != export['ci'][i]:
-                        self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(export['ci'][i]), pos, csize, start=1, end=2)
-                        has_skin = True
-                    else:
-                        has_skin = False
+                    has_skin = False
+                # star
+                self.pasteImage(imgs, self.get_uncap_star(export['cs'][i], export['cl'][i]), self.addTuple(pos, soffset), ssize, transparency=True, start=0, end=2 if has_skin else 1)
                 # rings
                 if export['cwr'][i] == True:
                     self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.addTuple(pos, roffset), rsize, transparency=True, start=0, end=2 if has_skin else 1)
@@ -459,9 +532,9 @@ class PartyBuilder():
                     if len(export['cn'][i]) > 11: name = export['cn'][i][:11] + ".."
                     else: name = export['cn'][i]
                     self.text(imgs, self.addTuple(pos, noffset), name, fill=(255, 255, 255), font=self.fonts['mini'], start=0, end=1)
-                    # level
-                    self.pasteImage(imgs, "assets/chara_stat.png", self.addTuple(pos, (0, csize[1]+120)), (csize[0], 120), transparency=True, start=0, end=1)
-                    self.text(imgs, self.addTuple(pos, loffset), "Lv {}".format(export['cl'][i]), fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
+                    # skill count
+                    self.pasteImage(imgs, "assets/skill_count_EN.png", self.addTuple(pos, (0, csize[1]+120)), (csize[0], 120), transparency=True, start=0, end=1)
+                    self.text(imgs, self.addTuple(self.addTuple(pos, loffset), (300, 0)), str(export['cb'][i]), fill=(255, 255, 255), font=self.fonts['medium'], stroke_width=8, stroke_fill=(0, 0, 0), start=0, end=1)
 
             # mc sub skills
             self.pasteImage(imgs, "assets/subskills.png", ssoffset, (840, 294), transparency=True)
@@ -525,7 +598,7 @@ class PartyBuilder():
                 else:
                     has_skin = False
                 # star
-                self.pasteImage(imgs, "assets/star_{}.png".format({3:1, 4:2, 5:3, 6:4, 7:4}.get(export['se'][i], 0)), pos, (132, 132), transparency=True, start=0, end=2 if has_skin else 1)
+                self.pasteImage(imgs, self.get_summon_star(export['se'][i], export['sl'][i]), pos, (132, 132), transparency=True, start=0, end=2 if has_skin else 1)
                 # level
                 self.pasteImage(imgs, "assets/chara_stat.png", self.addTuple(pos, (0, sizes[idx][1])), (sizes[idx][0], 120), transparency=True, start=0, end=1)
                 self.text(imgs, self.addTuple(pos, (12,sizes[idx][1]+18)), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
@@ -832,7 +905,8 @@ class PartyBuilder():
                 esizes = [(266, 266), (200, 200)]
                 eroffset = (200, 30)
             bg_size = (imgs[0].size[0] - csize[0] - offset[0], csize[1]+shift)
-            poffset = self.addTuple(csize, (-220, -100))
+            loffset = self.addTuple(csize, (-300, -100))
+            poffset = self.addTuple(csize, (-220, -200))
             pos = self.addTuple(offset, (0, offset[1]-csize[1]-shift))
 
             # allies
@@ -842,31 +916,22 @@ class PartyBuilder():
                     pos = self.addTuple(pos, (0, csize[1]+shift)) # set chara position
                     if i % 2 == odd: continue
                     # portrait
-                    style = ("" if str(export['cst'][i]) == '1' else "_st{}".format(export['cst'][i])) # style
-                    if style != "":
-                        uncap = "01"
-                    else:
-                        uncap = self.get_uncap_id(export['cs'][i])
-                    if export['c'][i] in self.nullchar: 
-                        if export['ce'][i] == 99:
-                            cid = "{}_{}{}_0{}".format(export['c'][i], uncap, style, export['pce'])
-                        else:
-                            cid = "{}_{}{}_0{}".format(export['c'][i], uncap, style, export['ce'][i])
-                    else:
-                        cid = "{}_{}{}".format(export['c'][i], uncap, style)
+                    cid = self.fix_character_look(export, i)
                     self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/npc/{}/{}.jpg".format(portrait_type, cid), pos, csize)
                     # rings
                     if export['cwr'][i] == True:
                         self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.addTuple(pos, roffset), rsize, transparency=True)
+                    # level
+                    self.text(imgs, self.addTuple(pos, loffset), "Lv{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.fonts['small'], stroke_width=12, stroke_fill=(0, 0, 0))
                     # plus
                     if export['cp'][i] > 0:
                         self.text(imgs, self.addTuple(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=12, stroke_fill=(0, 0, 0))
                     # background
                     self.pasteImage(imgs, "assets/bg_emp.png", self.addTuple(pos, (csize[0], 0)), bg_size, transparency=True)
                     # load EMP file
-                    data = self.loadEMP(export['c'][i])
+                    data = self.loadEMP(cid.split('_')[0])
                     if data is None or self.japanese != (data['lang'] == 'ja'): # skip if we can't find EMPs OR if the language doesn't match
-                        print("[EMP] |--> Ally #{}: {}.json can't be loaded".format(i+1, export['c'][i]))
+                        print("[EMP] |--> Ally #{}: {}.json can't be loaded".format(i+1, cid.split('_')[0]))
                         self.text(imgs, self.addTuple(pos, (csize[0]+100, csize[1]//3)), "EMP not set", fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                         continue
                     # main EMP
@@ -1267,7 +1332,7 @@ class PartyBuilder():
     def cpyBookmark(self):
         # check bookmarklet.txt for a more readable version
         # note: when updating it in this piece of code, you need to double the \
-        pyperclip.copy("javascript:(function(){if(window.location.hash.startsWith(\"#party/index/\")||window.location.hash.startsWith(\"#party/expectancy_damage/index\")||window.location.hash.startsWith(\"#tower/party/index/\")||(window.location.hash.startsWith(\"#event/sequenceraid\")&&window.location.hash.indexOf(\"/party/index/\")>0)&&!window.location.hash.startsWith(\"#tower/party/expectancy_damage/index/\")){let obj={lang:window.Game.lang,p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],pce:window.Game.view.deck_model.attributes.deck.pc.param.attribute,c:[],ce:[],ci:[],cst:[],cn:[],cl:[],cs:[],cp:[],cwr:[],cpl:[window.Game.view.deck_model.attributes.deck.pc.shield_id, window.Game.view.deck_model.attributes.deck.pc.skin_shield_id],s:[],sl:[],ss:[],se:[],sp:[],ssm:window.Game.view.deck_model.attributes.deck.pc.skin_summon_id,w:[],wsm:[window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id, window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id_2],wl:[],wsn:[],wll:[],wp:[],wakn:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage],estx:[],mods:window.Game.view.deck_model.attributes.deck.pc.damage_info.effect_value_info,sps:(window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name?window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name:null),spsid:(Game.view.expectancyDamageData?(Game.view.expectancyDamageData.imageId?Game.view.expectancyDamageData.imageId:null):null)};try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cst.push(e.param?e.param.style:1);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cst.push(e.param?e.param.style:1);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.sub_summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.wakn.push(e.param?e.param.arousal:null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});Array.from(document.getElementsByClassName(\"txt-gauge-num\")).forEach(x=>{obj.estx.push([x.classList[1], x.textContent])});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");} else if(window.location.hash.startsWith(\"#zenith/npc\")||window.location.hash.startsWith(\"#tower/zenith/npc\")||/^#event\/sequenceraid\d+\/zenith\/npc/.test(window.location.hash)){let obj={lang:window.Game.lang,id:parseInt(window.Game.view.npcId,10),emp:window.Game.view.bonusListModel.attributes.bonus_list,ring:window.Game.view.npcaugmentData.param_data,awakening:null,awaktype:null,domain:[]};try{obj.awakening=document.getElementsByClassName(\"prt-current-awakening-lv\")[0].firstChild.className;obj.awaktype=document.getElementsByClassName(\"prt-arousal-form-info\")[0].children[1].textContent;domains = document.getElementById(\"prt-domain-evoker-list\").getElementsByClassName(\"prt-bonus-detail\");for(let i=0;i<domains.length;++i){obj.domain.push([domains[i].children[0].className, domains[i].children[1].textContent, domains[i].children[2]?domains[i].children[2].textContent:null]);}}catch(error){};let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}else{alert('Please go to a GBF Party or EMP screen');}}())")
+        pyperclip.copy("javascript:(function(){if(window.location.hash.startsWith(\"#party/index/\")||window.location.hash.startsWith(\"#party/expectancy_damage/index\")||window.location.hash.startsWith(\"#tower/party/index/\")||(window.location.hash.startsWith(\"#event/sequenceraid\")&&window.location.hash.indexOf(\"/party/index/\")>0)&&!window.location.hash.startsWith(\"#tower/party/expectancy_damage/index/\")){let obj={lang:window.Game.lang,p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],pce:window.Game.view.deck_model.attributes.deck.pc.param.attribute,c:[],ce:[],ci:[],cb:[window.Game.view.deck_model.attributes.deck.pc.skill.count],cst:[],cn:[],cl:[],cs:[],cp:[],cwr:[],cpl:[window.Game.view.deck_model.attributes.deck.pc.shield_id, window.Game.view.deck_model.attributes.deck.pc.skin_shield_id],s:[],sl:[],ss:[],se:[],sp:[],ssm:window.Game.view.deck_model.attributes.deck.pc.skin_summon_id,w:[],wsm:[window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id, window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id_2],wl:[],wsn:[],wll:[],wp:[],wakn:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage],estx:[],mods:window.Game.view.deck_model.attributes.deck.pc.damage_info.effect_value_info,sps:(window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name?window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name:null),spsid:(Game.view.expectancyDamageData?(Game.view.expectancyDamageData.imageId?Game.view.expectancyDamageData.imageId:null):null)};try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cb.push(e.param?e.skill.count:null);obj.cst.push(e.param?e.param.style:1);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cb.push(e.param?e.skill.count:null);obj.cst.push(e.param?e.param.style:1);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.sub_summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?parseInt(e.master.id.slice(0,-2),10):null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.wakn.push(e.param?e.param.arousal:null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});Array.from(document.getElementsByClassName(\"txt-gauge-num\")).forEach(x=>{obj.estx.push([x.classList[1], x.textContent])});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");} else if(window.location.hash.startsWith(\"#zenith/npc\")||window.location.hash.startsWith(\"#tower/zenith/npc\")||/^#event\/sequenceraid\d+\/zenith\/npc/.test(window.location.hash)){let obj={lang:window.Game.lang,id:parseInt(window.Game.view.npcId,10),emp:window.Game.view.bonusListModel.attributes.bonus_list,ring:window.Game.view.npcaugmentData.param_data,awakening:null,awaktype:null,domain:[]};try{obj.awakening=document.getElementsByClassName(\"prt-current-awakening-lv\")[0].firstChild.className;obj.awaktype=document.getElementsByClassName(\"prt-arousal-form-info\")[0].children[1].textContent;domains = document.getElementById(\"prt-domain-evoker-list\").getElementsByClassName(\"prt-bonus-detail\");for(let i=0;i<domains.length;++i){obj.domain.push([domains[i].children[0].className, domains[i].children[1].textContent, domains[i].children[2]?domains[i].children[2].textContent:null]);}}catch(error){};let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}else{alert('Please go to a GBF Party or EMP screen');}}())")
 
     def run(self): # old command line menu
         while True:
