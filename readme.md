@@ -55,9 +55,12 @@ To update it, simply repeat the process.
 Keep in mind:
 1. The `Do EMP` setting must be enabled or `emp.png` won't be generated when clicking `Build Images`.  
 2. Your game language must be the same at the time you saved the EMP and when generating a Party image. EMP saved as japanese won't work for an english party image and vice versa.  
-### Estimate Damage settings  
+### Current HP setting  
+(Only if the `HP Bar on skin.png` setting is enabled)  
 If you click the bookmarklet with the Estimated Damage calculator open, it will grab the current HP percentage and display it on `skin.png`, instead of the off-element estimated damage.  
+If you don't open the calculator, it will assume your current HP is set to 100%.  
 ### Critical Estimate Damage  
+(Only if the `Show crit. on skin.png` setting is enabled)  
 If your weapon grid has a critical modifier inferior to 100%, it will display the critical estimated damage on `skin.png`, instead of the on-element estimated damage.  
 Do note the calcul isn't perfect: It won't account for cap up or craft skills (or other critical supplementals).  
 ### Support Summon  

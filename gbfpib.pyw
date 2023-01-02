@@ -619,7 +619,7 @@ class PartyBuilder():
             imgs[1].close()
             return self.pexc(e)
 
-    def make_weapon(self, export):
+    def make_weapon(self, export, do_hp, do_crit):
         try:
             client = self.initHTTPClient()
             imgs = [self.make_canvas(), self.make_canvas()]
@@ -747,6 +747,7 @@ class PartyBuilder():
                             mod_supp = int(str(m['value']).replace('+', ''))
                         except:
                             mod_supp = int(str(m['value']).replace('+', ''))
+            if not do_crit: mod_crit = 0 # disable
             if (export['sps'] is not None and export['sps'] != '') or export['spsid'] is not None:
                 # support summon
                 if export['spsid'] is not None:
@@ -791,12 +792,12 @@ class PartyBuilder():
                         self.text(imgs, (pos[0]+est_width*i+30 , pos[1]+180), "vs", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
                         self.text(imgs, (pos[0]+est_width*i+132 , pos[1]+180), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
             # hp gauge
-            hpratio = None
-            for et in export['estx']:
-                if et[0].replace('txt-gauge-num ', '') == 'hp':
-                    hpratio = et[1]
-                    break
-            if hpratio is not None:
+            if do_hp:
+                hpratio = 100
+                for et in export['estx']:
+                    if et[0].replace('txt-gauge-num ', '') == 'hp':
+                        hpratio = et[1]
+                        break
                 self.pasteImage(imgs, "assets/big_stat.png", (pos[0] ,pos[1]), (est_width-30, 300), transparency=True, start=1, end=2)
                 if self.japanese:
                     self.text(imgs, (pos[0]+50 , pos[1]+50), "HP{}%".format(hpratio), fill=(255, 255, 255), font=self.fonts['medium'], start=1, end=2)
@@ -1156,6 +1157,8 @@ class PartyBuilder():
         start = time.time()
         do_emp = self.settings.get('emp', False)
         do_skin = self.settings.get('skin', True)
+        do_hp = self.settings.get('hp', True)
+        do_crit = self.settings.get('crit', True)
         if self.settings.get('caching', False):
             self.checkDiskCache()
         self.quality = {'720p':1/6, '1080p':1/4, '4k':1/2, '8k':1}.get(self.settings.get('quality', '8K').lower(), 1)
@@ -1195,7 +1198,7 @@ class PartyBuilder():
                 self.make_emp_start(executor, futures, export)
             futures.append(executor.submit(self.make_party, export))
             futures.append(executor.submit(self.make_summon, export))
-            futures.append(executor.submit(self.make_weapon, export))
+            futures.append(executor.submit(self.make_weapon, export, do_hp, do_crit))
             futures.append(executor.submit(self.make_modifier, export))
             res = []
             for future in concurrent.futures.as_completed(futures):
@@ -1254,10 +1257,12 @@ class PartyBuilder():
             print("[2] Generate skin.png ( Current:", self.settings.get('skin', True),")")
             print("[3] Generate emp.png ( Current:", self.settings.get('emp', False),")")
             print("[4] Set Asset Server ( Current:", self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net'),")")
-            print("[5] Set GBFTM Path ( Current:", self.settings.get('gbftm_path', ''),")")
-            print("[6] Use GBFTM if imported ( Current:", self.settings.get('gbftm_use', False),")")
-            print("[7] Empty Cache")
-            print("[8] Empty EMP")
+            print("[5] Show HP bar on skin.png ( Current:", self.settings.get('hp', True),")")
+            print("[6] Show critical estimate on skin.png ( Current:", self.settings.get('crit', True),")")
+            print("[7] Set GBFTM Path ( Current:", self.settings.get('gbftm_path', ''),")")
+            print("[8] Use GBFTM if imported ( Current:", self.settings.get('gbftm_use', False),")")
+            print("[9] Empty Cache")
+            print("[10] Empty EMP")
             print("[Any] Back")
             s = input()
             if s == "0":
@@ -1286,6 +1291,10 @@ class PartyBuilder():
                         print("Asset Server test: Failed")
                         print("Did you input the right url?")
             elif s == "5":
+                self.settings['hp'] = not self.settings.get('hp', True)
+            elif s == "6":
+                self.settings['crit'] = not self.settings.get('crit', True)
+            elif s == "7":
                 print("Input the path of the GBFTM folder (Leave blank to cancel): ")
                 folder = input()
                 if folder != "":
@@ -1298,11 +1307,11 @@ class PartyBuilder():
                         print("GBFTM is imported with success")
                     else:
                         print("Failed to import GBFTM")
-            elif s == "6":
-                self.settings['gbftm_use'] = not self.settings.get('gbftm_use', False)
-            elif s == "7":
-                self.emptyCache()
             elif s == "8":
+                self.settings['gbftm_use'] = not self.settings.get('gbftm_use', False)
+            elif s == "9":
+                self.emptyCache()
+            elif s == "10":
                 self.emptyCache()
             else:
                 return
@@ -1444,6 +1453,7 @@ class Interface(Tk.Tk): # interface
         # setting part
         tabs = ttk.Notebook(self)
         tabs.grid(row=1, column=1, rowspan=2, sticky="nwe")
+        ### Settings Tab
         tabcontent = Tk.Frame(tabs)
         tabs.add(tabcontent, text="Settings")
         self.qual_variable = Tk.StringVar(self)
@@ -1454,22 +1464,40 @@ class Interface(Tk.Tk): # interface
         opt.grid(row=0, column=1)
         self.to_disable.append(opt)
         
-        self.cache_var = Tk.IntVar(value=self.pb.settings.get('caching', False))
-        Tk.Label(tabcontent, text="Caching").grid(row=1, column=0)
-        self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.cache_var, command=self.toggleCaching))
-        self.to_disable[-1].grid(row=1, column=1)
         self.skin_var = Tk.IntVar(value=self.pb.settings.get('skin', True))
         Tk.Label(tabcontent, text="Do Skins").grid(row=2, column=0)
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.skin_var, command=self.toggleSkin))
         self.to_disable[-1].grid(row=2, column=1)
+        
         self.emp_var = Tk.IntVar(value=self.pb.settings.get('emp', False))
         Tk.Label(tabcontent, text="Do EMP").grid(row=3, column=0)
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.emp_var, command=self.toggleEMP))
         self.to_disable[-1].grid(row=3, column=1)
+        
         self.update_var = Tk.IntVar(value=self.pb.settings.get('update', False))
         Tk.Label(tabcontent, text="Auto Update").grid(row=4, column=0)
         Tk.Checkbutton(tabcontent, variable=self.update_var, command=self.toggleUpdate).grid(row=4, column=1)
-        ### GBFTM plugin
+        
+        ### Settings Tab
+        tabcontent = Tk.Frame(tabs)
+        tabs.add(tabcontent, text="Advanced")
+        
+        self.cache_var = Tk.IntVar(value=self.pb.settings.get('caching', False))
+        Tk.Label(tabcontent, text="Cache Assets").grid(row=0, column=0)
+        self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.cache_var, command=self.toggleCaching))
+        self.to_disable[-1].grid(row=0, column=1)
+        
+        self.hp_var = Tk.IntVar(value=self.pb.settings.get('hp', True))
+        Tk.Label(tabcontent, text="HP Bar on skin.png").grid(row=1, column=0)
+        self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.hp_var, command=self.toggleHP))
+        self.to_disable[-1].grid(row=1, column=1)
+        
+        self.crit_var = Tk.IntVar(value=self.pb.settings.get('crit', True))
+        Tk.Label(tabcontent, text="Show crit. on skin.png").grid(row=2, column=0)
+        self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.crit_var, command=self.toggleCrit))
+        self.to_disable[-1].grid(row=2, column=1)
+        
+        ### GBFTM plugin Tab
         tabcontent = Tk.Frame(tabs)
         tabs.add(tabcontent, text="GBFTM")
         self.to_disable.append(Tk.Button(tabcontent, text="Set Path", command=self.setGBFTM, width=self.BW, height=self.BH))
@@ -1580,6 +1608,12 @@ class Interface(Tk.Tk): # interface
 
     def toggleUpdate(self):
         self.pb.settings['update'] = (self.update_var.get() != 0)
+
+    def toggleHP(self):
+        self.pb.settings['hp'] = (self.hp_var.get() != 0)
+
+    def toggleCrit(self):
+        self.pb.settings['crit'] = (self.crit_var.get() != 0)
 
     def toggleGBFTM(self):
         self.pb.settings['gbftm_use'] = (self.gbftm_var.get() != 0)
