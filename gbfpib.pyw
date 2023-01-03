@@ -32,7 +32,26 @@ def cmpVer(mver, tver): # compare version strings, True if greater or equal, els
             return False
     return True
 
+def manifestPending(state):
+    with open('manifest.json', mode="r", encoding="utf-8") as f:
+        manifest = json.load(f)
+    manifest['pending'] = state
+    with open('manifest.json', mode="w", encoding="utf-8") as f:
+        manifest = json.dump(manifest, f)
+
 if __name__ == "__main__":
+    try:
+        with open('manifest.json', mode="r", encoding="utf-8") as f:
+            manifest = json.load(f)
+            SVER = manifest['version']
+            RVER = manifest['requirements']
+            RPEN = manifest.get('pending', False)
+        if RPEN:
+            installRequirements()
+            manifestPending(False)
+    except:
+        SVER = None
+        RVER = None
     try:
         import httpx
         from PIL import Image, ImageFont, ImageDraw
@@ -53,14 +72,6 @@ if __name__ == "__main__":
                 else:
                     print("Can't install the requirements")
                 exit(0)
-    try:
-        with open('manifest.json', encoding="utf-8") as f:
-            manifest = json.load(f)
-            SVER = manifest['version']
-            RVER = manifest['requirements']
-    except:
-        SVER = None
-        RVER = None
 else:
     import httpx
     from PIL import Image, ImageFont, ImageDraw
@@ -1673,8 +1684,8 @@ class Interface(Tk.Tk): # interface
                     shutil.rmtree(os.path.join(root, "GBFPIB-main"))
                     if not cmpVer(RVER, manifest['requirements']):
                         try:
-                            installRequirements()
-                            messagebox.showinfo("Info", "Update successful and new requirements have been installed.\nThe app will now restart.")
+                            manifestPending(True)
+                            messagebox.showinfo("Info", "Update successful\nThe app will now restart and new requirements will be installed.")
                         except:
                             messagebox.showinfo("Info", "Update successful but new requirements couldn't be installed.\nTry to do 'python -m pip install -r requirements.txt' from a command prompt in the same folder.\nThe app will now restart.")
                     else:
