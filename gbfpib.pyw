@@ -545,7 +545,7 @@ class PartyBuilder():
                     self.text(imgs, self.addTuple(pos, noffset), name, fill=(255, 255, 255), font=self.fonts['mini'], start=0, end=1)
                     # skill count
                     self.pasteImage(imgs, "assets/skill_count_EN.png", self.addTuple(pos, (0, csize[1]+120)), (csize[0], 120), transparency=True, start=0, end=1)
-                    self.text(imgs, self.addTuple(self.addTuple(pos, loffset), (300, 0)), str(export['cb'][i]), fill=(255, 255, 255), font=self.fonts['medium'], stroke_width=8, stroke_fill=(0, 0, 0), start=0, end=1)
+                    self.text(imgs, self.addTuple(self.addTuple(pos, loffset), (300, 0)), str(export['cb'][i+1]), fill=(255, 255, 255), font=self.fonts['medium'], stroke_width=8, stroke_fill=(0, 0, 0), start=0, end=1)
 
             # mc sub skills
             self.pasteImage(imgs, "assets/subskills.png", ssoffset, (840, 294), transparency=True)
