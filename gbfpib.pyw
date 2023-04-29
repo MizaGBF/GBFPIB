@@ -78,25 +78,25 @@ else:
     import pyperclip
 
 import importlib.util
-GBFTM_instance = None
+GBFTMR_instance = None
 
-def importGBFTM(path):
-    global GBFTM_instance
+def importGBFTMR(path):
+    global GBFTMR_instance
     try:
-        if GBFTM_instance is not None: return True
-        module_name = "gbftm.py"
+        if GBFTMR_instance is not None: return True
+        module_name = "gbftmr.py"
 
-        spec = importlib.util.spec_from_file_location("GBFTM.gbftm", path + module_name)
+        spec = importlib.util.spec_from_file_location("GBFTMR.gbftmr", path + module_name)
         module = importlib.util.module_from_spec(spec)
-        sys.modules["GBFTM.gbftm"] = module
+        sys.modules["GBFTMR.gbftmr"] = module
         spec.loader.exec_module(module)
-        GBFTM_instance = module.GBFTM(path)
-        if GBFTM_instance.version[0] >= 1 and GBFTM_instance.version[1] >= 16:
+        GBFTMR_instance = module.GBFTMR(path)
+        if GBFTMR_instance.version[0] >= 1 and GBFTMR_instance.version[1] >= 0:
             return True
-        GBFTM_instance = None
+        GBFTMR_instance = None
         return False
     except:
-        GBFTM_instance = None
+        GBFTMR_instance = None
         return False
 
 class PartyBuilder():
@@ -190,8 +190,8 @@ class PartyBuilder():
         self.dummy_layer = self.make_canvas()
         self.settings = {} # settings.json data
         self.load() # loading settings.json
-        if importGBFTM(self.settings.get('gbftm_path', '')):
-            print("GBFTM imported with success")
+        if importGBFTMR(self.settings.get('gbftmr_path', '')):
+            print("GBFTMR imported with success")
         self.wtm = b64decode("TWl6YSdzIEdCRlBJQiA=").decode('utf-8')+SVER
 
     def pexc(self, e):
@@ -353,8 +353,7 @@ class PartyBuilder():
             return None
 
     def initHTTPClient(self):
-        limits = httpx.Limits(max_keepalive_connections=100, max_connections=100, keepalive_expiry=10)
-        return httpx.Client(http2=True, limits=limits)
+        return httpx.Client(http2=True, limits=httpx.Limits(max_keepalive_connections=100, max_connections=100, keepalive_expiry=10))
 
     def get_uncap_id(self, cs): # to get character portraits based on uncap levels
         return {2:'02', 3:'02', 4:'02', 5:'03', 6:'04'}.get(cs, '01')
@@ -1048,63 +1047,6 @@ class PartyBuilder():
     def clipboardToJSON(self):
         return json.loads(pyperclip.paste())
 
-    def make_gbftm(self, choice1, choice2, export, bg = None, opttext = None):
-        match choice1:
-            case '0':
-                preset = ['-bg', '-input', '-fadein', '-party', '-position', 'top', '-ratio', '1.4', '-offset', '-70,140', '-text', '-input', '-position', 'bottomleft', '-offset', '30,-30', '-fontsize', '100', '-bold']
-                auto_pos = '100,300'
-            case '1':
-                preset = ['-bg', '-input', '-fadein', '-party_mainsummon', '-position', 'topleft', '-offset', '38,433', '-ratio', '1.25', '-text', '-input', '-position', 'topleft', '-offset', '70,100', '-fontsize', '190', '-bold', '-outcolor', '0,0,0', '-outsize', '8']
-                auto_pos = '100,330'
-            case '2':
-                preset = ['-bg', '-input', '-fadein', '-party_noskin', '-position', 'top', '-ratio', '1.2', '-offset', '50,180', '-text', '-input', '-position', 'topleft', '-offset', '80,350', '-color', '255,196,0', '-outcolor', '0,0,0', '-fontsize', '80', '-bold']
-                auto_pos = '100,270'
-            case '3':
-                preset = ['-bg', 'NM100.jpg',  '-nm150', '-party_noskin', '-position', 'top', '-ratio', '1.2', '-offset', '50,180', '-text', '-input', '-position', 'topleft', '-offset', '80,250', '-color', '255,196,0', '-outcolor', '0,0,0', '-fontsize', '80', '-bold']
-                auto_pos = '100,150'
-            case '4':
-                preset = ['-bg', 'NM100.jpg', '-nm200', '-party_noskin', '-position', 'top', '-ratio', '1.2', '-offset', '50,180', '-text', '-input', '-position', 'topleft', '-offset', '80,250', '-color', '255,196,0', '-outcolor', '0,0,0', '-fontsize', '80', '-bold']
-                auto_pos = '100,150'
-            case '5':
-                preset = ['-bg', 'tower_of_babyl.png', '-fill', '-text', '-input', '-position', 'topleft', '-offset', '20,20', '-fontsize', '100', '-bold', '-color', '255,255,255', '-outcolor', '0,0,0', '-outsize', '8', '-party_noskin', '-position', 'top', '-ratio', '1.4', '-offset', '50,60', '-text', '-input', '-position', 'bottomleft', '-offset', '30,-30', '-fontsize', '100', '-bold']
-                auto_pos = '100,140'
-            case '6':
-                preset = ['-bg', 'proving', '-fill', '-text', '-input', '-position', 'topleft', '-offset', '20,20', '-fontsize', '100', '-bold', '-color', '255,255,255', '-outcolor', '0,0,0', '-outsize', '8', '-party_mainsummon', '-position', 'topleft', '-offset', '38,433', '-ratio', '1.25', '-text', '-input', '-position', 'bottomleft', '-offset', '420,-100', '-fontsize', '100', '-bold']
-                auto_pos = '100,330'
-            case _:
-                preset = None
-        if preset is not None:
-            match choice2:
-                case '0':
-                    preset += ['-element', '-add', 'auto.png', '-ratio', '3', '-position', 'topleft', '-offset', auto_pos]
-                case '1':
-                    preset += ['-element', '-add', 'fa.png', '-ratio', '3', '-position', 'topleft', '-offset', auto_pos]
-                case '2':
-                    preset += ['-element', '-add', 'fa_guard.png', '-ratio', '3', '-position', 'topleft', '-offset', auto_pos]
-                case _:
-                    pass
-            if bg is not None:
-                for i in range(0, len(preset)):
-                    if preset[i] == '-input' and preset[i-1] == '-bg':
-                        preset[i] = bg
-                        break
-            if opttext is not None:
-                index = 0
-                i = 0
-                while i < len(preset) and index < len(opttext):
-                    if preset[i] == '-nm150' or preset[i] == '-nm200':
-                        preset[i] += '_auto'
-                        preset.insert(i+1, opttext[index])
-                        index += 1
-                        i += 1
-                    elif preset[i] == '-input' and preset[i-1] == '-text':
-                        preset[i] = '-content'
-                        preset.insert(i+1, opttext[index])
-                        index += 1
-                        i += 1
-                    i += 1
-            GBFTM_instance.auto(preset, nowait=True, auto_import=export)
-
     def make(self, fast=False): # main function
         try:
             if not fast:
@@ -1118,28 +1060,15 @@ class PartyBuilder():
             if 'emp' in export: self.make_sub_emp(export)
             else:
                 self.make_sub_party(export)
-                if GBFTM_instance is not None and self.settings.get('gbftm_use', False):
+                if GBFTMR_instance is not None and self.settings.get('gbftmr_use', False):
                     print("Do you want to make a thumbnail with this party? (Y to confirm)")
                     s = input()
                     if s.lower() == "y":
-                        print("Please select a preset")
-                        print("[0] Party Showcase")
-                        print("[1] End Game Raid")
-                        print("[2] Unite and Fight")
-                        print("[3] Unite and Fight NM150")
-                        print("[4] Unite and Fight NM200")
-                        print("[5] Tower of Babyl")
-                        print("[6] Proving Grounds")
-                        print("[Any] Cancel")
-                        c1 = input()
-                        if c1 in ['0', '1', '2', '3', '4', '5', '6']:
-                            print("Please select the type")
-                            print("[0] Auto")
-                            print("[1] Full Auto")
-                            print("[2] Full Auto Guard")
-                            print("[Any] Manual")
-                            c2 = input()
-                            self.make_gbftm(c1, c2, export)
+                        try:
+                            GBFTMR_instance.makeThumbnailManual(export)
+                        except Exception as xe:
+                            print(self.parent.pb.pexc(xe))
+                            print("The above exception occured while trying to generate the thumbnail")
             self.running = False
             return True
         except Exception as e:
@@ -1280,8 +1209,8 @@ class PartyBuilder():
             print("[4] Set Asset Server ( Current:", self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net'),")")
             print("[5] Show HP bar on skin.png ( Current:", self.settings.get('hp', True),")")
             print("[6] Show critical estimate on skin.png ( Current:", self.settings.get('crit', True),")")
-            print("[7] Set GBFTM Path ( Current:", self.settings.get('gbftm_path', ''),")")
-            print("[8] Use GBFTM if imported ( Current:", self.settings.get('gbftm_use', False),")")
+            print("[7] Set GBFTMR Path ( Current:", self.settings.get('gbftmr_path', ''),")")
+            print("[8] Use GBFTMR if imported ( Current:", self.settings.get('gbftmr_use', False),")")
             print("[9] Empty Cache")
             print("[10] Empty EMP")
             print("[Any] Back")
@@ -1316,20 +1245,20 @@ class PartyBuilder():
             elif s == "6":
                 self.settings['crit'] = not self.settings.get('crit', True)
             elif s == "7":
-                print("Input the path of the GBFTM folder (Leave blank to cancel): ")
+                print("Input the path of the GBFTMR folder (Leave blank to cancel): ")
                 folder = input()
                 if folder != "":
                     folder = folder.replace('\\', '/').replace('//', '/')
                     if not folder.endswith('/'): folder += '/'
-                    self.settings['gbftm_path'] = folder
-                    if GBFTM_instance is not None:
+                    self.settings['gbftmr_path'] = folder
+                    if GBFTMR_instance is not None:
                         print("The change will take effect the next time")
-                    elif importGBFTM(self.settings['gbftm_path']):
-                        print("GBFTM is imported with success")
+                    elif importGBFTMR(self.settings['gbftmr_path']):
+                        print("GBFTMR is imported with success")
                     else:
-                        print("Failed to import GBFTM")
+                        print("Failed to import GBFTMR")
             elif s == "8":
-                self.settings['gbftm_use'] = not self.settings.get('gbftm_use', False)
+                self.settings['gbftmr_use'] = not self.settings.get('gbftmr_use', False)
             elif s == "9":
                 self.emptyCache()
             elif s == "10":
@@ -1395,52 +1324,71 @@ class PartyBuilder():
                 self.save()
                 return
 
-class GBFTM_Select(Tk.Toplevel):
+class GBFTMR_Select(Tk.Toplevel):
     def __init__(self, parent):
         # window
         self.parent = parent
-        self.export = self.parent.gbftm_export
-        self.parent.gbftm_export = None
+        self.export = self.parent.gbftmr_export
+        self.parent.gbftmr_export = None
         Tk.Toplevel.__init__(self,parent)
-        self.title("Thumbnail")
+        self.title("GBFTMR")
         self.resizable(width=False, height=False) # not resizable
-        self.var1 = Tk.StringVar()
-        self.var1.set("Party Showcase")
-        self.choices1 = {"Party Showcase":'0', "End Game Raid":'1', "Unite and Fight":'2', "Unite and Fight NM150":'3', "Unite and Fight NM200":'4', "Tower of Babyl":'5', "Proving Grounds":'6'}
-        Tk.Label(self, text="Type").grid(row=0, column=0, sticky="w")
-        Tk.OptionMenu(self, self.var1, *list(self.choices1.keys())).grid(row=0, column=1, stick="ws")
+        template_list = GBFTMR_instance.getTemplateList()
+        self.tempopt_var = Tk.StringVar()
+        self.tempopt_var.set(template_list[0])
+        Tk.Label(self, text="Template").grid(row=0, column=0, columnspan=1, sticky="w")
+        self.tempopt = Tk.OptionMenu(self, self.tempopt_var, *template_list, command=self.update_UI)
+        self.tempopt.grid(row=0, column=1, columnspan=3, stick="ws")
+
+        self.make_bt = Tk.Button(self, text="Make", command=self.confirm)
+        self.make_bt.grid(row=90, column=0, columnspan=2, sticky="we")
+        Tk.Button(self, text="Cancel", command=self.cancel).grid(row=90, column=2, columnspan=2, sticky="we")
         
-        self.var2 = Tk.StringVar()
-        self.var2.set("Manual")
-        self.choices2 = {"Auto":'0', "Full Auto":'1', "Full Auto Guard":'2', "Manual":'3'}
-        Tk.Label(self, text="Auto").grid(row=1, column=0, sticky="w")
-        Tk.OptionMenu(self, self.var2, *list(self.choices2.keys())).grid(row=1, column=1, stick="ws")
-
-        Tk.Label(self, text="Settings").grid(row=2, column=0, sticky="w")
-
-        Tk.Label(self, text="Background").grid(row=3, column=0, sticky="w")
-        self.var3 = Tk.StringVar(self)
-        Tk.Entry(self, textvariable=self.var3).grid(row=3, column=1, columnspan=3, sticky="we")
-
-        Tk.Label(self, text="Text 1").grid(row=4, column=0, sticky="w")
-        self.var4 = Tk.StringVar(self)
-        Tk.Entry(self, textvariable=self.var4).grid(row=4, column=1, columnspan=3, sticky="we")
-        Tk.Label(self, text="Text 2").grid(row=5, column=0, sticky="w")
-        self.var5 = Tk.StringVar(self)
-        Tk.Entry(self, textvariable=self.var5).grid(row=5, column=1, columnspan=3, sticky="we")
-
-        Tk.Button(self, text="Make", command=self.confirm).grid(row=6, column=0, sticky="we")
-        Tk.Button(self, text="Ignore", command=self.cancel).grid(row=6, column=1, sticky="we")
+        self.options = None
+        self.optelems = []
+        self.update_UI()
         
         self.protocol("WM_DELETE_WINDOW", self.cancel)
 
+    def update_UI(self, *args):
+        self.options = GBFTMR_instance.getThumbnailOptions(self.tempopt_var.get())
+        for t in self.optelems:
+            t[0].destroy()
+            t[1].destroy()
+        self.optelems = []
+        for i, e in enumerate(self.options["choices"]):
+            label = Tk.Label(self, text=e[0])
+            label.grid(row=1+i, column=0, columnspan=2, sticky="w")
+            if e[1] is None:
+                var = Tk.StringVar()
+                widget = Tk.Entry(self, textvariable=var)
+                widget.grid(row=1+i, column=2, columnspan=2, sticky="we")
+            else:
+                var = Tk.StringVar()
+                var.set(e[1][0])
+                widget = Tk.OptionMenu(self, var, *e[1])
+                widget.grid(row=1+i, column=2, columnspan=2, sticky="we")
+            self.optelems.append((label, widget, var))
+
     def confirm(self):
-        try: self.parent.pb.make_gbftm(self.choices1[self.var1.get()], self.choices2[self.var2.get()], self.export, self.var3.get(), [self.var4.get(), self.var5.get()])
-        except: self.parent.events.append(("Error", "An error occured, impossible to generate the thumbnail"))
+        for i in range(len(self.optelems)):
+            if self.options["choices"][i][1] is None:
+                self.options["choices"][i][-1](self.options, self.options["choices"][i][-2], self.optelems[i][2].get())
+            else:
+                for j in range(len(self.options["choices"][i][1])):
+                    if self.options["choices"][i][1][j] == self.optelems[i][2].get():
+                        break
+                self.options["choices"][i][-1](self.options, self.options["choices"][i][-2], self.options["choices"][i][2][j])
+        self.options["settings"]["gbfpib"] = self.export
+        try:
+            GBFTMR_instance.makeThumbnail(self.options["settings"], self.options["template"])
+        except Exception as e:
+            print(self.parent.pb.pexc(e))
+            self.parent.events.append(("Error", "An error occured, impossible to generate the thumbnail"))
         self.cancel()
 
     def cancel(self):
-        self.parent.gbftm_state = 3
+        self.parent.gbftmr_state = 3
         self.destroy()
 
 class Interface(Tk.Tk): # interface
@@ -1451,8 +1399,8 @@ class Interface(Tk.Tk): # interface
         self.parent = None
         self.pb = pb
         self.apprunning = True
-        self.gbftm_state = 0
-        self.gbftm_export = None
+        self.gbftmr_state = 0
+        self.gbftmr_export = None
         self.iconbitmap('icon.ico')
         self.title("GBFPIB {}".format(SVER))
         self.resizable(width=False, height=False) # not resizable
@@ -1518,19 +1466,19 @@ class Interface(Tk.Tk): # interface
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.crit_var, command=self.toggleCrit))
         self.to_disable[-1].grid(row=2, column=1)
         
-        ### GBFTM plugin Tab
+        ### GBFTMR plugin Tab
         tabcontent = Tk.Frame(tabs)
-        tabs.add(tabcontent, text="GBFTM")
-        self.to_disable.append(Tk.Button(tabcontent, text="Set Path", command=self.setGBFTM, width=self.BW, height=self.BH))
+        tabs.add(tabcontent, text="GBFTMR")
+        self.to_disable.append(Tk.Button(tabcontent, text="Set Path", command=self.setGBFTMR, width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=0, column=0, columnspan=2, sticky="we")
-        self.gbftm_var = Tk.IntVar(value=self.pb.settings.get('gbftm_use', False))
-        self.gbftm_status = Tk.Label(tabcontent, text="Not Imported")
-        self.gbftm_status.grid(row=1, column=0)
+        self.gbftmr_var = Tk.IntVar(value=self.pb.settings.get('gbftmr_use', False))
+        self.gbftmr_status = Tk.Label(tabcontent, text="Not Imported")
+        self.gbftmr_status.grid(row=1, column=0)
         Tk.Label(tabcontent, text="Enable").grid(row=2, column=0)
-        self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.gbftm_var, command=self.toggleGBFTM))
+        self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.gbftmr_var, command=self.toggleGBFTMR))
         self.to_disable[-1].grid(row=2, column=1)
-        if GBFTM_instance is not None:
-            self.gbftm_status.config(text="Imported")
+        if GBFTMR_instance is not None:
+            self.gbftmr_status.config(text="Imported")
         
         # other
         self.status = Tk.Label(self, text="Starting")
@@ -1546,12 +1494,12 @@ class Interface(Tk.Tk): # interface
         # main loop
         run_flag = False
         while self.apprunning:
-            if self.gbftm_state == 1:
+            if self.gbftmr_state == 1:
                 if messagebox.askyesno(title="Thumbnail", message="Do you want to make a thumbnail?"):
-                    self.gbftm_state = 2
-                    GBFTM_Select(self)
+                    self.gbftmr_state = 2
+                    GBFTMR_Select(self)
                 else:
-                    self.gbftm_state = 3
+                    self.gbftmr_state = 3
             if len(self.events) > 0:
                 ev = self.events.pop(0)
                 if ev[0] == "Info": messagebox.showinfo(ev[0], ev[1])
@@ -1586,21 +1534,21 @@ class Interface(Tk.Tk): # interface
 
     def buildThread(self):
         try:
-            self.gbftm_state = 0
+            self.gbftmr_state = 0
             wait = False
-            gbftm_use = self.pb.settings.get('gbftm_use', False)
+            gbftmr_use = self.pb.settings.get('gbftmr_use', False)
             export = self.pb.clipboardToJSON()
-            if GBFTM_instance and gbftm_use:
-                self.gbftm_export = export
-                self.gbftm_state = 1
+            if GBFTMR_instance and gbftmr_use:
+                self.gbftmr_export = export
+                self.gbftmr_state = 1
                 wait = True
             self.pb.make_sub_party(export)
-            while wait and self.gbftm_state != 3:
+            while wait and self.gbftmr_state != 3:
                 time.sleep(1)
-            self.gbftm_state = 0
+            self.gbftmr_state = 0
             self.events.append(("Info", "Image(s) generated with success"))
         except:
-            self.gbftm_state = 0
+            self.gbftmr_state = 0
             self.events.append(("Error", "An error occured, did you press the bookmark?"))
         self.thread = None
 
@@ -1636,8 +1584,8 @@ class Interface(Tk.Tk): # interface
     def toggleCrit(self):
         self.pb.settings['crit'] = (self.crit_var.get() != 0)
 
-    def toggleGBFTM(self):
-        self.pb.settings['gbftm_use'] = (self.gbftm_var.get() != 0)
+    def toggleGBFTMR(self):
+        self.pb.settings['gbftmr_use'] = (self.gbftmr_var.get() != 0)
 
     def setserver(self):
         url = simpledialog.askstring("Set Asset Server", "Input the URL of the Asset Server to use\nLeave blank to reset to the default setting.")
@@ -1657,20 +1605,20 @@ class Interface(Tk.Tk): # interface
     def checkUpdate(self):
         self.autoUpdate(silent=False)
 
-    def setGBFTM(self):
-        global GBFTM_instance
-        folder_selected = filedialog.askdirectory(title="Select the GBFTM folder")
+    def setGBFTMR(self):
+        global GBFTMR_instance
+        folder_selected = filedialog.askdirectory(title="Select the GBFTMR folder")
         if folder_selected == '': return
-        self.pb.settings['gbftm_path'] = folder_selected + "/"
-        if GBFTM_instance is not None:
-            messagebox.showinfo("Info", "GBFTM is already loaded, the change will take affect at the next startup")
+        self.pb.settings['gbftmr_path'] = folder_selected + "/"
+        if GBFTMR_instance is not None:
+            messagebox.showinfo("Info", "GBFTMR is already loaded, the change will take affect at the next startup")
         else:
-            importGBFTM(self.pb.settings.get('gbftm_path', ''))
-            if GBFTM_instance is not None:
-                messagebox.showinfo("Info", "Imported GBFTM with success")
-                self.gbftm_status.config(text="Imported")
+            importGBFTMR(self.pb.settings.get('gbftmr_path', ''))
+            if GBFTMR_instance is not None:
+                messagebox.showinfo("Info", "Imported GBFTMR with success")
+                self.gbftmr_status.config(text="Imported")
             else:
-                messagebox.showinfo("Error", "Failed to import GBFTM")
+                messagebox.showinfo("Error", "Failed to import GBFTMR")
 
     def autoUpdate(self, silent=True):
         update_started = False

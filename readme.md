@@ -70,10 +70,13 @@ There are a few ways to go around this issue:
 2. Alternatively, the bookmarklet will fetch the name of the support summon and search its ID on [gbf.wiki](https://gbf.wiki/). However, be warned this method isn't perfect, especially if you are playing in japanese.  
 3. If the above two methods don't work, the name of the support summon will simply be written instead.  
 ### GBFTM  
-My other project [GBFTM](https://github.com/MizaGBF/GBFTM) can be imported to also generate a thumbnail.  
-Simply click `Set Path` and select the folder where GBFTM is located.  
-GBFTM must has been set beforehand (Twitter credentials included) or it might not work properly.  
-It's also currently compatible only with version 1.16 and higher (Ideally, always use the latest version to have the latest bugfixes).  
+Following the Twitter debacle, and GBFTM relying on Twitter assets, I reworked it into a new project.  
+As a result, support for the existing GBFTM project has been discontinued.  
+### GBFTMR  
+[GBFTMR](https://github.com/MizaGBF/GBFTM) can be imported to also generate a thumbnail.  
+Simply click `Set Path` and select the folder where GBFTMR is located.  
+GBFTMR must has been set beforehand or it might not work properly.  
+It's currently compatible with version 1.0 and higher (Ideally, always use the latest version to have the latest bugfixes).  
 ### Updating  
 The script has a built-in auto updater.  
 I recommend using it, for ease of use.  
