@@ -75,7 +75,7 @@ As a result, support for the existing GBFTM project has been discontinued.
 ### GBFTMR  
 [GBFTMR](https://github.com/MizaGBF/GBFTM) can be imported to also generate a thumbnail.  
 Simply click `Set Path` and select the folder where GBFTMR is located.  
-GBFTMR must has been set beforehand or it might not work properly.  
+GBFTMR must have been set beforehand or it might not work properly.  
 It's currently compatible with version 1.0 and higher (Ideally, always use the latest version to have the latest bugfixes).  
 ### Updating  
 The script has a built-in auto updater.  
