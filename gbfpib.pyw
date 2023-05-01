@@ -1380,12 +1380,12 @@ class GBFTMR_Select(Tk.Toplevel):
                         break
                 self.options["choices"][i][-1](self.options, self.options["choices"][i][-2], self.options["choices"][i][2][j])
         self.options["settings"]["gbfpib"] = self.export
+        self.cancel()
         try:
             GBFTMR_instance.makeThumbnail(self.options["settings"], self.options["template"])
         except Exception as e:
             print(self.parent.pb.pexc(e))
             self.parent.events.append(("Error", "An error occured, impossible to generate the thumbnail"))
-        self.cancel()
 
     def cancel(self):
         self.parent.gbftmr_state = 3
@@ -1477,6 +1477,8 @@ class Interface(Tk.Tk): # interface
         Tk.Label(tabcontent, text="Enable").grid(row=2, column=0)
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.gbftmr_var, command=self.toggleGBFTMR))
         self.to_disable[-1].grid(row=2, column=1)
+        self.to_disable.append(Tk.Button(tabcontent, text="Make Thumbnail", command=self.runGBFTMR, width=self.BW, height=self.BH))
+        self.to_disable[-1].grid(row=3, column=0, columnspan=2, sticky="we")
         if GBFTMR_instance is not None:
             self.gbftmr_status.config(text="Imported")
         
@@ -1526,27 +1528,32 @@ class Interface(Tk.Tk): # interface
 
     def build(self):
         if self.thread is not None:
-            messagebox.showinfo("Info", "Wait for the current processing to finish")
+            messagebox.showinfo("Info", "Wait for the current process to finish")
             return
         self.thread = threading.Thread(target=self.buildThread)
         self.thread.daemon = True
         self.thread.start()
 
-    def buildThread(self):
+    def buildThread(self, thumbnailOnly=False):
         try:
             self.gbftmr_state = 0
             wait = False
             gbftmr_use = self.pb.settings.get('gbftmr_use', False)
             export = self.pb.clipboardToJSON()
+            if 'lang' not in export: raise Exception()
             if GBFTMR_instance and gbftmr_use:
                 self.gbftmr_export = export
                 self.gbftmr_state = 1
                 wait = True
-            self.pb.make_sub_party(export)
+            if not thumbnailOnly:
+                self.pb.make_sub_party(export)
             while wait and self.gbftmr_state != 3:
                 time.sleep(1)
             self.gbftmr_state = 0
-            self.events.append(("Info", "Image(s) generated with success"))
+            if not thumbnailOnly:
+                self.events.append(("Info", "Image(s) generated with success"))
+            else:
+                self.events.append(("Info", "Thumbnail generated with success"))
         except:
             self.gbftmr_state = 0
             self.events.append(("Error", "An error occured, did you press the bookmark?"))
@@ -1619,6 +1626,17 @@ class Interface(Tk.Tk): # interface
                 self.gbftmr_status.config(text="Imported")
             else:
                 messagebox.showinfo("Error", "Failed to import GBFTMR")
+
+    def runGBFTMR(self):
+        if GBFTMR_instance:
+            if self.thread is not None:
+                messagebox.showinfo("Info", "Wait for the current process to finish")
+                return
+            self.thread = threading.Thread(target=self.buildThread, args=(True,))
+            self.thread.daemon = True
+            self.thread.start()
+        else:
+            self.events.append(("Error", "GBFTMR isn't loaded"))
 
     def autoUpdate(self, silent=True):
         update_started = False
