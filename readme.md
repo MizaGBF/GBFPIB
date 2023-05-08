@@ -27,11 +27,16 @@ Do note, if requirements haven't been installed properly, the script will automa
   
 The process take around 1 GB of memory and can take up to one minute (if your computer is slow and the script needs to download assets).  
 ### Settings  
-1. `Quality`: let you control the output size (default is 8K, minimum is 720p).  
-2. `Caching`: if enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  
-3. `Do Skins`: if enabled, it will also generate `skin.png`.  
-4. `Do EMP`: if enabled, it will also generate `emp.png`.  
-5. `Use HTTPS`: if enabled, it will use HTTPS when downloading assets. Do note you can change the used asset server with the button on the left (in case they change the address again in the future).  
+1. `Quality`: Let you control the output size (default is 8K, minimum is 720p).  
+2. `Caching`: If enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  
+3. `Do Skins`: If enabled, it will also generate `skin.png`.  
+4. `Do EMP`: If enabled, it will also generate `emp.png`.  
+5. `Auto Update`: If enabled, will check if an update is available on app startup.  
+### Advanced Settings  
+1. `Cache Assets`: If enabled, assets will be cached in the `cache` folder to increase speed of future processings.  
+2. `HP Bar on skin.png`: If enabled, your Estimate Damage HP setting will be displayed on `skin.png`. `Do Skins` setting must be enabled for it to work.  
+3. `Show crit. on skin.png`: If enabled and if you have between 0 and 100% critical value, an approximation of your critical estimate damage will be displayed on `skin.png`. Do note it doesn't amount well for damage cap. `Do Skins` setting must be enabled for it to work.  
+4. `Guess Opus/Ultima Key`: If enabled, it will attempt to guess your Dark Opus and Ultima third skill to display the key image instead of the generic skill icon. Not 100% accurate.  
 ### Command Line  
 For advanced users:  
 1. `-fast`: Automatically start the image building process. Be sure to have the party data ready in your clipboard. If EMP datas are found instead, it will be saved in the `emp` folder.  

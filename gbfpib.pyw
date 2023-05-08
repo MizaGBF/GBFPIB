@@ -187,6 +187,21 @@ class PartyBuilder():
             re.compile('(20[0-9]{8}_02)\\.'),
             re.compile('(20[0-9]{8})\\.')
         ]
+        self.dark_opus = [
+            10403106,10403107,10404150,10404151,10408094,10408095,10402125,10402126,10400170,10400171,10409110,1040911100
+        ]
+        self.ultima = [
+            10400119,10400120,10400121,10400122,10400123,10400124,
+            10401097,10401098,10401099,10401100,10401101,10401102,
+            10402088,10402089,10402090,10402091,10402092,10402093,
+            10403078,10403079,10403080,10403081,10403082,10403083,
+            10404108,10404109,10404110,10404111,10404112,10404113,
+            10405074,10405075,10405076,10405077,10405078,10405079,
+            10406081,10406082,10406083,10406084,10406085,10406086,
+            10407069,10407070,10407071,10407072,10407073,10407074,
+            10408070,10408071,10408072,10408073,10408074,10408075,
+            10409075,10409076,10409077,10409078,10409079,10409080
+        ]
         self.dummy_layer = self.make_canvas()
         self.settings = {} # settings.json data
         self.load() # loading settings.json
@@ -442,6 +457,79 @@ class PartyBuilder():
         if jid not in self.classes: return skin
         return "{}_{}_{}".format(job, self.classes[jid], '_'.join(skin.split('_')[2:]))
 
+
+
+    def process_special_weapon(self, export, i):
+        if export['wsn'][i][2] is not None and export['wsn'][i][2] == "skill_job_weapon":
+            if export['w'][i] in self.dark_opus:
+                bar_gain = 0
+                hp_cut = 0
+                turn_dmg = 0
+                prog = 0
+                ca_dmg = 0
+                ca_dmg_cap = 0
+                for m in export['mods']:
+                    try:
+                        if m['icon_img'] == '04_icon_ca_gage.png':
+                            bar_gain = float(m['value'].replace('%', ''))
+                        elif m['icon_img'] == '03_icon_hp_cut.png':
+                            hp_cut = float(m['value'].replace('%', ''))
+                        elif m['icon_img'] == '03_icon_turn_dmg.png':
+                            turn_dmg = float(m['value'].replace('%', ''))
+                        elif m['icon_img'] == '01_icon_e_atk_01.png':
+                            prog = float(m['value'].replace('%', ''))
+                        elif m['icon_img'] == '04_icon_ca_dmg.png':
+                            ca_dmg = float(m['value'].replace('%', ''))
+                        elif m['icon_img'] == '04_icon_ca_dmg_cap.png':
+                            ca_dmg_cap = float(m['value'].replace('%', ''))
+                    except:
+                        pass
+                if hp_cut >= 30: # temptation
+                    export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/14014.jpg"
+                    return True
+                elif bar_gain <= -50 and bar_gain > -200: # falsehood
+                    export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/14017.jpg"
+                    return True
+                elif prog > 0: # progression
+                    export['wsn'][i][2] = "assets_en/img_low/sp/assets/item/skillplus/s/14004.jpg"
+                    return True
+                elif ca_dmg >= 100 and ca_dmg_cap >= 30: # forbiddance
+                    export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/14015.jpg"
+                    return True
+                elif turn_dmg >= 5: # depravity
+                    export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/14016.jpg"
+                    return True
+            elif export['w'][i] in self.ultima:
+                seraphic = 0
+                heal_cap = 0
+                bar_gain = 0
+                cap_up = 0
+                for m in export['mods']:
+                    try:
+                        if m['icon_img'] == '04_icon_elem_mplify.png':
+                            seraphic = float(m['value'].replace('%', ''))
+                        elif m['icon_img'] == '04_icon_dmg_cap.png':
+                            cap_up = float(m['value'].replace('%', ''))
+                        elif m['icon_img'] == '04_icon_ca_gage.png':
+                            bar_gain = float(m['value'].replace('%', ''))
+                        elif m['icon_img'] == '03_icon_heal_cap.png':
+                            heal_cap = float(m['value'].replace('%', ''))
+                    except:
+                        pass
+                if seraphic >= 25: # tria
+                    export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17003.jpg"
+                    return True
+                elif heal_cap >= 50: # dio
+                    export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17002.jpg"
+                    return True
+                elif bar_gain >= 10: # tessera
+                    export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17004.jpg"
+                    return True
+                elif cap_up >= 10: # ena
+                    export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17001.jpg"
+                    return True
+        return False
+
     def make_canvas(self, size=(3600, 4320)):
         i = Image.new('RGB', size, "black")
         im_a = Image.new("L", size, "black")
@@ -639,7 +727,7 @@ class PartyBuilder():
             imgs[1].close()
             return self.pexc(e)
 
-    def make_weapon(self, export, do_hp, do_crit):
+    def make_weapon(self, export, do_hp, do_crit, do_opus):
         try:
             client = self.initHTTPClient()
             imgs = [self.make_canvas(), self.make_canvas()]
@@ -684,14 +772,13 @@ class PartyBuilder():
                     else:
                         self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), pos, size, start=0, end=1)
                     continue
-                else:
-                    # ax and awakening check
-                    has_ax = len(export['waxt'][i]) > 0
-                    has_awakening = (export['wakn'][i] is not None and export['wakn'][i]['is_arousal_weapon'] and export['wakn'][i]['level'] is not None and export['wakn'][i]['level'] > 1)
-                    pos_shift = - skill_icon_size if (has_ax and has_awakening) else 0  # vertical shift of the skill boxes (if both ax and awk are presents)
-                    # portrait draw
-                    print("[WPN] |--> Weapon #{}".format(i+1), str(export['w'][i])+"00", ", AX:", has_ax, ", Awakening:", has_awakening)
-                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/weapon/{}/{}00.jpg".format(wt, export['w'][i]), pos, size, start=0, end=1)
+                # ax and awakening check
+                has_ax = len(export['waxt'][i]) > 0
+                has_awakening = (export['wakn'][i] is not None and export['wakn'][i]['is_arousal_weapon'] and export['wakn'][i]['level'] is not None and export['wakn'][i]['level'] > 1)
+                pos_shift = - skill_icon_size if (has_ax and has_awakening) else 0  # vertical shift of the skill boxes (if both ax and awk are presents)
+                # portrait draw
+                print("[WPN] |--> Weapon #{}".format(i+1), str(export['w'][i])+"00", ", AX:", has_ax, ", Awakening:", has_awakening)
+                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/weapon/{}/{}00.jpg".format(wt, export['w'][i]), pos, size, start=0, end=1)
                 # skin
                 has_skin = False
                 if i <= 1 and export['wsm'][i] is not None:
@@ -725,7 +812,10 @@ class PartyBuilder():
                     # skill icon
                     for j in range(3):
                         if export['wsn'][i][j] is not None:
-                            self.dlAndPasteImage(client, imgs, "assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
+                            if do_opus and j == 2 and self.process_special_weapon(export, i): # 3rd skill guessing
+                                self.dlAndPasteImage(client, imgs, export['wsn'][i][j], (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
+                            else:
+                                self.dlAndPasteImage(client, imgs, "assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
                 pos_shift += skill_icon_size
                 main_ax_icon_size  = int(ax_icon_size * (1.5 if i == 0 else 1) * (0.75 if (has_ax and has_awakening) else 1)) # size of the big AX/Awakening icon
                 # ax skills
@@ -1109,6 +1199,7 @@ class PartyBuilder():
         do_skin = self.settings.get('skin', True)
         do_hp = self.settings.get('hp', True)
         do_crit = self.settings.get('crit', True)
+        do_opus = self.settings.get('opus', False)
         if self.settings.get('caching', False):
             self.checkDiskCache()
         self.quality = {'720p':1/6, '1080p':1/4, '4k':1/2, '8k':1}.get(self.settings.get('quality', '8K').lower(), 1)
@@ -1148,7 +1239,7 @@ class PartyBuilder():
                 self.make_emp_start(executor, futures, export)
             futures.append(executor.submit(self.make_party, export))
             futures.append(executor.submit(self.make_summon, export))
-            futures.append(executor.submit(self.make_weapon, export, do_hp, do_crit))
+            futures.append(executor.submit(self.make_weapon, export, do_hp, do_crit, do_opus))
             futures.append(executor.submit(self.make_modifier, export))
             res = []
             for future in concurrent.futures.as_completed(futures):
@@ -1209,10 +1300,11 @@ class PartyBuilder():
             print("[4] Set Asset Server ( Current:", self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net'),")")
             print("[5] Show HP bar on skin.png ( Current:", self.settings.get('hp', True),")")
             print("[6] Show critical estimate on skin.png ( Current:", self.settings.get('crit', True),")")
-            print("[7] Set GBFTMR Path ( Current:", self.settings.get('gbftmr_path', ''),")")
-            print("[8] Use GBFTMR if imported ( Current:", self.settings.get('gbftmr_use', False),")")
-            print("[9] Empty Cache")
-            print("[10] Empty EMP")
+            print("[7] Guess Opus / Ultima 3rd skill ( Current:", self.settings.get('opus', True),")")
+            print("[8] Set GBFTMR Path ( Current:", self.settings.get('gbftmr_path', ''),")")
+            print("[9] Use GBFTMR if imported ( Current:", self.settings.get('gbftmr_use', False),")")
+            print("[10] Empty Asset Cache")
+            print("[11] Empty EMP Cache")
             print("[Any] Back")
             s = input()
             if s == "0":
@@ -1245,6 +1337,8 @@ class PartyBuilder():
             elif s == "6":
                 self.settings['crit'] = not self.settings.get('crit', True)
             elif s == "7":
+                self.settings['opus'] = not self.settings.get('opus', False)
+            elif s == "8":
                 print("Input the path of the GBFTMR folder (Leave blank to cancel): ")
                 folder = input()
                 if folder != "":
@@ -1257,11 +1351,11 @@ class PartyBuilder():
                         print("GBFTMR is imported with success")
                     else:
                         print("Failed to import GBFTMR")
-            elif s == "8":
-                self.settings['gbftmr_use'] = not self.settings.get('gbftmr_use', False)
             elif s == "9":
-                self.emptyCache()
+                self.settings['gbftmr_use'] = not self.settings.get('gbftmr_use', False)
             elif s == "10":
+                self.emptyCache()
+            elif s == "11":
                 self.emptyCache()
             else:
                 return
@@ -1412,12 +1506,16 @@ class Interface(Tk.Tk): # interface
         tabs.grid(row=1, column=0, rowspan=2, sticky="nwe")
         tabcontent = Tk.Frame(tabs)
         tabs.add(tabcontent, text="Run")
-        Tk.Button(tabcontent, text="Build Images", command=self.build, width=self.BW, height=self.BH).grid(row=0, column=0, sticky="we")
-        Tk.Button(tabcontent, text="Add EMP", command=self.add_emp, width=self.BW, height=self.BH).grid(row=1, column=0, sticky="we")
-        Tk.Button(tabcontent, text="Bookmark", command=self.bookmark, width=self.BW, height=self.BH).grid(row=2, column=0, sticky="we")
+        self.to_disable.append(Tk.Button(tabcontent, text="Build Images", command=self.build, width=self.BW, height=self.BH))
+        self.to_disable[-1].grid(row=0, column=0, sticky="we")
+        self.to_disable.append(Tk.Button(tabcontent, text="Add EMP", command=self.add_emp, width=self.BW, height=self.BH))
+        self.to_disable[-1].grid(row=1, column=0, sticky="we")
+        self.to_disable.append(Tk.Button(tabcontent, text="Bookmark", command=self.bookmark, width=self.BW, height=self.BH))
+        self.to_disable[-1].grid(row=2, column=0, sticky="we")
         self.to_disable.append(Tk.Button(tabcontent, text="Set Server", command=self.setserver, width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=3, column=0, sticky="we")
-        Tk.Button(tabcontent, text="Check Update", command=self.checkUpdate, width=self.BW, height=self.BH).grid(row=4, column=0, sticky="we")
+        self.to_disable.append(Tk.Button(tabcontent, text="Check Update", command=self.checkUpdate, width=self.BW, height=self.BH))
+        self.to_disable[-1].grid(row=4, column=0, sticky="we")
         
         # setting part
         tabs = ttk.Notebook(self)
@@ -1445,7 +1543,8 @@ class Interface(Tk.Tk): # interface
         
         self.update_var = Tk.IntVar(value=self.pb.settings.get('update', False))
         Tk.Label(tabcontent, text="Auto Update").grid(row=4, column=0)
-        Tk.Checkbutton(tabcontent, variable=self.update_var, command=self.toggleUpdate).grid(row=4, column=1)
+        self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.update_var, command=self.toggleUpdate))
+        self.to_disable[-1].grid(row=4, column=1)
         
         ### Settings Tab
         tabcontent = Tk.Frame(tabs)
@@ -1465,6 +1564,11 @@ class Interface(Tk.Tk): # interface
         Tk.Label(tabcontent, text="Show crit. on skin.png").grid(row=2, column=0)
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.crit_var, command=self.toggleCrit))
         self.to_disable[-1].grid(row=2, column=1)
+        
+        self.opus_var = Tk.IntVar(value=self.pb.settings.get('opus', False))
+        Tk.Label(tabcontent, text="Guess Opus/Ultima Key").grid(row=3, column=0)
+        self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.opus_var, command=self.toggleOpus))
+        self.to_disable[-1].grid(row=3, column=1)
         
         ### GBFTMR plugin Tab
         tabcontent = Tk.Frame(tabs)
@@ -1590,6 +1694,9 @@ class Interface(Tk.Tk): # interface
 
     def toggleCrit(self):
         self.pb.settings['crit'] = (self.crit_var.get() != 0)
+
+    def toggleOpus(self):
+        self.pb.settings['opus'] = (self.opus_var.get() != 0)
 
     def toggleGBFTMR(self):
         self.pb.settings['gbftmr_use'] = (self.gbftmr_var.get() != 0)
