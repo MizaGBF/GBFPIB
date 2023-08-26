@@ -16,6 +16,7 @@ import shutil
 import traceback
 import subprocess
 from zipfile import ZipFile
+import platform
 
 # auto install
 SVER = None
@@ -1761,6 +1762,13 @@ class Interface(Tk.Tk): # interface
             if response.status_code != 200: raise Exception()
             manifest = response.json()
             if not cmpVer(SVER, manifest['version']):
+                # python 3.12 check for future v10
+                try:
+                    if int(manifest['version'].split('.')[0]) > 9 and int(platform.python_version().split('.')[1]) < 12:
+                        messagebox.showinfo("Info", "An update is available but it requires Python 3.12.\nPlease update your python installation if you care about future GBFPIB updates.\nYou can disable auto-update otherwise.")
+                        return
+                except:
+                    pass
                 if messagebox.askyesno(title="Update", message="An update is available.\nUpdate now?"):
                     update_started = True
                     response = httpx.get("https://github.com/MizaGBF/GBFPIB/archive/refs/heads/main.zip", follow_redirects=True)
