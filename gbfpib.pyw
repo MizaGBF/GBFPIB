@@ -142,18 +142,6 @@ class PartyBuilder():
             5:"光",
             6:"闇"
         }
-        self.color_awakening = { # color for awakening string
-            "Balanced" : (211, 193, 148),
-            "Attack" : (255, 121, 90),
-            "Defense" : (133, 233, 245),
-            "Multiattack" : (255, 255, 95)
-        }
-        self.color_awakening_jp = { # color for awakening string
-            "バランス" : (211, 193, 148),
-            "攻撃" : (255, 121, 90),
-            "防御" : (133, 233, 245),
-            "連続攻撃" : (255, 255, 95)
-        }
         self.classes = { # class prefix (gotta add them manually, sadly)
             10: 'sw',
             11: 'sw',
@@ -1089,23 +1077,27 @@ class PartyBuilder():
                             apos2 = (pos[0] + csize[0] + 850, pos[1] + csize[1])
                         else:
                             apos1 = (imgs[0].size[0] - 800, pos[1]+40)
-                            apos2 = (imgs[0].size[0] - 800, pos[1]+150)
+                            apos2 = (imgs[0].size[0] - 800, pos[1]+170)
                         # awakening
                         if data.get('awakening', None) is not None:
-                            if self.japanese:
-                                self.text(imgs, apos1, data['awaktype'] + "Lv" + data['awakening'].split('lv')[-1], fill=self.color_awakening_jp[data['awaktype']], font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
-                            else:
-                                self.text(imgs, apos1, data['awaktype'] + " Lv" + data['awakening'].split('lv')[-1], fill=self.color_awakening[data['awaktype']], font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                            match data['awaktype']:
+                                case "Attack"|"攻撃":
+                                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/item/npcarousal/s/1.jpg", apos1, (130, 130))
+                                case "Defense"|"防御":
+                                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/item/npcarousal/s/2.jpg", apos1, (130, 130))
+                                case "Multiattack"|"連続攻撃":
+                                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/item/npcarousal/s/3.jpg", apos1, (130, 130))
+                                case _: # "Balanced"|"バランス"or others
+                                    self.pasteImage(imgs, "assets/bal_awakening.png", apos1, (130, 130), transparency=True)
+                            self.text(imgs, self.addTuple(apos1, (150, 20)), "Lv" + data['awakening'].split('lv')[-1], fill=(198, 170, 240), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
                         # domain
                         if data.get('domain', None) is not None:
                             if len(data['domain']) > 0:
+                                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/ability/m/1426_3.png", apos2, (130, 130))
                                 dlv = 0
                                 for d in data['domain']:
                                     if d[2] is not None: dlv += 1
-                                if self.japanese:
-                                    self.text(imgs, apos2,"至賢Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
-                                else:
-                                    self.text(imgs, apos2,"Domain Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
+                                self.text(imgs, self.addTuple(apos2, (150, 20)),"Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=12, stroke_fill=(0, 0, 0))
             return ('emp{}'.format(odd), imgs)
         except Exception as e:
             imgs[0].close()
