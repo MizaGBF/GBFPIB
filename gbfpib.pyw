@@ -357,7 +357,7 @@ class PartyBuilder():
             return None
 
     def initHTTPClient(self):
-        return httpx.Client(http2=True, limits=httpx.Limits(max_keepalive_connections=100, max_connections=100, keepalive_expiry=10))
+        return httpx.Client(limits=httpx.Limits(max_keepalive_connections=100, max_connections=100, keepalive_expiry=10))
 
     def get_uncap_id(self, cs): # to get character portraits based on uncap levels
         return {2:'02', 3:'02', 4:'02', 5:'03', 6:'04'}.get(cs, '01')
