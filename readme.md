@@ -1,7 +1,7 @@
 # Granblue Fantasy Party Image Builder  
 * Tool to generate an image from one of your in-game party in just a few clicks, to use for Videos or anything else.  
 ### Requirements  
-* Tested on Python 3.10.  
+* Tested on Python 3.11.  
 * [pyperclip](https://pypi.org/project/pyperclip/) to read/write the clipboard.  
 * [Pillow](https://pillow.readthedocs.io/en/stable/) for image processing.  
 * [httpx](https://www.python-httpx.org/) for faster asset downloads.  
