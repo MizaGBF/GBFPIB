@@ -450,95 +450,90 @@ class PartyBuilder():
         return "{}_{}_{}".format(job, self.classes[jid], '_'.join(skin.split('_')[2:]))
 
     def process_special_weapon(self, export, i, j):
-        if j == 2 and export['wsn'][i][j] is not None and export['wsn'][i][j] == "skill_job_weapon": # ultima, opus
-            if export['w'][i] in self.dark_opus:
-                bar_gain = 0
-                hp_cut = 0
-                turn_dmg = 0
-                prog = 0
-                ca_dmg = 0
-                ca_dmg_cap = 0
-                for m in export['mods']:
-                    try:
-                        match m['icon_img']:
-                            case '04_icon_ca_gage.png':
-                                bar_gain = float(m['value'].replace('%', ''))
-                            case '03_icon_hp_cut.png':
-                                hp_cut = float(m['value'].replace('%', ''))
-                            case '03_icon_turn_dmg.png':
-                                turn_dmg = float(m['value'].replace('%', ''))
-                            case '01_icon_e_atk_01.png':
-                                prog = float(m['value'].replace('%', ''))
-                            case '04_icon_ca_dmg.png':
-                                ca_dmg = float(m['value'].replace('%', ''))
-                            case '04_icon_ca_dmg_cap.png':
-                                ca_dmg_cap = float(m['value'].replace('%', ''))
-                    except:
-                        pass
-                if hp_cut >= 30: # temptation
-                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14014.jpg"
-                    return True
-                elif bar_gain <= -50 and bar_gain > -200: # falsehood
-                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14017.jpg"
-                    return True
-                elif prog > 0: # progression
-                    export['wsn'][i][j] = "assets_en/img_low/sp/assets/item/skillplus/s/14004.jpg"
-                    return True
-                elif ca_dmg >= 100 and ca_dmg_cap >= 30: # forbiddance
-                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14015.jpg"
-                    return True
-                elif turn_dmg >= 5: # depravity
-                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14016.jpg"
-                    return True
-            elif export['w'][i] in self.ultima:
-                seraphic = 0
-                heal_cap = 0
-                bar_gain = 0
-                cap_up = 0
-                for m in export['mods']:
-                    try:
-                        match m['icon_img']:
-                            case '04_icon_elem_mplify.png':
-                                seraphic = float(m['value'].replace('%', ''))
-                            case '04_icon_dmg_cap.png':
-                                cap_up = float(m['value'].replace('%', ''))
-                            case '04_icon_ca_gage.png':
-                                bar_gain = float(m['value'].replace('%', ''))
-                            case '03_icon_heal_cap.png':
-                                heal_cap = float(m['value'].replace('%', ''))
-                    except:
-                        pass
-                if seraphic >= 25: # tria
-                    export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17003.jpg"
-                    return True
-                elif heal_cap >= 50: # dio
-                    export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17002.jpg"
-                    return True
-                elif bar_gain >= 10: # tessera
-                    export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17004.jpg"
-                    return True
-                elif cap_up >= 10: # ena
-                    export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17001.jpg"
-                    return True
-        elif j == 1 and export['wsn'][i][j] is not None and export['wsn'][i][j] == "skill_job_weapon": # hexa draconic
-            if export['w'][i] in self.hexa_draconic:
-                seraphic = 0
-                flat_hp = 0
-                for m in export['mods']:
-                    try:
-                        match m['icon_img']:
-                            case '04_icon_plain_amplify.png':
-                                seraphic = float(m['value'].replace('%', ''))
-                            case '03_icon_hp_add.png':
-                                seraphic = float(m['value'].replace('%', ''))
-                    except:
-                        pass
-                if seraphic >= 10: # oblivion teluma
-                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/15009.jpg"
-                    return True
-                elif flat_hp >= 10000: # salvation teluma
-                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/15008.jpg"
-                    return True
+        if export['wsn'][i][j] is not None and export['wsn'][i][j] == "skill_job_weapon":
+            if j == 2: # ultima, opus
+                if export['w'][i] in self.dark_opus:
+                    bar_gain = 0
+                    hp_cut = 0
+                    turn_dmg = 0
+                    prog = 0
+                    ca_dmg = 0
+                    ca_dmg_cap = 0
+                    for m in export['mods']:
+                        try:
+                            match m['icon_img']:
+                                case '04_icon_ca_gage.png':
+                                    bar_gain = float(m['value'].replace('%', ''))
+                                case '03_icon_hp_cut.png':
+                                    hp_cut = float(m['value'].replace('%', ''))
+                                case '03_icon_turn_dmg.png':
+                                    turn_dmg = float(m['value'].replace('%', ''))
+                                case '01_icon_e_atk_01.png':
+                                    prog = float(m['value'].replace('%', ''))
+                                case '04_icon_ca_dmg.png':
+                                    ca_dmg = float(m['value'].replace('%', ''))
+                                case '04_icon_ca_dmg_cap.png':
+                                    ca_dmg_cap = float(m['value'].replace('%', ''))
+                        except:
+                            pass
+                    if hp_cut >= 30: # temptation
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14014.jpg"
+                        return True
+                    elif bar_gain <= -50 and bar_gain > -200: # falsehood
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14017.jpg"
+                        return True
+                    elif prog > 0: # progression
+                        export['wsn'][i][j] = "assets_en/img_low/sp/assets/item/skillplus/s/14004.jpg"
+                        return True
+                    elif ca_dmg >= 100 and ca_dmg_cap >= 30: # forbiddance
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14015.jpg"
+                        return True
+                    elif turn_dmg >= 5: # depravity
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14016.jpg"
+                        return True
+                elif export['w'][i] in self.ultima:
+                    seraphic = 0
+                    heal_cap = 0
+                    bar_gain = 0
+                    cap_up = 0
+                    for m in export['mods']:
+                        try:
+                            match m['icon_img']:
+                                case '04_icon_elem_mplify.png':
+                                    seraphic = float(m['value'].replace('%', ''))
+                                case '04_icon_dmg_cap.png':
+                                    cap_up = float(m['value'].replace('%', ''))
+                                case '04_icon_ca_gage.png':
+                                    bar_gain = float(m['value'].replace('%', ''))
+                                case '03_icon_heal_cap.png':
+                                    heal_cap = float(m['value'].replace('%', ''))
+                        except:
+                            pass
+                    if seraphic >= 25: # tria
+                        export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17003.jpg"
+                        return True
+                    elif heal_cap >= 50: # dio
+                        export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17002.jpg"
+                        return True
+                    elif bar_gain >= 10: # tessera
+                        export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17004.jpg"
+                        return True
+                    elif cap_up >= 10: # ena
+                        export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17001.jpg"
+                        return True
+            elif j == 1: # hexa draconic
+                if export['w'][i] in self.hexa_draconic:
+                    seraphic = 0
+                    for m in export['mods']:
+                        try:
+                            match m['icon_img']:
+                                case '04_icon_plain_amplify.png':
+                                    seraphic = float(m['value'].replace('%', ''))
+                        except:
+                            pass
+                    if seraphic >= 10: # oblivion teluma
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/15009.jpg"
+                        return True
         return False
 
     def make_canvas(self, size=(3600, 4320)):
@@ -553,7 +548,6 @@ class PartyBuilder():
             client = self.initHTTPClient()
             imgs = [self.make_canvas(), self.make_canvas()]
             print("[CHA] * Drawing Party...")
-            # version number
             if self.babyl:
                 offset = (30, 20)
                 nchara = 12
