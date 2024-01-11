@@ -499,7 +499,7 @@ class PartyBuilder():
                     for m in export['mods']:
                         try:
                             match m['icon_img']:
-                                case '04_icon_elem_mplify.png':
+                                case '04_icon_elem_amplify.png':
                                     seraphic = float(m['value'].replace('%', ''))
                                 case '04_icon_dmg_cap.png':
                                     cap_up = float(m['value'].replace('%', ''))
