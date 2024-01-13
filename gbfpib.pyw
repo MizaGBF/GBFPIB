@@ -1218,8 +1218,8 @@ class PartyBuilder():
         do_opus = self.settings.get('opus', False)
         if self.settings.get('caching', False):
             self.checkDiskCache()
-        self.quality = {'720p':1/3, '1080p':1/2, '4k':1}.get(self.settings.get('quality', '4k').lower(), 1)
-        self.definition = {'720p':(600, 720), '1080p':(900, 1080), '4k':(1800, 2160)}.get(self.settings.get('quality', '4k').lower(), (1800, 2160))
+        self.quality = {'720p':1/3, '1080p':1/2, '4k':1}.get(self.settings.get('quality', '720p').lower(), 1/3)
+        self.definition = {'720p':(600, 720), '1080p':(900, 1080), '4k':(1800, 2160)}.get(self.settings.get('quality', '720p').lower(), (600, 720))
         resize = None if self.quality == 1 else self.definition
         print("* Image Quality ratio:", self.quality)
         print("* Image Definition:", self.definition)

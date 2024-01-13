@@ -27,7 +27,7 @@ Do note, if requirements haven't been installed properly, the script will automa
   
 The process can take up 1 GB of memory and can take up to one minute (if your computer is slow and the script needs to download assets).  
 ### Settings  
-1. `Quality`: Let you control the output size (default is 8K, minimum is 720p).  
+1. `Quality`: Let you control the output size (default and minimum is 720p, maximum is 4K).  
 2. `Caching`: If enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  
 3. `Do Skins`: If enabled, it will also generate `skin.png`.  
 4. `Do EMP`: If enabled, it will also generate `emp.png`.  
