@@ -862,9 +862,9 @@ class PartyBuilder():
                         mod_crit = round(float(m['value'][:-1]))
                     case '04_icon_dmg_supp.png':
                         try:
-                            mod_supp = int(str(m['value']).replace('+', ''))
+                            mod_supp = int(str(m['value']).replace('＋', '+').replace('+', ''))
                         except:
-                            mod_supp = int(str(m['value']).replace('+', ''))
+                            mod_supp = int(str(m['value']).replace('＋', '+').replace('+', ''))
             if not do_crit: mod_crit = 0 # disable
             if (export['sps'] is not None and export['sps'] != '') or export['spsid'] is not None:
                 # support summon
@@ -1049,10 +1049,12 @@ class PartyBuilder():
                     self.pasteImage(imgs, "assets/bg_emp.png", self.addTuple(pos, (csize[0], 0)), bg_size, transparency=True)
                     # load EMP file
                     data = self.loadEMP(cid.split('_')[0])
-                    if data is None or self.japanese != (data['lang'] == 'ja'): # skip if we can't find EMPs OR if the language doesn't match
+                    if data is None: # skip if we can't find EMPs OR if the language doesn't match
                         print("[EMP] |--> Ally #{}: {}.json can't be loaded".format(i+1, cid.split('_')[0]))
                         self.text(imgs, self.addTuple(pos, (csize[0]+50, csize[1]//3)), "EMP not set", fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
                         continue
+                    if self.japanese != (data['lang'] == 'ja'):
+                        print("[EMP] |--> Ally #{}: WARNING, language doesn't match".format(i+1))
                     # main EMP
                     nemp = len(data['emp'])
                     print("[EMP] |--> Ally #{}: {} EMPs, {} Ring EMPs, {}, {}".format(i+1, nemp, len(data['ring']), ('{} Lv{}'.format(data['awaktype'], data['awakening'].split('lv')[-1]) if 'awakening' in data else 'Awakening not found'), ('Has Domain' if ('domain' in data and len(data['domain']) > 0) else 'No Domain')))
