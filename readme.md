@@ -72,7 +72,7 @@ Do note the calcul isn't perfect: It won't account for cap up or craft skills (o
 By default, the game doesn't provide you the ID of the support summon set in your damage calculator.  
 There are a few ways to go around this issue:  
 1. If you open the damage calculator BEFORE clicking the bookmarklet, the ID will be fetched properly. You need to open it again if you change the party without reloading the page or the last loaded one will stay.  
-2. Alternatively, the bookmarklet will fetch the name of the support summon and search its ID on [gbf.wiki](https://gbf.wiki/). However, be warned this method isn't perfect, especially if you are playing in japanese.  
+2. Alternatively, the bookmarklet will fetch the name of the support summon and search its ID on [gbf.wiki](https://gbf.wiki/). However, be warned this method isn't perfect, especially if you are playing in japanese or if you switch between parties.  
 3. If the above two methods don't work, the name of the support summon will simply be written instead.  
 ### GBFTM  
 Following the Twitter debacle, and GBFTM relying on Twitter assets, I reworked it into a new project.  
