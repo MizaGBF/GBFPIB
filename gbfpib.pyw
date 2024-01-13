@@ -1218,8 +1218,8 @@ class PartyBuilder():
         do_opus = self.settings.get('opus', False)
         if self.settings.get('caching', False):
             self.checkDiskCache()
-        self.quality = {'720p':1/3, '1080p':1/2, '4k':1}.get(self.settings.get('quality', '720p').lower(), 1/3)
-        self.definition = {'720p':(600, 720), '1080p':(900, 1080), '4k':(1800, 2160)}.get(self.settings.get('quality', '720p').lower(), (600, 720))
+        self.quality = {'720p':1/3, '1080p':1/2, '4k':1}.get(self.settings.get('quality', '4k').lower(), 1/3)
+        self.definition = {'720p':(600, 720), '1080p':(900, 1080), '4k':(1800, 2160)}.get(self.settings.get('quality', '4k').lower(), (600, 720))
         resize = None if self.quality == 1 else self.definition
         print("* Image Quality ratio:", self.quality)
         print("* Image Definition:", self.definition)
@@ -1309,7 +1309,7 @@ class PartyBuilder():
         while True:
             print("")
             print("Settings:")
-            print("[0] Change quality ( Current:", self.settings.get('quality', '720p'),")")
+            print("[0] Change quality ( Current:", self.settings.get('quality', '4k'),")")
             print("[1] Enable Disk Caching ( Current:", self.settings.get('caching', False),")")
             print("[2] Generate skin.png ( Current:", self.settings.get('skin', True),")")
             print("[3] Generate emp.png ( Current:", self.settings.get('emp', False),")")
@@ -1324,7 +1324,7 @@ class PartyBuilder():
             print("[Any] Back")
             s = input()
             if s == "0":
-                v = ({'720p':0, '1080p':1, '4K':2}[self.settings.get('quality', '720p')] + 1) % 4
+                v = ({'720p':0, '1080p':1, '4K':2}[self.settings.get('quality', '4k')] + 1) % 4
                 self.settings['quality'] = {0:'720p', 1:'1080p', 2:'4K'}.get(v, 0)
             elif s == "1":
                 self.settings['caching'] = not self.settings.get('caching', False)
@@ -1541,7 +1541,7 @@ class Interface(Tk.Tk): # interface
         tabs.add(tabcontent, text="Settings")
         self.qual_variable = Tk.StringVar(self)
         options = ['720p', '1080p', '4K']
-        self.qual_variable.set(self.pb.settings.get('quality', options[0]))
+        self.qual_variable.set(self.pb.settings.get('quality', options[-1]))
         Tk.Label(tabcontent, text="Quality").grid(row=0, column=0)
         opt = Tk.OptionMenu(tabcontent, self.qual_variable, *options, command=self.qual_changed)
         opt.grid(row=0, column=1)
