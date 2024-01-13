@@ -25,7 +25,7 @@ Do note, if requirements haven't been installed properly, the script will automa
 5. If everything went well, the image should appear beside `gbfpib.pyw` under the name `party.png`. Note: if you enabled the corresponding settings, it will also generate `skin.png` and/or `emp.png`.  
 6. If it didn't, something went wrong, probably at the step 2.  
   
-The process take around 1 GB of memory and can take up to one minute (if your computer is slow and the script needs to download assets).  
+The process can take up 1 GB of memory and can take up to one minute (if your computer is slow and the script needs to download assets).  
 ### Settings  
 1. `Quality`: Let you control the output size (default is 8K, minimum is 720p).  
 2. `Caching`: If enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  
