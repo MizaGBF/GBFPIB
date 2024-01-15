@@ -92,7 +92,7 @@ def importGBFTMR(path):
         sys.modules["GBFTMR.gbftmr"] = module
         spec.loader.exec_module(module)
         GBFTMR_instance = module.GBFTMR(path)
-        if GBFTMR_instance.version[0] >= 1 and GBFTMR_instance.version[1] >= 0:
+        if GBFTMR_instance.version[0] >= 1 and GBFTMR_instance.version[1] >= 24:
             return True
         GBFTMR_instance = None
         return False
