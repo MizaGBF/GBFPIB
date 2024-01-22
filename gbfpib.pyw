@@ -532,7 +532,6 @@ class PartyBuilder():
                                     seraphic = float(m['value'].replace('%', ''))
                         except:
                             pass
-                    print("ok")
                     if seraphic >= 10: # oblivion teluma
                         export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/15009.jpg"
                         return True
