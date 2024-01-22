@@ -193,7 +193,7 @@ class PartyBuilder():
             "1040907500","1040907600","1040907700","1040907800","1040907900","1040908000"
         ]
         self.hexa_draconic = [
-            "1040815900"," 1040316500"," 1040712800"," 1040422200"," 1040915600"," 1040516500"
+            "1040815900","1040316500","1040712800","1040422200","1040915600","1040516500"
         ]
         self.dummy_layer = self.make_canvas()
         self.settings = {} # settings.json data
@@ -452,7 +452,7 @@ class PartyBuilder():
 
     def process_special_weapon(self, export, i, j):
         if export['wsn'][i][j] is not None and export['wsn'][i][j] == "skill_job_weapon":
-            if j == 2: # ultima, opus
+            if j == 2: # skill 3, ultima, opus
                 if export['w'][i] in self.dark_opus:
                     bar_gain = 0
                     hp_cut = 0
@@ -522,7 +522,7 @@ class PartyBuilder():
                     elif cap_up >= 10: # ena
                         export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17001.jpg"
                         return True
-            elif j == 1: # hexa draconic
+            elif j == 1: # skill 2, hexa draconic
                 if export['w'][i] in self.hexa_draconic:
                     seraphic = 0
                     for m in export['mods']:
@@ -532,6 +532,7 @@ class PartyBuilder():
                                     seraphic = float(m['value'].replace('%', ''))
                         except:
                             pass
+                    print("ok")
                     if seraphic >= 10: # oblivion teluma
                         export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/15009.jpg"
                         return True
