@@ -1,118 +1,42 @@
-from urllib.parse import quote
-import json
-from io import BytesIO
-import re
-import sys
+import asyncio
+from contextlib import asynccontextmanager
+
+from typing import Generator, Optional, Union
+
 import time
 import os
-from base64 import b64decode, b64encode
-import tkinter as Tk
-import tkinter.ttk as ttk
-from tkinter import messagebox, filedialog, simpledialog
-import threading
-import concurrent.futures
-from multiprocessing import Manager
+import sys
 import shutil
 import traceback
-import subprocess
-from zipfile import ZipFile
-import platform
 
-# auto install
-SVER = None
-RVER = None
+import re
+from urllib.parse import quote
+from base64 import b64decode, b64encode
 
-def installRequirements(): # run requirements.txt through pip
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+import json
+from io import BytesIO
 
-def cmpVer(mver, tver): # compare version strings, True if greater or equal, else False
-    me = mver.split('.')
-    te = tver.split('.')
-    for i in range(0, min(len(me), len(te))):
-        if int(me[i]) < int(te[i]):
-            return False
-    return True
-
-def manifestPending(state):
-    with open('manifest.json', mode="r", encoding="utf-8") as f:
-        manifest = json.load(f)
-    manifest['pending'] = state
-    with open('manifest.json', mode="w", encoding="utf-8") as f:
-        manifest = json.dump(manifest, f)
-
-if __name__ == "__main__":
-    try:
-        with open('manifest.json', mode="r", encoding="utf-8") as f:
-            manifest = json.load(f)
-            SVER = manifest['version']
-            RVER = manifest['requirements']
-            RPEN = manifest.get('pending', False)
-        if RPEN:
-            installRequirements()
-            manifestPending(False)
-    except:
-        SVER = None
-        RVER = None
-    try:
-        import httpx
-        from PIL import Image, ImageFont, ImageDraw
-        import pyperclip
-    except:
-        try:
-            installRequirements()
-            import httpx
-            from PIL import Image, ImageFont, ImageDraw
-            import pyperclip
-        except: # failed again, we exit
-            if sys.platform == "win32":
-                import ctypes
-                try: is_admin = ctypes.windll.shell32.IsUserAnAdmin()
-                except: is_admin = False
-                if not is_admin:
-                    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
-                else:
-                    print("Can't install the requirements")
-                exit(0)
-else:
-    import httpx
-    from PIL import Image, ImageFont, ImageDraw
-    import pyperclip
 
 import importlib.util
-GBFTMR_instance = None
 
-def importGBFTMR(path):
-    global GBFTMR_instance
-    try:
-        if GBFTMR_instance is not None: return True
-        module_name = "gbftmr.py"
+from tkinter import messagebox, filedialog, simpledialog
+import tkinter as Tk
+import tkinter.ttk as ttk
 
-        spec = importlib.util.spec_from_file_location("GBFTMR.gbftmr", path + module_name)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules["GBFTMR.gbftmr"] = module
-        spec.loader.exec_module(module)
-        GBFTMR_instance = module.GBFTMR(path)
-        if GBFTMR_instance.version[0] >= 1 and GBFTMR_instance.version[1] >= 24:
-            return True
-        GBFTMR_instance = None
-        return False
-    except:
-        GBFTMR_instance = None
-        return False
+import subprocess
+from zipfile import ZipFile
+
 
 class PartyBuilder():
-    def __init__(self, debug):
-        print("Granblue Fantasy Party Image Builder", SVER)
+    def __init__(self, debug : bool = False) -> None:
         self.debug = debug
         if self.debug: print("DEBUG enabled")
         self.japanese = False # True if the data is japanese, False if not
         self.prev_lang = None # Language used in the previous run
         self.babyl = False # True if the data contains more than 5 allies
         self.sandbox = False # True if the data contains more than 10 weapons
-        manager = Manager()
-        self.cache = manager.dict() # memory cache
-        self.lock = manager.Lock() # lock object for cache
-        self.sumcache = manager.dict()# wiki summon cache
+        self.cache = {} # memory cache
+        self.sumcache = {} # wiki summon cache
         self.fonts = {'small':None, 'medium':None, 'big':None, 'mini':None} # font to use during the processing
         self.quality = 1 # quality ratio in use currently
         self.definition = None # image size
@@ -195,17 +119,92 @@ class PartyBuilder():
         self.hexa_draconic = [
             "1040815900","1040316500","1040712800","1040422200","1040915600","1040516500"
         ]
-        self.dummy_layer = self.make_canvas()
         self.settings = {} # settings.json data
+        self.manifest = {} # manifest.json data
+        self.startup_check()
         self.load() # loading settings.json
-        if importGBFTMR(self.settings.get('gbftmr_path', '')):
+        self.dummy_layer = self.make_canvas()
+        self.gbftmr = None
+        if self.importGBFTMR(self.settings.get('gbftmr_path', '')):
             print("GBFTMR imported with success")
-        self.wtm = b64decode("TWl6YSdzIEdCRlBJQiA=").decode('utf-8')+SVER
+        self.wtm = b64decode("TWl6YSdzIEdCRlBJQiA=").decode('utf-8')+self.manifest.get('version', '')
+        self.client = None
+        if self.manifest.get('pending', False):
+            self.manifest['pending'] = False
+            self.saveManifest()
 
-    def pexc(self, e):
+    @asynccontextmanager
+    async def init_client(self) -> Generator['aiohttp.ClientSession', None, None]:
+        try:
+            self.client = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20))
+            yield self.client
+        finally:
+            await self.client.close()
+
+    def pexc(self, e : Exception) -> str:
         return "".join(traceback.format_exception(type(e), e, e.__traceback__))
 
-    def load(self): # load settings.json
+    def loadManifest(self) -> None: # load manifest.json
+        try:
+            with open('manifest.json') as f:
+                self.manifest = json.load(f)
+        except:
+            pass
+
+    def saveManifest(self) -> None: # save manifest.json
+        try:
+            with open('manifest.json', 'w') as outfile:
+                json.dump(self.manifest, outfile)
+        except:
+            pass
+
+    def importRequirements(self) -> None:
+        global aiohttp
+        import aiohttp
+        
+        global Image
+        global ImageFont
+        global ImageDraw
+        from PIL import Image, ImageFont, ImageDraw
+        
+        global pyperclip
+        import pyperclip
+
+    def startup_check(self) -> None:
+        self.loadManifest()
+        if self.manifest.get('pending', False):
+            if messagebox.askyesno(title="Info", message="I will now attempt to update required dependencies.\nDo you accept?\nElse it will be ignored if the application can start."):
+                try:
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+                    self.importRequirements()
+                    messagebox.showinfo("Info", "Installation successful.")
+                except Exception as e:
+                    print(self.pexc(e))
+                    if sys.platform == "win32":
+                        import ctypes
+                        try: is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+                        except: is_admin = False
+                        if not is_admin:
+                            if messagebox.askyesno(title="Error", message="An error occured: {}\nDo you want to restart the application with administrator permissions?".format(e)):
+                                ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1) # restart as admin
+                        else:
+                            messagebox.showerror("Error", "An error occured: {}\nFurther troubleshooting is needed.\nYou might need to install the dependancies manually, check the README for details.")
+                    else:
+                        messagebox.showerror("Error", "An error occured: {}\nFurther troubleshooting is needed.\nYou might need to install the dependancies manually, check the README for details.")
+                    exit(0)
+        else:
+            try:
+                self.importRequirements()
+            except Exception as e:
+                print(self.pexc(e))
+                if messagebox.askyesno(title="Error", message="An error occured while importing the dependencies: {}\nThey might be outdated or missing.\nRestart and attempt to install them now?".format(e)):
+                    self.manifest['pending'] = True
+                    self.saveManifest()
+                    self.restart()
+                exit(0)
+        print("Granblue Fantasy Party Image Builder", self.manifest.get('version', ''))
+
+    def load(self) -> None: # load settings.json
         try:
             with open('settings.json') as f:
                 self.settings = json.load(f)
@@ -218,46 +217,48 @@ class PartyBuilder():
                 elif i.lower() == 'y': break
                 self.save()
 
-    def save(self): # save settings.json
+    def save(self) -> None: # save settings.json
         try:
             with open('settings.json', 'w') as outfile:
                 json.dump(self.settings, outfile)
         except:
             pass
 
-    def retrieveImage(self, path, client=None, remote=True, forceDownload=False):
+    async def retrieveImage(self, path : str, remote : bool = True, forceDownload : bool = False) -> bytes:
         if self.japanese: path = path.replace('assets_en', 'assets')
-        with self.lock:
-            if forceDownload or path not in self.cache:
-                try: # get from disk cache if enabled
-                    if forceDownload: raise Exception()
-                    if self.settings.get('caching', False):
-                        with open("cache/" + b64encode(path.encode('utf-8')).decode('utf-8'), "rb") as f:
-                            self.cache[path] = f.read()
-                    else:
-                        raise Exception()
-                except: # else request it from gbf
-                    if remote:
-                        print("[GET] *Downloading File", path)
-                        response = client.get('https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path, headers={'connection':'keep-alive'})
-                        if response.status_code != 200: raise Exception("HTTP Error code {} for url: {}".format(response.status_code, 'https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path))
-                        self.cache[path] = response.content
+        if forceDownload or path not in self.cache:
+            try: # get from disk cache if enabled
+                if forceDownload: raise Exception()
+                if self.settings.get('caching', False):
+                    with open("cache/" + b64encode(path.encode('utf-8')).decode('utf-8'), "rb") as f:
+                        self.cache[path] = f.read()
+                    await asyncio.sleep(0)
+                else:
+                    raise Exception()
+            except: # else request it from gbf
+                if remote:
+                    print("[GET] *Downloading File", path)
+                    response = await self.client.get('https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path, headers={'connection':'keep-alive'})
+                    async with response:
+                        if response.status != 200: raise Exception("HTTP Error code {} for url: {}".format(response.status_code, 'https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path))
+                        self.cache[path] = await response.read()
                         if self.settings.get('caching', False):
                             try:
                                 with open("cache/" + b64encode(path.encode('utf-8')).decode('utf-8'), "wb") as f:
                                     f.write(self.cache[path])
+                                await asyncio.sleep(0)
                             except Exception as e:
                                 print(e)
                                 pass
-                    else:
-                        with open(path, "rb") as f:
-                            self.cache[path] = f.read()
-            return self.cache[path]
+                else:
+                    with open(path, "rb") as f:
+                        self.cache[path] = f.read()
+        return self.cache[path]
 
-    def pasteImage(self, imgs, file, offset, resize=None, transparency=False, start=0, end=99999999, crop=None): # paste an image onto another
+    async def pasteImage(self, imgs : list, file : Union[str, BytesIO], offset : tuple, resize : Optional[tuple] = None, transparency : bool = False, start : int = 0, end : int = 99999999, crop : Optional[tuple] = None) -> list: # paste an image onto another
         if isinstance(file, str):
             if self.japanese: file = file.replace('_EN', '')
-            file = BytesIO(self.retrieveImage(file, remote=False))
+            file = BytesIO(await self.retrieveImage(file, remote=False))
         buffers = [Image.open(file)]
         if crop is not None:
             buffers.append(buffers[-1].crop((0, 0, crop[0], crop[1])))
@@ -279,17 +280,14 @@ class PartyBuilder():
         file.close()
         return imgs
 
-    def dlAndPasteImage(self, client, imgs, url, offset, resize=None, transparency=False, start=0, end=99999999): # dl an image and call pasteImage()
-        with BytesIO(self.retrieveImage(url, client=client)) as file_jpgdata:
-            return self.pasteImage(imgs, file_jpgdata, offset, resize, transparency, start, end)
+    async def dlAndPasteImage(self, imgs : list, path : str, offset : tuple, resize : Optional[tuple] = None, transparency : bool = False, start : int = 0, end : int = 99999999, crop : Optional[tuple] = None) -> list: # dl an image and call pasteImage()
+        with BytesIO(await self.retrieveImage(path)) as file_jpgdata:
+            return await self.pasteImage(imgs, file_jpgdata, offset, resize, transparency, start, end)
 
-    def addTuple(self, A:tuple, B:tuple):
+    def add(self, A:tuple, B:tuple):
         return (A[0]+B[0], A[1]+B[1])
 
-    def subTuple(self, A:tuple, B:tuple):
-        return (A[0]-B[0], A[1]-B[1])
-
-    def fixCase(self, terms): # function to fix the case (for wiki search requests)
+    def fixCase(self, terms : str) -> str: # function to fix the case (for wiki search requests)
         terms = terms.split(' ')
         fixeds = []
         for term in terms:
@@ -322,51 +320,50 @@ class PartyBuilder():
             fixeds.append(fixed)
         return "_".join(fixeds) # return the result
 
-    def get_support_summon(self, client, sps): # search on gbf.wiki to match a summon name to its id
+    async def get_support_summon(self, sps : str) -> Optional[str]: # search on gbf.wiki to match a summon name to its id
         try:
             if sps in self.sumcache: return self.sumcache[sps]
-            response = client.get("https://gbf.wiki/" + quote(self.fixCase(sps)), headers={'connection':'keep-alive'})
-            if response.status_code != 200: raise Exception()
-            data = response.content.decode('utf-8')
-            for ss in self.supp_summon_re:
-                group = ss.findall(data)
-                if len(group) > 0: break
-            self.sumcache[sps] = group[0]
+            response = await self.client.get("https://gbf.wiki/" + quote(self.fixCase(sps)), headers={'connection':'keep-alive'})
+            async with response:
+                if response.status != 200: raise Exception()
+                data = (await response.read()).decode('utf-8')
+                for ss in self.supp_summon_re:
+                    group = ss.findall(data)
+                    if len(group) > 0: break
+                self.sumcache[sps] = group[0]
             return group[0]
         except:
             if "(summon)" not in sps.lower():
-                return self.get_support_summon(client, sps + ' (Summon)')
+                return await self.get_support_summon(sps + ' (Summon)')
             else:
                 try:
-                    return self.advanced_support_summon_search(client, sps.replace(' (Summon)', ''))
+                    return await self.advanced_support_summon_search(sps.replace(' (Summon)', ''))
                 except:
                     pass
             return None
 
-    def advanced_support_summon_search(self, client, summon_name): # advanced search on gbf.wiki to match a summon name to its id
+    async def advanced_support_summon_search(self, summon_name : str) -> Optional[str]: # advanced search on gbf.wiki to match a summon name to its id
         try:
-            response = client.get("https://gbf.wiki/index.php?title=Special:Search&search=" + quote(summon_name), headers={'connection':'keep-alive'})
-            if response.status_code != 200: raise Exception()
-            data = response.content.decode('utf-8')
-            cur = 0
-            while True: # iterate search results for an id
-                x = data.find("<div class='searchresult'>ID ", cur)
-                if x == -1: break
-                x += len("<div class='searchresult'>ID ")
-                if 'title="Demi ' not in data[cur:x]: # skip demi optimus
-                    return data[x:x+10]
-                cur = x
+            response = await self.client.get("https://gbf.wiki/index.php?title=Special:Search&search=" + quote(summon_name), headers={'connection':'keep-alive'})
+            async with response:
+                if response.statu != 200: raise Exception()
+                data = (await response.read()).decode('utf-8')
+                cur = 0
+                while True: # iterate search results for an id
+                    x = data.find("<div class='searchresult'>ID ", cur)
+                    if x == -1: break
+                    x += len("<div class='searchresult'>ID ")
+                    if 'title="Demi ' not in data[cur:x]: # skip demi optimus
+                        return data[x:x+10]
+                    cur = x
             return None
         except:
             return None
 
-    def initHTTPClient(self):
-        return httpx.Client(limits=httpx.Limits(max_keepalive_connections=100, max_connections=100, keepalive_expiry=10))
-
-    def get_uncap_id(self, cs): # to get character portraits based on uncap levels
+    def get_uncap_id(self, cs : int) -> str: # to get character portraits based on uncap levels
         return {2:'02', 3:'02', 4:'02', 5:'03', 6:'04'}.get(cs, '01')
 
-    def get_uncap_star(self, cs, cl): # to get character star based on uncap levels
+    def get_uncap_star(self, cs : int, cl : int) -> str: # to get character star based on uncap levels
         match cs:
             case 4: return "assets/star_1.png"
             case 5: return "assets/star_2.png"
@@ -378,7 +375,7 @@ class PartyBuilder():
                 elif cl <= 150: return "assets/star_4_5.png"
             case _: return "assets/star_0.png"
 
-    def get_summon_star(self, se, sl): # to get summon star based on uncap levels
+    def get_summon_star(self, se : int, sl : int) -> str: # to get summon star based on uncap levels
         match se:
             case 3: return "assets/star_1.png"
             case 4: return "assets/star_2.png"
@@ -391,7 +388,7 @@ class PartyBuilder():
                 elif sl <= 250: return "assets/star_4_5.png"
             case _: return "assets/star_0.png"
 
-    def fix_character_look(self, export, i):
+    def fix_character_look(self, export : dict, i : int) -> str:
         style = ("" if str(export['cst'][i]) == '1' else "_st{}".format(export['cst'][i])) # style
         if style != "":
             uncap = "01"
@@ -445,12 +442,12 @@ class PartyBuilder():
         else:
             return "{}_{}{}".format(cid, uncap, style)
 
-    def get_mc_job_look(self, skin, job): # get the MC unskined filename based on id
+    def get_mc_job_look(self, skin : str, job : int) -> str: # get the MC unskined filename based on id
         jid = job // 10000
         if jid not in self.classes: return skin
         return "{}_{}_{}".format(job, self.classes[jid], '_'.join(skin.split('_')[2:]))
 
-    def process_special_weapon(self, export, i, j):
+    def process_special_weapon(self, export : dict, i : int, j : int) -> bool:
         if export['wsn'][i][j] is not None and export['wsn'][i][j] == "skill_job_weapon":
             if j == 2: # skill 3, ultima, opus
                 if export['w'][i] in self.dark_opus:
@@ -537,16 +534,15 @@ class PartyBuilder():
                         return True
         return False
 
-    def make_canvas(self, size=(1800, 2160)):
+    def make_canvas(self, size : tuple = (1800, 2160)) -> 'Image':
         i = Image.new('RGB', size, "black")
         im_a = Image.new("L", size, "black")
         i.putalpha(im_a)
         im_a.close()
         return i
 
-    def make_party(self, export):
+    async def make_party(self, export : dict) -> Union[str, tuple]:
         try:
-            client = self.initHTTPClient()
             imgs = [self.make_canvas(), self.make_canvas()]
             print("[CHA] * Drawing Party...")
             if self.babyl:
@@ -554,37 +550,37 @@ class PartyBuilder():
                 nchara = 12
                 csize = (180, 180)
                 skill_width = 420
-                pos = self.addTuple(offset, (30, 0))
+                pos = self.add(offset, (30, 0))
                 jsize = (54, 45)
                 roffset = (-6, -6)
                 rsize = (60, 60)
                 ssize = (50, 50)
-                soffset = self.addTuple(csize, (-csize[0], -ssize[1]*5//3))
-                poffset = self.addTuple(csize, (-105, -45))
-                ssoffset = self.addTuple(pos, (0, 10+csize[1]))
-                stoffset = self.addTuple(ssoffset, (3, 3))
-                plsoffset = self.addTuple(ssoffset, (447, 0))
+                soffset = self.add(csize, (-csize[0], -ssize[1]*5//3))
+                poffset = self.add(csize, (-105, -45))
+                ssoffset = self.add(pos, (0, 10+csize[1]))
+                stoffset = self.add(ssoffset, (3, 3))
+                plsoffset = self.add(ssoffset, (447, 0))
                 # background
-                self.pasteImage(imgs, "assets/bg.png", self.addTuple(pos, (-15, -15)), (csize[0]*8+40, csize[1]*2+55), transparency=True, start=0, end=1)
+                await self.pasteImage(imgs, "assets/bg.png", self.add(pos, (-15, -15)), (csize[0]*8+40, csize[1]*2+55), transparency=True, start=0, end=1)
             else:
                 offset = (15, 10)
                 nchara = 5
                 csize = (250, 250)
                 skill_width = 420
-                pos = self.addTuple(offset, (skill_width-csize[0], 0))
+                pos = self.add(offset, (skill_width-csize[0], 0))
                 jsize = (72, 60)
                 roffset = (-10, -10)
                 rsize = (90, 90)
                 ssize = (66, 66)
-                soffset = self.addTuple(csize, (-csize[0]+ssize[0]//2, -ssize[1]))
-                poffset = self.addTuple(csize, (-110, -40))
+                soffset = self.add(csize, (-csize[0]+ssize[0]//2, -ssize[1]))
+                poffset = self.add(csize, (-110, -40))
                 noffset = (9, csize[1]+10)
                 loffset = (10, csize[1]+6+60)
-                ssoffset = self.addTuple(offset, (0, csize[1]))
-                stoffset = self.addTuple(ssoffset, (3, 3))
-                plsoffset = self.addTuple(ssoffset, (0, -150))
+                ssoffset = self.add(offset, (0, csize[1]))
+                stoffset = self.add(ssoffset, (3, 3))
+                plsoffset = self.add(ssoffset, (0, -150))
                 # background
-                self.pasteImage(imgs, "assets/bg.png", self.addTuple(pos, (-15, -10)), (25+csize[0]*6+30, csize[1]+175), transparency=True, start=0, end=1)
+                await self.pasteImage(imgs, "assets/bg.png", self.add(pos, (-15, -10)), (25+csize[0]*6+30, csize[1]+175), transparency=True, start=0, end=1)
             
             # mc
             print("[CHA] |--> MC Skin:", export['pcjs'])
@@ -593,89 +589,91 @@ class PartyBuilder():
             print("[CHA] |--> MC Proof Level:", export['cbl'])
             # class
             class_id = self.get_mc_job_look(export['pcjs'], export['p'])
-            self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/leader/s/{}.jpg".format(class_id), pos, csize, start=0, end=1)
+            await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/leader/s/{}.jpg".format(class_id), pos, csize, start=0, end=1)
             # job icon
-            self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True, start=0, end=1)
+            await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True, start=0, end=1)
             if export['cbl'] == '6':
-                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/job/ico_perfection.png", self.addTuple(pos, (0, jsize[1])), jsize, transparency=True, start=0, end=1)
+                await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/job/ico_perfection.png", self.add(pos, (0, jsize[1])), jsize, transparency=True, start=0, end=1)
             # skin
             if class_id != export['pcjs']:
-                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/leader/s/{}.jpg".format(export['pcjs']), pos, csize, start=1, end=2)
-                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True, start=1, end=2)
+                await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/leader/s/{}.jpg".format(export['pcjs']), pos, csize, start=1, end=2)
+                await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True, start=1, end=2)
             # allies
             for i in range(0, nchara):
+                await asyncio.sleep(0)
                 if self.babyl:
-                    if i < 4: pos = self.addTuple(offset, (csize[0]*i+30, 0))
-                    elif i < 8: pos = self.addTuple(offset, (csize[0]*i+40, 0))
-                    else: pos = self.addTuple(offset, (csize[0]*(i-4)+40, 10+csize[1]*(i//8)))
+                    if i < 4: pos = self.add(offset, (csize[0]*i+30, 0))
+                    elif i < 8: pos = self.add(offset, (csize[0]*i+40, 0))
+                    else: pos = self.add(offset, (csize[0]*(i-4)+40, 10+csize[1]*(i//8)))
                     if i == 0: continue # quirk of babyl party, mc is counted
                 else:
-                    pos = self.addTuple(offset, (skill_width+csize[0]*(i+1-1), 0))
-                    if i >= 3: pos = self.addTuple(pos, (25, 0))
+                    pos = self.add(offset, (skill_width+csize[0]*(i+1-1), 0))
+                    if i >= 3: pos = self.add(pos, (25, 0))
                 # portrait
                 if i >= len(export['c']) or export['c'][i] is None: # empty
-                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize, start=0, end=1)
+                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/tower/assets/npc/s/3999999999.jpg", pos, csize, start=0, end=1)
                     continue
                 print("[CHA] |--> Ally #{}:".format(i+1), export['c'][i], export['cn'][i], "Lv {}".format(export['cl'][i]), "Uncap-{}".format(export['cs'][i]), "+{}".format(export['cp'][i]), "Has Ring" if export['cwr'][i] else "No Ring")
                 # portrait
                 cid = self.fix_character_look(export, i)
-                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(cid), pos, csize, start=0, end=1)
+                await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(cid), pos, csize, start=0, end=1)
                 # skin
                 if cid != export['ci'][i]:
-                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(export['ci'][i]), pos, csize, start=1, end=2)
+                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/npc/s/{}.jpg".format(export['ci'][i]), pos, csize, start=1, end=2)
                     has_skin = True
                 else:
                     has_skin = False
                 # star
-                self.pasteImage(imgs, self.get_uncap_star(export['cs'][i], export['cl'][i]), self.addTuple(pos, soffset), ssize, transparency=True, start=0, end=2 if has_skin else 1)
+                await self.pasteImage(imgs, self.get_uncap_star(export['cs'][i], export['cl'][i]), self.add(pos, soffset), ssize, transparency=True, start=0, end=2 if has_skin else 1)
                 # rings
                 if export['cwr'][i] == True:
-                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.addTuple(pos, roffset), rsize, transparency=True, start=0, end=2 if has_skin else 1)
+                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.add(pos, roffset), rsize, transparency=True, start=0, end=2 if has_skin else 1)
                 # plus
                 if export['cp'][i] > 0:
-                    self.text(imgs, self.addTuple(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0), start=0, end=2 if has_skin else 1)
+                    self.text(imgs, self.add(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0), start=0, end=2 if has_skin else 1)
                 if not self.babyl:
                     # name
-                    self.pasteImage(imgs, "assets/chara_stat.png", self.addTuple(pos, (0, csize[1])), (csize[0], 60), transparency=True, start=0, end=1)
+                    await self.pasteImage(imgs, "assets/chara_stat.png", self.add(pos, (0, csize[1])), (csize[0], 60), transparency=True, start=0, end=1)
                     if len(export['cn'][i]) > 11: name = export['cn'][i][:11] + ".."
                     else: name = export['cn'][i]
-                    self.text(imgs, self.addTuple(pos, noffset), name, fill=(255, 255, 255), font=self.fonts['mini'], start=0, end=1)
+                    self.text(imgs, self.add(pos, noffset), name, fill=(255, 255, 255), font=self.fonts['mini'], start=0, end=1)
                     # skill count
-                    self.pasteImage(imgs, "assets/skill_count_EN.png", self.addTuple(pos, (0, csize[1]+60)), (csize[0], 60), transparency=True, start=0, end=1)
-                    self.text(imgs, self.addTuple(self.addTuple(pos, loffset), (150, 0)), str(export['cb'][i+1]), fill=(255, 255, 255), font=self.fonts['medium'], stroke_width=4, stroke_fill=(0, 0, 0), start=0, end=1)
+                    await self.pasteImage(imgs, "assets/skill_count_EN.png", self.add(pos, (0, csize[1]+60)), (csize[0], 60), transparency=True, start=0, end=1)
+                    self.text(imgs, self.add(self.add(pos, loffset), (150, 0)), str(export['cb'][i+1]), fill=(255, 255, 255), font=self.fonts['medium'], stroke_width=4, stroke_fill=(0, 0, 0), start=0, end=1)
+            await asyncio.sleep(0)
 
             # mc sub skills
-            self.pasteImage(imgs, "assets/subskills.png", ssoffset, (420, 147), transparency=True)
+            await self.pasteImage(imgs, "assets/subskills.png", ssoffset, (420, 147), transparency=True)
             count = 0
             for i in range(len(export['ps'])):
                 if export['ps'][i] is not None:
                     print("[CHA] |--> MC Skill #{}:".format(i), export['ps'][i])
-                    self.text(imgs, self.addTuple(stoffset, (0, 48*count)), export['ps'][i], fill=(255, 255, 255), font=self.fonts['small'] if (len(export['ps'][i]) > 15) else self.fonts['medium'])
+                    self.text(imgs, self.add(stoffset, (0, 48*count)), export['ps'][i], fill=(255, 255, 255), font=self.fonts['small'] if (len(export['ps'][i]) > 15) else self.fonts['medium'])
                     count += 1
+            await asyncio.sleep(0)
             # paladin shield/manadiver familiar
             if export['cpl'][0] is not None:
                 print("[CHA] |--> Paladin shields:", export['cpl'][0], "|", export['cpl'][1])
-                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/shield/s/{}.jpg".format(export['cpl'][0]), plsoffset, (150, 150), start=0, end=1)
+                await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/shield/s/{}.jpg".format(export['cpl'][0]), plsoffset, (150, 150), start=0, end=1)
                 if export['cpl'][1] is not None and export['cpl'][1] != export['cpl'][0] and export['cpl'][1] > 0: # skin
-                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/shield/s/{}.jpg".format(export['cpl'][1]), plsoffset, (150, 150), start=1, end=2)
-                    self.pasteImage(imgs, "assets/skin.png", self.addTuple(plsoffset, (0, -70)), (153, 171), start=1, end=2)
+                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/shield/s/{}.jpg".format(export['cpl'][1]), plsoffset, (150, 150), start=1, end=2)
+                    await self.pasteImage(imgs, "assets/skin.png", self.add(plsoffset, (0, -70)), (153, 171), start=1, end=2)
             elif export['fpl'][0] is not None:
                 print("[CHA] |--> Manadiver Manatura:", export['fpl'][0], "|", export['fpl'][1])
-                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/familiar/s/{}.jpg".format(export['fpl'][0]), plsoffset, (150, 150), start=0, end=1)
+                await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/familiar/s/{}.jpg".format(export['fpl'][0]), plsoffset, (150, 150), start=0, end=1)
                 if export['fpl'][1] is not None and export['fpl'][1] != export['fpl'][0] and export['fpl'][1] > 0: # skin
-                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/familiar/s/{}.jpg".format(export['fpl'][1]), plsoffset, (150, 150), start=1, end=2)
-                    self.pasteImage(imgs, "assets/skin.png", self.addTuple(plsoffset, (0, -45)), (76, 85), start=1, end=2)
+                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/familiar/s/{}.jpg".format(export['fpl'][1]), plsoffset, (150, 150), start=1, end=2)
+                    await self.pasteImage(imgs, "assets/skin.png", self.add(plsoffset, (0, -45)), (76, 85), start=1, end=2)
             elif self.babyl: # to fill the blank space
-                self.pasteImage(imgs, "assets/characters_EN.png", self.addTuple(ssoffset, (skill_width, 0)), (276, 75), transparency=True)
+                await self.pasteImage(imgs, "assets/characters_EN.png", self.add(ssoffset, (skill_width, 0)), (276, 75), transparency=True)
             return ('party', imgs)
         except Exception as e:
             imgs[0].close()
             imgs[1].close()
             return self.pexc(e)
 
-    def make_summon(self, export):
+    async def make_summon(self, export : dict) -> Union[str, tuple]:
         try:
-            client = self.initHTTPClient()
             imgs = [self.make_canvas(), self.make_canvas()]
             print("[SUM] * Drawing Summons...")
             offset = (170, 425)
@@ -684,61 +682,62 @@ class PartyBuilder():
             surls = ["assets_en/img/sp/assets/summon/party_main/{}.jpg", "assets_en/img/sp/assets/summon/party_sub/{}.jpg", "assets_en/img/sp/assets/summon/m/{}.jpg"]
 
             # background setup
-            self.pasteImage(imgs, "assets/bg.png", self.addTuple(offset, (-15, -15)), (100+sizes[0][0]+sizes[1][0]*2+sizes[0][0]+48, sizes[0][1]+143), transparency=True, start=0, end=1)
+            await self.pasteImage(imgs, "assets/bg.png", self.add(offset, (-15, -15)), (100+sizes[0][0]+sizes[1][0]*2+sizes[0][0]+48, sizes[0][1]+143), transparency=True, start=0, end=1)
 
             for i in range(0, 7):
+                await asyncio.sleep(0)
                 if i == 0:
-                    pos = self.addTuple(offset, (0, 0)) 
+                    pos = self.add(offset, (0, 0)) 
                     idx = 0
                 elif i < 5:
-                    pos = self.addTuple(offset, (sizes[0][0]+50+((i-1)%2)*sizes[1][0]+18, 266*((i-1)//2)))
+                    pos = self.add(offset, (sizes[0][0]+50+((i-1)%2)*sizes[1][0]+18, 266*((i-1)//2)))
                     idx = 1
                 else:
-                    pos = self.addTuple(offset, (sizes[0][0]+100+2*sizes[1][0]+18, 102+(i-5)*(sizes[2][1]+60)))
+                    pos = self.add(offset, (sizes[0][0]+100+2*sizes[1][0]+18, 102+(i-5)*(sizes[2][1]+60)))
                     idx = 2
-                    if i == 5: self.pasteImage(imgs, "assets/subsummon_EN.png", (pos[0]+45, pos[1]-72-30), (180, 72), transparency=True, start=0, end=1)
+                    if i == 5: await self.pasteImage(imgs, "assets/subsummon_EN.png", (pos[0]+45, pos[1]-72-30), (180, 72), transparency=True, start=0, end=1)
                 # portraits
                 if export['s'][i] is None:
-                    self.dlAndPasteImage(client, imgs, durls[idx], pos, sizes[idx], start=0, end=1)
+                    await self.dlAndPasteImage(imgs, durls[idx], pos, sizes[idx], start=0, end=1)
                     continue
                 else:
                     print("[SUM] |--> Summon #{}:".format(i+1), export['ss'][i], "Uncap Lv{}".format(export['se'][i]), "Lv{}".format(export['sl'][i]))
-                    self.dlAndPasteImage(client, imgs, surls[idx].format(export['ss'][i]), pos, sizes[idx], start=0, end=1)
+                    await self.dlAndPasteImage(imgs, surls[idx].format(export['ss'][i]), pos, sizes[idx], start=0, end=1)
                 # main summon skin
                 if i == 0 and export['ssm'] is not None:
-                    self.dlAndPasteImage(client, imgs, surls[idx].format(export['ssm']), pos, sizes[idx], start=1, end=2)
-                    self.pasteImage(imgs, "assets/skin.png", self.addTuple(pos, (sizes[idx][0]-85, 15)), (76, 85), start=1, end=2)
+                    await self.dlAndPasteImage(imgs, surls[idx].format(export['ssm']), pos, sizes[idx], start=1, end=2)
+                    await self.pasteImage(imgs, "assets/skin.png", self.add(pos, (sizes[idx][0]-85, 15)), (76, 85), start=1, end=2)
                     has_skin = True
                 else:
                     has_skin = False
                 # star
-                self.pasteImage(imgs, self.get_summon_star(export['se'][i], export['sl'][i]), pos, (66, 66), transparency=True, start=0, end=2 if has_skin else 1)
+                await self.pasteImage(imgs, self.get_summon_star(export['se'][i], export['sl'][i]), pos, (66, 66), transparency=True, start=0, end=2 if has_skin else 1)
                 # quick summon
                 if export['qs'] is not None and export['qs'] == i:
-                    self.pasteImage(imgs, "assets/quick.png", self.addTuple(pos, (0, 66)), (66, 66), transparency=True, start=0, end=2 if has_skin else 1)
+                    await self.pasteImage(imgs, "assets/quick.png", self.add(pos, (0, 66)), (66, 66), transparency=True, start=0, end=2 if has_skin else 1)
                 # level
-                self.pasteImage(imgs, "assets/chara_stat.png", self.addTuple(pos, (0, sizes[idx][1])), (sizes[idx][0], 60), transparency=True, start=0, end=1)
-                self.text(imgs, self.addTuple(pos, (6,sizes[idx][1]+9)), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
+                await self.pasteImage(imgs, "assets/chara_stat.png", self.add(pos, (0, sizes[idx][1])), (sizes[idx][0], 60), transparency=True, start=0, end=1)
+                self.text(imgs, self.add(pos, (6,sizes[idx][1]+9)), "Lv{}".format(export['sl'][i]), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
                 # plus
                 if export['sp'][i] > 0:
                     self.text(imgs, (pos[0]+sizes[idx][0]-95, pos[1]+sizes[idx][1]-50), "+{}".format(export['sp'][i]), fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0), start=0, end=2 if has_skin else 1)
+            await asyncio.sleep(0)
 
             # stats
-            spos = self.addTuple(offset, (sizes[0][0]+50+18, sizes[0][1]+60))
-            self.pasteImage(imgs, "assets/chara_stat.png",  spos, (sizes[1][0]*2, 60), transparency=True, start=0, end=1)
-            self.pasteImage(imgs, "assets/atk.png", self.addTuple(spos, (9, 9)), (90, 39), transparency=True, start=0, end=1)
-            self.pasteImage(imgs, "assets/hp.png", self.addTuple(spos, (sizes[1][0]+9, 9)), (66, 39), transparency=True, start=0, end=1)
-            self.text(imgs, self.addTuple(spos, (120, 9)), "{}".format(export['satk']), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
-            self.text(imgs, self.addTuple(spos, (sizes[1][0]+80, 9)), "{}".format(export['shp']), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
+            spos = self.add(offset, (sizes[0][0]+50+18, sizes[0][1]+60))
+            await self.pasteImage(imgs, "assets/chara_stat.png",  spos, (sizes[1][0]*2, 60), transparency=True, start=0, end=1)
+            await self.pasteImage(imgs, "assets/atk.png", self.add(spos, (9, 9)), (90, 39), transparency=True, start=0, end=1)
+            await self.pasteImage(imgs, "assets/hp.png", self.add(spos, (sizes[1][0]+9, 9)), (66, 39), transparency=True, start=0, end=1)
+            self.text(imgs, self.add(spos, (120, 9)), "{}".format(export['satk']), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
+            self.text(imgs, self.add(spos, (sizes[1][0]+80, 9)), "{}".format(export['shp']), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
             return ('summon', imgs)
         except Exception as e:
             imgs[0].close()
             imgs[1].close()
             return self.pexc(e)
 
-    def make_weapon(self, export, do_hp, do_crit, do_opus):
+    async def make_weapon(self, export : dict, do_hp : bool, do_crit : bool, do_opus : bool) -> Union[str, tuple]:
         try:
-            client = self.initHTTPClient()
             imgs = [self.make_canvas(), self.make_canvas()]
             print("[WPN] * Drawing Weapons...")
             if self.sandbox: offset = (25, 1050)
@@ -750,11 +749,12 @@ class PartyBuilder():
             mh_size = (300, 630)
             sub_size = (288, 165)
             self.multiline_text(imgs, (1425, 2125), self.wtm, fill=(120, 120, 120, 255), font=self.fonts['mini'])
-            self.pasteImage(imgs, "assets/grid_bg.png", self.addTuple(offset, (-15, -15)), (mh_size[0]+(4 if self.sandbox else 3)*sub_size[0]+60, 1425+(240 if self.sandbox else 0)), transparency=True, start=0, end=1)
+            await self.pasteImage(imgs, "assets/grid_bg.png", self.add(offset, (-15, -15)), (mh_size[0]+(4 if self.sandbox else 3)*sub_size[0]+60, 1425+(240 if self.sandbox else 0)), transparency=True, start=0, end=1)
             if self.sandbox:
-                self.pasteImage(imgs, "assets/grid_bg_extra.png", (offset[0]+mh_size[0]+30+sub_size[0]*3, offset[1]), (288, 1145), transparency=True, start=0, end=1)
+                await self.pasteImage(imgs, "assets/grid_bg_extra.png", (offset[0]+mh_size[0]+30+sub_size[0]*3, offset[1]), (288, 1145), transparency=True, start=0, end=1)
 
             for i in range(0, len(export['w'])):
+                await asyncio.sleep(0)
                 wt = "ls" if i == 0 else "m"
                 if i == 0: # mainhand
                     pos = (offset[0], offset[1])
@@ -773,13 +773,13 @@ class PartyBuilder():
                     pos = (offset[0]+bsize[0]+30+size[0]*x, offset[1]+(size[1]+skill_box_height)*y)
                 # dual blade class
                 if i <= 1 and export['p'] in self.aux_class:
-                    self.pasteImage(imgs, ("assets/mh_dual.png" if i == 0 else "assets/aux_dual.png"), self.addTuple(pos, (-2, -2)), self.addTuple(size, (5, 5+skill_box_height)), transparency=True, start=0, end=1)
+                    await self.pasteImage(imgs, ("assets/mh_dual.png" if i == 0 else "assets/aux_dual.png"), self.add(pos, (-2, -2)), self.add(size, (5, 5+skill_box_height)), transparency=True, start=0, end=1)
                 # portrait
                 if export['w'][i] is None or export['wl'][i] is None:
                     if i >= 10:
-                        self.pasteImage(imgs, "assets/arca_slot.png", pos, size, start=0, end=1)
+                        await self.pasteImage(imgs, "assets/arca_slot.png", pos, size, start=0, end=1)
                     else:
-                        self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), pos, size, start=0, end=1)
+                        await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/weapon/{}/1999999999.jpg".format(wt), pos, size, start=0, end=1)
                     continue
                 # ax and awakening check
                 has_ax = len(export['waxt'][i]) > 0
@@ -787,13 +787,13 @@ class PartyBuilder():
                 pos_shift = - skill_icon_size if (has_ax and has_awakening) else 0  # vertical shift of the skill boxes (if both ax and awk are presents)
                 # portrait draw
                 print("[WPN] |--> Weapon #{}".format(i+1), str(export['w'][i]), ", AX:", has_ax, ", Awakening:", has_awakening)
-                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/weapon/{}/{}.jpg".format(wt, export['w'][i]), pos, size, start=0, end=1)
+                await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/weapon/{}/{}.jpg".format(wt, export['w'][i]), pos, size, start=0, end=1)
                 # skin
                 has_skin = False
                 if i <= 1 and export['wsm'][i] is not None:
                     if i == 0 or (i == 1 and export['p'] in self.aux_class): # aux class check for 2nd weapon
-                        self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/weapon/{}/{}.jpg".format(wt, export['wsm'][i]), pos, size, start=1, end=2)
-                        self.pasteImage(imgs, "assets/skin.png", self.addTuple(pos, (size[0]-76, 0)), (76, 85), transparency=True, start=1, end=2)
+                        await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/weapon/{}/{}.jpg".format(wt, export['wsm'][i]), pos, size, start=1, end=2)
+                        await self.pasteImage(imgs, "assets/skin.png", self.add(pos, (size[0]-76, 0)), (76, 85), transparency=True, start=1, end=2)
                         has_skin = True
                 # skill box
                 nbox = 1 # number of skill boxes to draw
@@ -801,9 +801,9 @@ class PartyBuilder():
                 if has_awakening: nbox += 1
                 for j in range(nbox):
                     if i != 0 and j == 0 and nbox == 3: # if 3 boxes and we aren't on the mainhand, we draw half of one for the first box
-                        self.pasteImage(imgs, "assets/skill.png", (pos[0]+size[0]//2, pos[1]+size[1]+pos_shift+skill_icon_size*j), (size[0]//2, skill_icon_size), transparency=True, start=0, end=2 if (has_skin and j == 0) else 1)
+                        await self.pasteImage(imgs, "assets/skill.png", (pos[0]+size[0]//2, pos[1]+size[1]+pos_shift+skill_icon_size*j), (size[0]//2, skill_icon_size), transparency=True, start=0, end=2 if (has_skin and j == 0) else 1)
                     else:
-                        self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+size[1]+pos_shift+skill_icon_size*j), (size[0], skill_icon_size), transparency=True, start=0, end=2 if (has_skin and j == 0) else 1)
+                        await self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+size[1]+pos_shift+skill_icon_size*j), (size[0], skill_icon_size), transparency=True, start=0, end=2 if (has_skin and j == 0) else 1)
                 # plus
                 if export['wp'][i] > 0:
                     # calculate shift of the position if AX and awakening are present
@@ -822,35 +822,36 @@ class PartyBuilder():
                     for j in range(3):
                         if export['wsn'][i][j] is not None:
                             if do_opus and self.process_special_weapon(export, i, j): # 3rd skill guessing
-                                self.dlAndPasteImage(client, imgs, export['wsn'][i][j], (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
+                                await self.dlAndPasteImage(imgs, export['wsn'][i][j], (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
                             else:
-                                self.dlAndPasteImage(client, imgs, "assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
+                                await self.dlAndPasteImage(imgs, "assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
                 pos_shift += skill_icon_size
                 main_ax_icon_size  = int(ax_icon_size * (1.5 if i == 0 else 1) * (0.75 if (has_ax and has_awakening) else 1)) # size of the big AX/Awakening icon
                 # ax skills
                 if has_ax:
-                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), pos, (main_ax_icon_size, main_ax_icon_size), start=0, end=2 if has_skin else 1)
+                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/augment_skill/{}.png".format(export['waxt'][i][0]), pos, (main_ax_icon_size, main_ax_icon_size), start=0, end=2 if has_skin else 1)
                     for j in range(len(export['waxi'][i])):
-                        self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/skill/{}.png".format(export['waxi'][i][j]), (pos[0]+ax_separator*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=1)
+                        await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/skill/{}.png".format(export['waxi'][i][j]), (pos[0]+ax_separator*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=1)
                         self.text(imgs, (pos[0]+ax_separator*j+skill_icon_size+6, pos[1]+size[1]+pos_shift+15), "{}".format(export['wax'][i][0][j]['show_value']).replace('%', '').replace('+', ''), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
                     pos_shift += skill_icon_size
                 # awakening
                 if has_awakening:
                     shift = main_ax_icon_size//2 if has_ax else 0 # shift the icon right a bit if also has AX icon
-                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), self.addTuple(pos, (shift, 0)), (main_ax_icon_size, main_ax_icon_size), start=0, end=2 if has_skin else 1)
-                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), (pos[0]+skill_icon_size, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=1)
+                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), self.add(pos, (shift, 0)), (main_ax_icon_size, main_ax_icon_size), start=0, end=2 if has_skin else 1)
+                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/arousal_type/type_{}.png".format(export['wakn'][i]['form']), (pos[0]+skill_icon_size, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=1)
                     self.text(imgs, (pos[0]+skill_icon_size*3-51, pos[1]+size[1]+pos_shift+15), "LV {}".format(export['wakn'][i]['level']), fill=(255, 255, 255), font=self.fonts['small'], start=0, end=1)
 
             if self.sandbox:
-                self.pasteImage(imgs, "assets/sandbox.png", (pos[0], offset[1]+(skill_box_height+sub_size[1])*3), (size[0], int(66*size[0]/159)), transparency=True, start=0, end=1)
+                await self.pasteImage(imgs, "assets/sandbox.png", (pos[0], offset[1]+(skill_box_height+sub_size[1])*3), (size[0], int(66*size[0]/159)), transparency=True, start=0, end=1)
             # stats
             pos = (offset[0], offset[1]+bsize[1]+150)
-            self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]), (bsize[0], 75), transparency=True, start=0, end=1)
-            self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+75), (bsize[0], 75), transparency=True, start=0, end=1)
-            self.pasteImage(imgs, "assets/atk.png", (pos[0]+9, pos[1]+15), (90, 39), transparency=True, start=0, end=1)
-            self.pasteImage(imgs, "assets/hp.png", (pos[0]+9, pos[1]+15+75), (66, 39), transparency=True, start=0, end=1)
+            await self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]), (bsize[0], 75), transparency=True, start=0, end=1)
+            await self.pasteImage(imgs, "assets/skill.png", (pos[0], pos[1]+75), (bsize[0], 75), transparency=True, start=0, end=1)
+            await self.pasteImage(imgs, "assets/atk.png", (pos[0]+9, pos[1]+15), (90, 39), transparency=True, start=0, end=1)
+            await self.pasteImage(imgs, "assets/hp.png", (pos[0]+9, pos[1]+15+75), (66, 39), transparency=True, start=0, end=1)
             self.text(imgs, (pos[0]+111, pos[1]+15), "{}".format(export['watk']), fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
             self.text(imgs, (pos[0]+111, pos[1]+15+75), "{}".format(export['whp']), fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
+            await asyncio.sleep(0)
 
             # estimated damage
             pos = (pos[0]+bsize[0]+15, pos[1]+165)
@@ -868,35 +869,37 @@ class PartyBuilder():
                             mod_supp = int(str(m['value']).replace('＋', '+').replace('+', ''))
             if not do_crit: mod_crit = 0 # disable
             if (export['sps'] is not None and export['sps'] != '') or export['spsid'] is not None:
+                await asyncio.sleep(0)
                 # support summon
                 if export['spsid'] is not None:
                     supp = export['spsid']
                 else:
                     print("[WPN] |--> Looking up summon ID of", export['sps'], "on the wiki")
-                    supp = self.get_support_summon(client, export['sps'])
+                    supp = await self.get_support_summon(export['sps'])
                 if supp is None:
                     print("[WPN] |--> Support summon is", export['sps'], "(Note: searching its ID on gbf.wiki failed)")
-                    self.pasteImage(imgs, "assets/big_stat.png", (pos[0]-bsize[0]-15, pos[1]+9*2-15), (bsize[0], 150), transparency=True, start=0, end=1)
+                    await self.pasteImage(imgs, "assets/big_stat.png", (pos[0]-bsize[0]-15, pos[1]+9*2-15), (bsize[0], 150), transparency=True, start=0, end=1)
                     self.text(imgs, (pos[0]-bsize[0], pos[1]+9*2), ("サポーター" if self.japanese else "Support"), fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
                     if len(export['sps']) > 10: supp = export['sps'][:10] + "..."
                     else: supp = export['sps']
                     self.text(imgs, (pos[0]-bsize[0], pos[1]+9*2+60), supp, fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
                 else:
                     print("[WPN] |--> Support summon ID is", supp)
-                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/summon/m/{}.jpg".format(supp), (pos[0]-bsize[0]-15+9, pos[1]), (261, 150), start=0, end=1)
+                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/summon/m/{}.jpg".format(supp), (pos[0]-bsize[0]-15+9, pos[1]), (261, 150), start=0, end=1)
             # weapon grid stats
             est_width = ((size[0]*3)//2)
             for i in range(0, 2):
+                await asyncio.sleep(0)
                 if i == 0 or mod_crit == 0 or mod_crit == 100:
-                    self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width*i , pos[1]), (est_width-15, 150), transparency=True, start=0, end=1)
+                    await self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width*i , pos[1]), (est_width-15, 150), transparency=True, start=0, end=1)
                     self.text(imgs, (pos[0]+9+est_width*i, pos[1]+9), "{}".format(export['est'][i+1]), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=0, end=1)
                     do_crit = False
                 else:
-                    self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width , pos[1]), (est_width-15, 150), transparency=True, start=0, end=2)
+                    await self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width , pos[1]), (est_width-15, 150), transparency=True, start=0, end=2)
                     self.text(imgs, (pos[0]+9+est_width, pos[1]+9), "{}".format(export['est'][i+1]), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=0, end=1)
                     # skin.png
                     self.text(imgs, (pos[0]+9+est_width, pos[1]+9), "{}".format(mod_supp+((export['est'][i+1]-mod_supp)*150)//100), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=1, end=2)
-                    self.pasteImage(imgs, "assets/critical.png", (pos[0]+size[0]+est_width+70, pos[1]), (100, 100), transparency=True, start=1, end=2)
+                    await self.pasteImage(imgs, "assets/critical.png", (pos[0]+size[0]+est_width+70, pos[1]), (100, 100), transparency=True, start=1, end=2)
                     do_crit = True
                 if i == 0:
                     self.text(imgs, (pos[0]+est_width*i+15 , pos[1]+90), ("予測ダメ一ジ" if self.japanese else "Estimated"), fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
@@ -912,19 +915,20 @@ class PartyBuilder():
                         self.text(imgs, (pos[0]+est_width*i+66 , pos[1]+90), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
             # hp gauge
             if do_hp:
+                await asyncio.sleep(0)
                 hpratio = 100
                 for et in export['estx']:
                     if et[0].replace('txt-gauge-num ', '') == 'hp':
                         hpratio = et[1]
                         break
-                self.pasteImage(imgs, "assets/big_stat.png", (pos[0] ,pos[1]), (est_width-15, 150), transparency=True, start=1, end=2)
+                await self.pasteImage(imgs, "assets/big_stat.png", (pos[0] ,pos[1]), (est_width-15, 150), transparency=True, start=1, end=2)
                 if self.japanese:
                     self.text(imgs, (pos[0]+25 , pos[1]+25), "HP{}%".format(hpratio), fill=(255, 255, 255), font=self.fonts['medium'], start=1, end=2)
                 else:
                     self.text(imgs, (pos[0]+25 , pos[1]+25), "{}% HP".format(hpratio), fill=(255, 255, 255), font=self.fonts['medium'], start=1, end=2)
-                self.pasteImage(imgs, "assets/hp_bottom.png", (pos[0]+25 , pos[1]+90), (363, 45), transparency=True, start=1, end=2)
-                self.pasteImage(imgs, "assets/hp_mid.png", (pos[0]+25 , pos[1]+90), (int(363*int(hpratio)/100), 45), transparency=True, start=1, end=2, crop=(int(484*int(hpratio)/100), 23))
-                self.pasteImage(imgs, "assets/hp_top.png", (pos[0]+25 , pos[1]+90), (363, 45), transparency=True, start=1, end=2)
+                await self.pasteImage(imgs, "assets/hp_bottom.png", (pos[0]+25 , pos[1]+90), (363, 45), transparency=True, start=1, end=2)
+                await self.pasteImage(imgs, "assets/hp_mid.png", (pos[0]+25 , pos[1]+90), (int(363*int(hpratio)/100), 45), transparency=True, start=1, end=2, crop=(int(484*int(hpratio)/100), 23))
+                await self.pasteImage(imgs, "assets/hp_top.png", (pos[0]+25 , pos[1]+90), (363, 45), transparency=True, start=1, end=2)
                 
             return ('weapon', imgs)
         except Exception as e:
@@ -932,9 +936,8 @@ class PartyBuilder():
             imgs[1].close()
             return self.pexc(e)
 
-    def make_modifier(self, export):
+    async def make_modifier(self, export : dict) -> Union[str, tuple]:
         try:
-            client = self.initHTTPClient()
             imgs = [self.make_canvas()]
             print("[MOD] * Drawing Modifiers...")
             if self.babyl:
@@ -951,24 +954,26 @@ class PartyBuilder():
                 mod_off =[15, 27, 15]
                 mod_bg_size = [(185, 114), (222, 114), (258, 114)]
                 mod_size = [(150, 38), (174, 45), (241, 60)]
-                mod_text_off = [(35, 66), (45, 84), (60, 60)]
+                mod_text_off = [(35, 66), (45, 84), (60, 105)]
                 
                 # auto sizing
                 if len(export['mods'])>= limit[0]: idx = 0 # smallest size for more mods
                 elif len(export['mods'])>= limit[1]: idx = 1
                 else: idx = 2 # biggest size
                 
+                await asyncio.sleep(0)
                 # background
-                self.pasteImage(imgs, "assets/mod_bg.png", (offset[0]-mod_off[idx], offset[1]-mod_off[idx]//2), mod_bg_size[idx])
+                await self.pasteImage(imgs, "assets/mod_bg.png", (offset[0]-mod_off[idx], offset[1]-mod_off[idx]//2), mod_bg_size[idx])
                 try:
-                    self.pasteImage(imgs, "assets/mod_bg_supp.png", (offset[0]-mod_off[idx], offset[1]-mod_off[idx]+mod_bg_size[idx][1]), (mod_bg_size[idx][0], mod_text_off[idx][1] * (len(export['mods'])-1)))
-                    self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], offset[1]+mod_off[idx]+mod_text_off[idx][1]*(len(export['mods'])-1)), mod_bg_size[idx])
+                    await self.pasteImage(imgs, "assets/mod_bg_supp.png", (offset[0]-mod_off[idx], offset[1]-mod_off[idx]+mod_bg_size[idx][1]), (mod_bg_size[idx][0], mod_text_off[idx][1] * (len(export['mods'])-1)))
+                    await self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], offset[1]+mod_off[idx]+mod_text_off[idx][1]*(len(export['mods'])-1)), mod_bg_size[idx])
                 except:
-                    self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], 50+offset[1]+mod_off[idx]+mod_text_off[idx][1]*(len(export['mods'])-1)), mod_bg_size[idx])
+                    await self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], 50+offset[1]+mod_off[idx]+mod_text_off[idx][1]*(len(export['mods'])-1)), mod_bg_size[idx])
                 offset = (offset[0], offset[1])
                 # modifier draw
                 for m in export['mods']:
-                    self.dlAndPasteImage(client, imgs, "assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], offset, mod_size[idx], transparency=True)
+                    await asyncio.sleep(0)
+                    await self.dlAndPasteImage(imgs, "assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], offset, mod_size[idx], transparency=True)
                     self.text(imgs, (offset[0], offset[1]+mod_text_off[idx][0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.fonts[mod_font[idx]])
                     offset = (offset[0], offset[1]+mod_text_off[idx][1])
             return ('modifier', imgs)
@@ -983,31 +988,25 @@ class PartyBuilder():
         except:
             return None
 
-    def make_emp_start(self, executor, futures, export):
-        # split in two to speed up the process
-        print("[EMP] * Drawing Extended Masteries...")
-        # check the number of character in the party
-        ccount = 0
-        if self.babyl:
-            nchara = 12 # max number for babyl (mc included)
-        else:
-            nchara = 5 # max number of allies
-        for i in range(0, nchara):
-            if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
-            if i >= len(export['c']) or export['c'][i] is None: continue
-            ccount += 1
-        futures.append(executor.submit(self.make_emp, export, ccount, nchara, 0))
-        futures.append(executor.submit(self.make_emp, export, ccount, nchara, 1))
-
-    def make_emp(self, export, ccount, nchara, odd):
+    async def make_emp(self, export : dict) -> Union[str, tuple]:
         try:
-            client = self.initHTTPClient()
             imgs = [self.make_canvas()]
+            print("[EMP] * Drawing EMPs...")
             offset = (15, 0)
             eoffset = (15, 10)
             ersize = (80, 80)
             roffset = (-10, -10)
             rsize = (90, 90)
+            # get chara count
+            ccount = 0
+            if self.babyl:
+                nchara = 12 # max number for babyl (mc included)
+            else:
+                nchara = 5 # max number of allies
+            for i in range(0, nchara):
+                if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
+                if i >= len(export['c']) or export['c'][i] is None: continue
+                ccount += 1
             # set positions and offsets we'll need
             if ccount > 5:
                 if ccount > 8: compact = 2
@@ -1025,34 +1024,34 @@ class PartyBuilder():
                 esizes = [(133, 133), (100, 100)]
                 eroffset = (100, 15)
             bg_size = (imgs[0].size[0] - csize[0] - offset[0], csize[1]+shift)
-            loffset = self.addTuple(csize, (-150, -50))
-            poffset = self.addTuple(csize, (-110, -100))
-            pos = self.addTuple(offset, (0, offset[1]-csize[1]-shift))
+            loffset = self.add(csize, (-150, -50))
+            poffset = self.add(csize, (-110, -100))
+            pos = self.add(offset, (0, offset[1]-csize[1]-shift))
 
             # allies
             for i in range(0, nchara):
+                await asyncio.sleep(0)
                 if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
                 if i < len(export['c']) and export['c'][i] is not None:
-                    pos = self.addTuple(pos, (0, csize[1]+shift)) # set chara position
-                    if i % 2 == odd: continue
+                    pos = self.add(pos, (0, csize[1]+shift)) # set chara position
                     # portrait
                     cid = self.fix_character_look(export, i)
-                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/npc/{}/{}.jpg".format(portrait_type, cid), pos, csize)
+                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/npc/{}/{}.jpg".format(portrait_type, cid), pos, csize)
                     # rings
                     if export['cwr'][i] == True:
-                        self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.addTuple(pos, roffset), rsize, transparency=True)
+                        await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/augment2/icon_augment2_l.png", self.add(pos, roffset), rsize, transparency=True)
                     # level
-                    self.text(imgs, self.addTuple(pos, loffset), "Lv{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
+                    self.text(imgs, self.add(pos, loffset), "Lv{}".format(export['cl'][i]), fill=(255, 255, 255), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
                     # plus
                     if export['cp'][i] > 0:
-                        self.text(imgs, self.addTuple(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
+                        self.text(imgs, self.add(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
                     # background
-                    self.pasteImage(imgs, "assets/bg_emp.png", self.addTuple(pos, (csize[0], 0)), bg_size, transparency=True)
+                    await self.pasteImage(imgs, "assets/bg_emp.png", self.add(pos, (csize[0], 0)), bg_size, transparency=True)
                     # load EMP file
                     data = self.loadEMP(cid.split('_')[0])
                     if data is None: # skip if we can't find EMPs OR if the language doesn't match
                         print("[EMP] |--> Ally #{}: {}.json can't be loaded".format(i+1, cid.split('_')[0]))
-                        self.text(imgs, self.addTuple(pos, (csize[0]+50, csize[1]//3)), "EMP not set", fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
+                        self.text(imgs, self.add(pos, (csize[0]+50, csize[1]//3)), "EMP not set", fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
                         continue
                     if self.japanese != (data['lang'] == 'ja'):
                         print("[EMP] |--> Ally #{}: WARNING, language doesn't match".format(i+1))
@@ -1066,32 +1065,35 @@ class PartyBuilder():
                         idx = 0
                         off = 0
                     for j, emp in enumerate(data['emp']):
+                        await asyncio.sleep(0)
                         if compact:
-                            epos = self.addTuple(pos, (csize[0]+15+esizes[idx][0]*j, 5))
+                            epos = self.add(pos, (csize[0]+15+esizes[idx][0]*j, 5))
                         elif j % 5 == 0: # new line
-                            epos = self.addTuple(pos, (csize[0]+15+off, 7+esizes[idx][1]*j//5))
+                            epos = self.add(pos, (csize[0]+15+off, 7+esizes[idx][1]*j//5))
                         else:
-                            epos = self.addTuple(epos, (esizes[idx][0], 0))
+                            epos = self.add(epos, (esizes[idx][0], 0))
                         if emp.get('is_lock', False):
-                            self.dlAndPasteImage(client, imgs, "assets_en/img/sp/zenith/assets/ability/lock.png", epos, esizes[idx])
+                            await self.dlAndPasteImage(imgs, "assets_en/img/sp/zenith/assets/ability/lock.png", epos, esizes[idx])
                         else:
-                            self.dlAndPasteImage(client, imgs, "assets_en/img/sp/zenith/assets/ability/{}.png".format(emp['image']), epos, esizes[idx])
+                            await self.dlAndPasteImage(imgs, "assets_en/img/sp/zenith/assets/ability/{}.png".format(emp['image']), epos, esizes[idx])
                             if str(emp['current_level']) != "0":
-                                self.text(imgs, self.addTuple(epos, eoffset), str(emp['current_level']), fill=(235, 227, 250), font=self.fonts['medium'] if compact and nemp > 15 else self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0))
+                                self.text(imgs, self.add(epos, eoffset), str(emp['current_level']), fill=(235, 227, 250), font=self.fonts['medium'] if compact and nemp > 15 else self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0))
                             else:
-                                self.pasteImage(imgs, "assets/emp_unused.png", epos, esizes[idx], transparency=True)
+                                await self.pasteImage(imgs, "assets/emp_unused.png", epos, esizes[idx], transparency=True)
                     # ring EMP
                     for j, ring in enumerate(data['ring']):
+                        await asyncio.sleep(0)
                         if compact:
-                            epos = self.addTuple(pos, (csize[0]+15+(200+ersize[0])*j, csize[1]-ersize[1]-15))
+                            epos = self.add(pos, (csize[0]+15+(200+ersize[0])*j, csize[1]-ersize[1]-15))
                         else:
-                            epos = self.addTuple(pos, (csize[0]+50+off*2+esizes[idx][0]*5, 15+ersize[1]*j))
-                        self.pasteImage(imgs, "assets/{}.png".format(ring['type']['image']), epos, ersize, transparency=True)
+                            epos = self.add(pos, (csize[0]+50+off*2+esizes[idx][0]*5, 15+ersize[1]*j))
+                        await self.pasteImage(imgs, "assets/{}.png".format(ring['type']['image']), epos, ersize, transparency=True)
                         if compact:
-                            self.text(imgs, self.addTuple(epos, eroffset), ring['param']['disp_total_param'], fill=(255, 255, 95), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
+                            self.text(imgs, self.add(epos, eroffset), ring['param']['disp_total_param'], fill=(255, 255, 95), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
                         else:
-                            self.text(imgs, self.addTuple(epos, eroffset), ring['type']['name'] + " " + ring['param']['disp_total_param'], fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
+                            self.text(imgs, self.add(epos, eroffset), ring['type']['name'] + " " + ring['param']['disp_total_param'], fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
                     if compact != 2:
+                        await asyncio.sleep(0)
                         # calc pos
                         if compact:
                             apos1 = (pos[0] + csize[0] + 25, pos[1] + csize[1])
@@ -1103,40 +1105,40 @@ class PartyBuilder():
                         if data.get('awakening', None) is not None:
                             match data['awaktype']:
                                 case "Attack"|"攻撃":
-                                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/item/npcarousal/s/1.jpg", apos1, (65, 65))
+                                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/item/npcarousal/s/1.jpg", apos1, (65, 65))
                                 case "Defense"|"防御":
-                                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/item/npcarousal/s/2.jpg", apos1, (65, 65))
+                                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/item/npcarousal/s/2.jpg", apos1, (65, 65))
                                 case "Multiattack"|"連続攻撃":
-                                    self.dlAndPasteImage(client, imgs, "assets_en/img/sp/assets/item/npcarousal/s/3.jpg", apos1, (65, 65))
+                                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/item/npcarousal/s/3.jpg", apos1, (65, 65))
                                 case _: # "Balanced"|"バランス"or others
-                                    self.pasteImage(imgs, "assets/bal_awakening.png", apos1, (65, 65), transparency=True)
-                            self.text(imgs, self.addTuple(apos1, (75, 10)), "Lv" + data['awakening'].split('lv')[-1], fill=(198, 170, 240), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
+                                    await self.pasteImage(imgs, "assets/bal_awakening.png", apos1, (65, 65), transparency=True)
+                            self.text(imgs, self.add(apos1, (75, 10)), "Lv" + data['awakening'].split('lv')[-1], fill=(198, 170, 240), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
                         # domain
                         if data.get('domain', None) is not None:
                             if len(data['domain']) > 0:
-                                self.dlAndPasteImage(client, imgs, "assets_en/img/sp/ui/icon/ability/m/1426_3.png", apos2, (65, 65))
+                                await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/ability/m/1426_3.png", apos2, (65, 65))
                                 dlv = 0
                                 for d in data['domain']:
                                     if d[2] is not None: dlv += 1
-                                self.text(imgs, self.addTuple(apos2, (75, 10)),"Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
-            return ('emp{}'.format(odd), imgs)
+                                self.text(imgs, self.add(apos2, (75, 10)),"Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
+            return ('emp', imgs)
         except Exception as e:
             imgs[0].close()
             return self.pexc(e)
 
-    def text(self, imgs, *args, **kwargs):
+    def text(self, imgs : list, *args, **kwargs) -> None:
         start = kwargs.pop('start',0)
         end = kwargs.pop('end',9999999999)
         for i in range(start, min(len(imgs), end)):
             ImageDraw.Draw(imgs[i], 'RGBA').text(*args, **kwargs)
 
-    def multiline_text(self, imgs, *args, **kwargs):
+    def multiline_text(self, imgs : list, *args, **kwargs) -> None:
         start = kwargs.pop('start',0)
         end = kwargs.pop('end',9999999999)
         for i in range(start, min(len(imgs), end)):
             ImageDraw.Draw(imgs[i], 'RGBA').multiline_text(*args, **kwargs)
 
-    def saveImage(self, img, filename, resize):
+    def saveImage(self, img : 'Image', filename : str, resize : Optional[tuple] = None) -> Optional[str]:
         try:
             if resize is not None:
                 tmp = img.resize(self.definition)
@@ -1152,7 +1154,7 @@ class PartyBuilder():
     def clipboardToJSON(self):
         return json.loads(pyperclip.paste())
 
-    def make(self, fast=False): # main function
+    async def make(self, fast : bool = False) -> bool: # main function
         try:
             if not fast:
                 print("Instructions:")
@@ -1168,13 +1170,13 @@ class PartyBuilder():
                 return False
             if 'emp' in export: self.make_sub_emp(export)
             else:
-                self.make_sub_party(export)
-                if GBFTMR_instance is not None and self.settings.get('gbftmr_use', False):
+                await self.make_sub_party(export)
+                if self.gbftmr is not None and self.settings.get('gbftmr_use', False):
                     print("Do you want to make a thumbnail with this party? (Y to confirm)")
                     s = input()
                     if s.lower() == "y":
                         try:
-                            GBFTMR_instance.makeThumbnailManual(export)
+                            self.gbftmr.makeThumbnailManual(export)
                         except Exception as xe:
                             print(self.parent.pb.pexc(xe))
                             print("The above exception occured while trying to generate the thumbnail")
@@ -1187,32 +1189,26 @@ class PartyBuilder():
             self.running = False
             return False
 
-    def AlphaCompositeAndClose(self, base, paste):
+    def applyAlphaComposite(self, base : 'Image', paste : 'Image') -> 'Image':
         res = Image.alpha_composite(base, paste)
         base.close()
         return res
 
-    def completeBaseImages(self, imgs, do_skin, executor, futures_save, resize):
+    def completeBaseImages(self, imgs : list, do_skin : bool, resize : Optional[tuple] = None) -> None:
         # party - Merge the images and save the resulting image
-        imgs['party'][0] = self.AlphaCompositeAndClose(imgs['party'][0], imgs['summon'][0])
-        imgs['summon'][0].close()
-        imgs['party'][0] = self.AlphaCompositeAndClose(imgs['party'][0], imgs['weapon'][0])
-        imgs['weapon'][0].close()
-        imgs['party'][0] = self.AlphaCompositeAndClose(imgs['party'][0], imgs['modifier'][0])
-        imgs['modifier'][0].close()
-        futures_save.append(executor.submit(self.saveImage, imgs['party'][0], "party.png", resize))
+        for k in ['summon', 'weapon', 'modifier']:
+            imgs['party'][0] = self.applyAlphaComposite(imgs['party'][0], imgs[k][0])
+        self.saveImage(imgs['party'][0], "party.png", resize)
         # skin - Merge the images (if enabled) and save the resulting image
         if do_skin:
             tmp = imgs['party'][1]
             imgs['party'][1] = Image.alpha_composite(imgs['party'][0], tmp) # we don't close imgs['party'][0] in case its save process isn't finished
             tmp.close()
-            imgs['party'][1] = self.AlphaCompositeAndClose(imgs['party'][1], imgs['summon'][1])
-            imgs['party'][1] = self.AlphaCompositeAndClose(imgs['party'][1], imgs['weapon'][1])
-            futures_save.append(executor.submit(self.saveImage, imgs['party'][1], "skin.png", resize))
-        imgs['summon'][1].close()
-        imgs['weapon'][1].close()
+            for k in ['summon', 'weapon']:
+                imgs['party'][1] = self.applyAlphaComposite(imgs['party'][1], imgs[k][1])
+            self.saveImage(imgs['party'][1], "skin.png", resize)
 
-    def make_sub_party(self, export):
+    async def make_sub_party(self, export : dict) -> None:
         start = time.time()
         do_emp = self.settings.get('emp', False)
         do_skin = self.settings.get('skin', True)
@@ -1248,49 +1244,38 @@ class PartyBuilder():
                 self.fonts['mini'] = ImageFont.truetype("assets/font_english.ttf", 36, encoding="unic")
         self.prev_lang = self.japanese
         
-        with concurrent.futures.ProcessPoolExecutor(max_workers=6) as executor:
-            print("* Preparing Canvas...")
-            imgs = {}
-            print("* Starting Threads...")
-            futures = []
-            futures_save = []
+        tasks = []
+        imgs = {}
+        async with asyncio.TaskGroup() as tg:
+            print("* Starting...")
             if do_emp: # only start if enabled
-                self.make_emp_start(executor, futures, export)
-            futures.append(executor.submit(self.make_party, export))
-            futures.append(executor.submit(self.make_summon, export))
-            futures.append(executor.submit(self.make_weapon, export, do_hp, do_crit, do_opus))
-            futures.append(executor.submit(self.make_modifier, export))
-            res = []
-            for future in concurrent.futures.as_completed(futures):
-                res.append(future.result())
-            gen_done = False # flag to check if party and skin final image generation started
-            for r in res:
-                if isinstance(r, tuple):
-                    imgs[r[0]] = r[1]
-                else: # exception check
-                    raise Exception("Exception error and traceback:\n" + r)
-                # as soon as available, we start generating the final images
-                if not gen_done and 'party' in imgs and 'summon' in imgs and 'weapon' in imgs and 'modifier' in imgs:
-                    gen_done = True
-                    self.completeBaseImages(imgs, do_skin, executor, futures_save, resize)
-            # emp - save the resulting image (if enabled)
+                tasks.append(tg.create_task(self.make_emp(export)))
+            tasks.append(tg.create_task(self.make_party(export)))
+            tasks.append(tg.create_task(self.make_summon(export)))
+            tasks.append(tg.create_task(self.make_weapon(export, do_hp, do_crit, do_opus)))
+            tasks.append(tg.create_task(self.make_modifier(export)))
+        for t in tasks:
+            r = t.result()
+            if isinstance(r, tuple):
+                imgs[r[0]] = r[1]
+            else: # exception check
+                raise Exception("Exception error and traceback:\n" + r)
+            # as soon as available, we start generating the final images
+        async with asyncio.TaskGroup() as tg:
+            tasks.append(tg.create_task(asyncio.to_thread(self.completeBaseImages, imgs, do_skin, resize)))
             if do_emp:
-                emp_img = self.AlphaCompositeAndClose(imgs['emp0'][0], imgs['emp1'][0])
-                futures_save.append(executor.submit(self.saveImage, emp_img, "emp.png", resize))
-                imgs['emp1'][0].close()
-            res = []
-            for future in concurrent.futures.as_completed(futures_save):
-                res.append(future.result())
-            for r in res: # exception check
-                if r is not None: raise Exception(r)
-            for i in imgs['party']: i.close()
-            try: emp_img.close()
-            except: pass
+                tasks.append(tg.create_task(asyncio.to_thread(self.saveImage, imgs['emp'][0], "emp.png", resize)))
+        for t in tasks:
+            r = t.result()
+        for k, v in imgs.items():
+            for i in v:
+                try: i.close()
+                except: pass
         end = time.time()
         print("* Task completed with success!")
         print("* Ended in {:.2f} seconds".format(end - start))
 
-    def make_sub_emp(self, export):
+    def make_sub_emp(self, export : dict) -> None:
         if 'emp' not in export or 'id' not in export or 'ring' not in export: raise Exception("Invalid EMP data, check your bookmark")
         print("* Saving EMP for Character", export['id'], "...")
         print("*", len(export['emp']), "Extended Masteries")
@@ -1308,7 +1293,7 @@ class PartyBuilder():
             json.dump(export, outfile)
         print("* Task completed with success!")
 
-    def settings_menu(self):
+    async def settings_menu(self) -> None:
         while True:
             print("")
             print("Settings:")
@@ -1344,7 +1329,7 @@ class PartyBuilder():
                     tmp = self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net')
                     self.settings['endpoint'] = url
                     try:
-                        self.retrieveImage("assets_en/img/sp/zenith/assets/ability/1.png", forceDownload=True)
+                        await self.retrieveImage("assets_en/img/sp/zenith/assets/ability/1.png", forceDownload=True)
                         print("Asset Server test: Success")
                         print("Asset Server set to:", url)
                     except:
@@ -1364,9 +1349,9 @@ class PartyBuilder():
                     folder = folder.replace('\\', '/').replace('//', '/')
                     if not folder.endswith('/'): folder += '/'
                     self.settings['gbftmr_path'] = folder
-                    if GBFTMR_instance is not None:
+                    if self.gbftmr is not None:
                         print("The change will take effect the next time")
-                    elif importGBFTMR(self.settings['gbftmr_path']):
+                    elif self.importGBFTMR(self.settings['gbftmr_path']):
                         print("GBFTMR is imported with success")
                     else:
                         print("Failed to import GBFTMR")
@@ -1379,34 +1364,122 @@ class PartyBuilder():
             else:
                 return
 
-    def checkEMP(self): # check if emp folder exists (and create it if needed)
+    def checkEMP(self) -> None: # check if emp folder exists (and create it if needed)
         if not os.path.isdir('emp'):
             os.mkdir('emp')
 
-    def emptyEMP(self): # delete the emp folder
+    def emptyEMP(self) -> None: # delete the emp folder
         try:
             shutil.rmtree('emp')
             print("Deleted the emp folder")
         except:
             print("Failed to delete the emp folder")
 
-    def checkDiskCache(self): # check if cache folder exists (and create it if needed)
+    def checkDiskCache(self) -> None: # check if cache folder exists (and create it if needed)
         if not os.path.isdir('cache'):
             os.mkdir('cache')
 
-    def emptyCache(self): # delete the cache folder
+    def emptyCache(self) -> None: # delete the cache folder
         try:
             shutil.rmtree('cache')
             print("Deleted the cache folder")
         except:
             print("Failed to delete the cache folder")
 
-    def cpyBookmark(self):
+    def cpyBookmark(self) -> None:
         # check bookmarklet.txt for a more readable version
         # note: when updating it in this piece of code, you need to double the \
         pyperclip.copy("javascript:(function(){if(window.location.hash.startsWith(\"#party/index/\")||window.location.hash.startsWith(\"#party/expectancy_damage/index\")||window.location.hash.startsWith(\"#tower/party/index/\")||(window.location.hash.startsWith(\"#event/sequenceraid\")&&window.location.hash.indexOf(\"/party/index/\")>0)&&!window.location.hash.startsWith(\"#tower/party/expectancy_damage/index/\")){let obj={ver:1,lang:window.Game.lang,p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],pce:window.Game.view.deck_model.attributes.deck.pc.param.attribute,c:[],ce:[],ci:[],cb:[window.Game.view.deck_model.attributes.deck.pc.skill.count],cst:[],cn:[],cl:[],cs:[],cp:[],cwr:[],cpl:[window.Game.view.deck_model.attributes.deck.pc.shield_id, window.Game.view.deck_model.attributes.deck.pc.skin_shield_id],fpl:[window.Game.view.deck_model.attributes.deck.pc.familiar_id, window.Game.view.deck_model.attributes.deck.pc.skin_familiar_id],qs:null,cml:window.Game.view.deck_model.attributes.deck.pc.job.param.master_level,cbl:window.Game.view.deck_model.attributes.deck.pc.job.param.perfection_proof_level,s:[],sl:[],ss:[],se:[],sp:[],ssm:window.Game.view.deck_model.attributes.deck.pc.skin_summon_id,w:[],wsm:[window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id, window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id_2],wl:[],wsn:[],wll:[],wp:[],wakn:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage],estx:[],mods:window.Game.view.deck_model.attributes.deck.pc.damage_info.effect_value_info,sps:(window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name?window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name:null),spsid:(Game.view.expectancyDamageData?(Game.view.expectancyDamageData.imageId?Game.view.expectancyDamageData.imageId:null):null)};let qid = JSON.stringify(Game.view.deck_model.attributes.deck.pc.quick_user_summon_id);if(qid != null){for(const i in Game.view.deck_model.attributes.deck.pc.summons){if(Game.view.deck_model.attributes.deck.pc.summons[i].param != null && Game.view.deck_model.attributes.deck.pc.summons[i].param['id'] == qid){obj.qs = parseInt(i)-1;break;}}};;try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cb.push(e.param?e.skill.count:null);obj.cst.push(e.param?e.param.style:1);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cb.push(e.param?e.skill.count:null);obj.cst.push(e.param?e.param.style:1);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.sub_summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?e.param.image_id:null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.wakn.push(e.param?e.param.arousal:null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});Array.from(document.getElementsByClassName(\"txt-gauge-num\")).forEach(x=>{obj.estx.push([x.classList[1], x.textContent])});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");} else if(window.location.hash.startsWith(\"#zenith/npc\")||window.location.hash.startsWith(\"#tower/zenith/npc\")||/^#event\/sequenceraid\d+\/zenith\/npc/.test(window.location.hash)){let obj={ver:1,lang:window.Game.lang,id:parseInt(window.Game.view.npcId,10),emp:window.Game.view.bonusListModel.attributes.bonus_list,ring:window.Game.view.npcaugmentData.param_data,awakening:null,awaktype:null,domain:[]};try{obj.awakening=document.getElementsByClassName(\"prt-current-awakening-lv\")[0].firstChild.className;obj.awaktype=document.getElementsByClassName(\"prt-arousal-form-info\")[0].children[1].textContent;domains = document.getElementById(\"prt-domain-evoker-list\").getElementsByClassName(\"prt-bonus-detail\");for(let i=0;i<domains.length;++i){obj.domain.push([domains[i].children[0].className, domains[i].children[1].textContent, domains[i].children[2]?domains[i].children[2].textContent:null]);}}catch(error){};let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}else{alert('Please go to a GBF Party or EMP screen');}}())")
 
-    def run(self): # old command line menu
+    def importGBFTMR(self, path : str) -> bool:
+        try:
+            if self.gbftmr is not None: return True
+            module_name = "gbftmr.py"
+
+            spec = importlib.util.spec_from_file_location("GBFTMR.gbftmr", path + module_name)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules["GBFTMR.gbftmr"] = module
+            spec.loader.exec_module(module)
+            self.gbftmr = module.GBFTMR(path)
+            if self.gbftmr.version[0] >= 1 and self.gbftmr.version[1] >= 25:
+                return True
+            self.gbftmr = None
+            return False
+        except:
+            self.gbftmr = None
+            return False
+
+    def cmpVer(self, mver : str, tver : str) -> bool: # compare version strings, True if mver greater or equal, else False
+        me = mver.split('.')
+        te = tver.split('.')
+        for i in range(0, min(len(me), len(te))):
+            if int(me[i]) < int(te[i]):
+                return False
+            elif int(me[i]) > int(te[i]):
+                return True
+        return True
+
+    async def update_check(self, command_line : bool = True) -> bool:
+        interacted = False
+        if self.settings.get('update', False):
+            try:
+                response = await self.client.get("https://raw.githubusercontent.com/MizaGBF/GBFPIB/main/manifest.json")
+                async with response:
+                    if response.status != 200: raise Exception()
+                    manifest = await response.json(content_type=None)
+                    if not self.cmpVer(self.manifest.get('version', '10.0'), manifest.get('version', '10.1')):
+                        interacted = True
+                        if (command_line and input("An update is available.\nCurrent Version: {}\nNew Version: {}\nUpdate now? (type 'y' to accept):".format(self.manifest.get('version', 'Unknown version 10'), manifest.get('version', 'Unknown version 10 or higher'))).lower() == 'y') or (not command_line and messagebox.askyesno(title="Update", message="An update is available.\nCurrent Version: {}\nNew Version: {}\nUpdate now?".format(self.manifest.get('version', 'Unknown version 10'), manifest.get('version', 'Unknown version 10 or higher')))):
+                            try:
+                                response = await self.client.get("https://github.com/MizaGBF/GBFPIB/archive/refs/heads/main.zip", allow_redirects=True)
+                                async with response:
+                                    if response.status != 200: raise Exception()
+                                    with BytesIO(await response.read()) as zip_content:
+                                        with ZipFile(zip_content, 'r') as zip_ref:
+                                            # list files
+                                            folders = set()
+                                            file_list = zip_ref.namelist()
+                                            for file in file_list:
+                                                if ".git" in file: continue
+                                                folders.add("/".join(file.split('/')[1:-1]))
+                                            # make folders (if missing)
+                                            for path in folders:
+                                                #if path == "": continue
+                                                path = "test/" + path
+                                                os.makedirs(os.path.dirname(path if path.endswith("/") else path+"/"), exist_ok=True)
+                                            # write files
+                                            for file in file_list:
+                                                if ".git" in file: continue
+                                                if file.split("/")[-1] in ["settings.json"] or file.endswith("/"): continue
+                                                path = "/".join(file.split('/')[1:])
+                                                with open("test/"+path, mode="wb") as f:
+                                                    f.write(zip_ref.read(file))
+                                if command_line:
+                                    print("Update successful.\nThe application will now restart.\nMake sure to update your Bookmarklet if needed.")
+                                    input("Press a key to continue:")
+                                else:
+                                    messagebox.showinfo("Update", "Update successful.\nThe application will now restart.\nMake sure to update your Bookmarklet if needed.")
+                                try:
+                                    if int(self.manifest['requirements']) < int(manifest['requirements']):
+                                        self.manifest = manifest
+                                        manifest['pending'] = True
+                                        self.saveManifest()
+                                except:
+                                    pass
+                                self.restart()
+                                exit(0)
+                            except Exception as eb:
+                                raise eb
+            except Exception as ea:
+                print(self.pexc(ea))
+                if command_line:
+                    print("An error occured.\nYou might need to update manually.")
+                else:
+                    messagebox.showerror("Error", "An error occured: {}\nYou might need to update manually.".format(ea))
+                interacted = True
+        return interacted
+
+    async def cmd(self) -> None: # old command line menu
         while True:
             try:
                 print("")
@@ -1417,7 +1490,7 @@ class PartyBuilder():
                 print("[Any] Exit")
                 s = input()
                 if s == "0":
-                    self.make()
+                    await self.make()
                 elif s == "1":
                     self.cpyBookmark()
                     print("Bookmarklet copied!")
@@ -1427,7 +1500,7 @@ class PartyBuilder():
                     print("3) Change the name if you want")
                     print("4) Paste the code in the url field")
                 elif s == "2":
-                    self.settings_menu()
+                    await self.settings_menu()
                     self.save()
                 else:
                     self.save()
@@ -1437,85 +1510,114 @@ class PartyBuilder():
                 self.save()
                 return
 
-class GBFTMR_Select(Tk.Toplevel):
-    def __init__(self, parent):
-        # window
-        self.parent = parent
-        self.export = self.parent.gbftmr_export
-        self.parent.gbftmr_export = None
-        Tk.Toplevel.__init__(self,parent)
-        self.title("GBFTMR")
-        self.resizable(width=False, height=False) # not resizable
-        template_list = GBFTMR_instance.getTemplateList()
-        self.tempopt_var = Tk.StringVar()
-        self.tempopt_var.set(template_list[0])
-        Tk.Label(self, text="Template").grid(row=0, column=0, columnspan=1, sticky="w")
-        self.tempopt = Tk.OptionMenu(self, self.tempopt_var, *template_list, command=self.update_UI)
-        self.tempopt.grid(row=0, column=1, columnspan=3, stick="ws")
+    def restart(self) -> None:
+        subprocess.Popen([sys.executable] + sys.argv)
+        exit(0)
 
-        self.make_bt = Tk.Button(self, text="Make", command=self.confirm)
+    async def start(self) -> None:
+        async with self.init_client():
+            if '-fast' in sys.argv:
+                await self.make(fast=True)
+                if '-nowait' not in sys.argv:
+                    print("Closing in 10 seconds...")
+                    time.sleep(10)
+            elif '-cmd' in sys.argv:
+                await self.update_check(True)
+                await self.cmd()
+            else:
+                await self.update_check()
+                await (Interface(asyncio.get_event_loop(), self).run())
+
+class GBFTMR_Select(Tk.Tk):
+    def __init__(self, interface : 'Interface', loop, export : dict) -> None:
+        Tk.Tk.__init__(self,None)
+        self.parent = None
+        self.interface = interface
+        self.loop = loop
+        self.export = export
+        self.title("GBFTMR")
+        self.iconbitmap('icon.ico')
+        self.resizable(width=False, height=False) # not resizable
+        template_list = self.interface.pb.gbftmr.getTemplateList()
+        Tk.Label(self, text="Generate a Video Thumbnail with GBFTMR").grid(row=0, column=0, columnspan=4, sticky="w")
+        Tk.Label(self, text="Template").grid(row=1, column=0, columnspan=1, sticky="w")
+        self.tempopt = ttk.Combobox(self, values=template_list)
+        self.tempopt.bind("<<ComboboxSelected>>", self.update_UI)
+        self.tempopt.set(template_list[0])
+        self.tempopt.grid(row=1, column=1, columnspan=3, stick="ws")
+
+        self.make_bt = Tk.Button(self, text="Make", command=lambda: self.loop.create_task(self.confirm()))
         self.make_bt.grid(row=90, column=0, columnspan=2, sticky="we")
         Tk.Button(self, text="Cancel", command=self.cancel).grid(row=90, column=2, columnspan=2, sticky="we")
         
         self.options = None
         self.optelems = []
         self.update_UI()
+        self.apprunning = True
+        self.result = False
         
         self.protocol("WM_DELETE_WINDOW", self.cancel)
 
-    def update_UI(self, *args):
-        self.options = GBFTMR_instance.getThumbnailOptions(self.tempopt_var.get())
+    async def run(self) -> bool:
+        while self.apprunning:
+            self.update()
+            await asyncio.sleep(0.02)
+        try: self.destroy()
+        except: pass
+        return self.result
+
+    def update_UI(self, *args) -> None:
+        self.options = self.interface.pb.gbftmr.getThumbnailOptions(self.tempopt.get())
         for t in self.optelems:
             t[0].destroy()
             t[1].destroy()
         self.optelems = []
         for i, e in enumerate(self.options["choices"]):
             label = Tk.Label(self, text=e[0])
-            label.grid(row=1+i, column=0, columnspan=2, sticky="w")
+            label.grid(row=2+i, column=0, columnspan=2, sticky="w")
             if e[1] is None:
-                var = Tk.StringVar()
-                widget = Tk.Entry(self, textvariable=var)
-                widget.grid(row=1+i, column=2, columnspan=2, sticky="we")
+                widget = Tk.Entry(self)
+                widget.grid(row=2+i, column=2, columnspan=2, sticky="we")
             else:
-                var = Tk.StringVar()
-                var.set(e[1][0])
-                widget = Tk.OptionMenu(self, var, *e[1])
-                widget.grid(row=1+i, column=2, columnspan=2, sticky="we")
-            self.optelems.append((label, widget, var))
+                widget = ttk.Combobox(self, values=e[1])
+                widget.set(e[1][0])
+                widget.grid(row=2+i, column=2, columnspan=2, sticky="we")
+            self.optelems.append((label, widget))
 
-    def confirm(self):
+    async def confirm(self) -> None:
         for i in range(len(self.optelems)):
             if self.options["choices"][i][1] is None:
-                self.options["choices"][i][-1](self.options, self.options["choices"][i][-2], self.optelems[i][2].get())
+                choice = self.optelems[i][1].get()
             else:
                 for j in range(len(self.options["choices"][i][1])):
-                    if self.options["choices"][i][1][j] == self.optelems[i][2].get():
+                    if self.options["choices"][i][1][j] == self.optelems[i][1].get():
                         break
-                self.options["choices"][i][-1](self.options, self.options["choices"][i][-2], self.options["choices"][i][2][j])
+                choice = None if self.options["choices"][i][1][j] == "None" else self.options["choices"][i][1][j]
+            self.options["choices"][i][-1](self.options, self.options["choices"][i][-2], choice)
         self.options["settings"]["gbfpib"] = self.export
-        self.cancel()
-        try:
-            GBFTMR_instance.makeThumbnail(self.options["settings"], self.options["template"])
-        except Exception as e:
-            print(self.parent.pb.pexc(e))
-            self.parent.events.append(("Error", "An error occured, impossible to generate the thumbnail"))
-
-    def cancel(self):
-        self.parent.gbftmr_state = 3
         self.destroy()
+        try:
+            await asyncio.to_thread(self.interface.pb.gbftmr.makeThumbnail, self.options["settings"], self.options["template"])
+            self.result = True
+        except Exception as e:
+            print(self.interface.pb.pexc(e))
+            self.interface.events.append(("Error", "An error occured, impossible to generate the thumbnail"))
+        self.cancel()
+
+    def cancel(self) -> None:
+        self.apprunning = False
 
 class Interface(Tk.Tk): # interface
     BW = 15
     BH = 1
-    def __init__(self, pb):
+    def __init__(self, loop, pb : PartyBuilder) -> None:
         Tk.Tk.__init__(self,None)
         self.parent = None
+        self.loop = loop
         self.pb = pb
         self.apprunning = True
-        self.gbftmr_state = 0
-        self.gbftmr_export = None
         self.iconbitmap('icon.ico')
-        self.title("GBFPIB {}".format(SVER))
+        self.title("GBFPIB {}".format(self.pb.manifest.get('version', '')))
         self.resizable(width=False, height=False) # not resizable
         self.protocol("WM_DELETE_WINDOW", self.close) # call close() if we close the window
         self.to_disable = []
@@ -1525,15 +1627,15 @@ class Interface(Tk.Tk): # interface
         tabs.grid(row=1, column=0, rowspan=2, sticky="nwe")
         tabcontent = Tk.Frame(tabs)
         tabs.add(tabcontent, text="Run")
-        self.to_disable.append(Tk.Button(tabcontent, text="Build Images", command=self.build, width=self.BW, height=self.BH))
+        self.to_disable.append(Tk.Button(tabcontent, text="Build Images", command=lambda: self.loop.create_task(self.build()), width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=0, column=0, sticky="we")
         self.to_disable.append(Tk.Button(tabcontent, text="Add EMP", command=self.add_emp, width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=1, column=0, sticky="we")
         self.to_disable.append(Tk.Button(tabcontent, text="Bookmark", command=self.bookmark, width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=2, column=0, sticky="we")
-        self.to_disable.append(Tk.Button(tabcontent, text="Set Server", command=self.setserver, width=self.BW, height=self.BH))
+        self.to_disable.append(Tk.Button(tabcontent, text="Set Server", command=lambda: self.loop.create_task(self.setserver()), width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=3, column=0, sticky="we")
-        self.to_disable.append(Tk.Button(tabcontent, text="Check Update", command=self.checkUpdate, width=self.BW, height=self.BH))
+        self.to_disable.append(Tk.Button(tabcontent, text="Check Update", command=lambda: self.loop.create_task(self.update_check()), width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=4, column=0, sticky="we")
         
         # setting part
@@ -1600,36 +1702,27 @@ class Interface(Tk.Tk): # interface
         Tk.Label(tabcontent, text="Enable").grid(row=2, column=0)
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.gbftmr_var, command=self.toggleGBFTMR))
         self.to_disable[-1].grid(row=2, column=1)
-        self.to_disable.append(Tk.Button(tabcontent, text="Make Thumbnail", command=self.runGBFTMR, width=self.BW, height=self.BH))
+        self.to_disable.append(Tk.Button(tabcontent, text="Make Thumbnail", command=lambda: self.loop.create_task(self.runGBFTMR()), width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=3, column=0, columnspan=2, sticky="we")
-        if GBFTMR_instance is not None:
+        if self.pb.gbftmr is not None:
             self.gbftmr_status.config(text="Imported")
         
         # other
         self.status = Tk.Label(self, text="Starting")
         self.status.grid(row=0, column=0, sticky="w")
         
-        self.thread = None
+        self.process_running = False
         self.events = []
-        
-        if self.pb.settings.get('update', True):
-            self.autoUpdate()
 
-    def run(self):
+    async def run(self) -> None:
         # main loop
         run_flag = False
         while self.apprunning:
-            if self.gbftmr_state == 1:
-                if messagebox.askyesno(title="Thumbnail", message="Do you want to make a thumbnail?"):
-                    self.gbftmr_state = 2
-                    GBFTMR_Select(self)
-                else:
-                    self.gbftmr_state = 3
             if len(self.events) > 0:
                 ev = self.events.pop(0)
                 if ev[0] == "Info": messagebox.showinfo(ev[0], ev[1])
                 elif ev[0] == "Error": messagebox.showerror(ev[0], ev[1])
-            if self.thread is None:
+            if not self.process_running:
                 if run_flag:
                     for e in self.to_disable:
                         e.configure(state=Tk.NORMAL)
@@ -1642,89 +1735,87 @@ class Interface(Tk.Tk): # interface
                     run_flag = True
                 self.status.config(text="Running", background='#edc7c7')
             self.update()
-            time.sleep(0.02)
-
-    def close(self): # called by the app when closed
+            await asyncio.sleep(0.02)
         self.pb.save()
-        self.apprunning = False
         self.destroy() # destroy the window
 
-    def build(self):
-        if self.thread is not None:
+    def close(self) -> None: # called by the app when closed
+        self.apprunning = False
+
+    async def build(self) -> None:
+        if self.process_running:
             messagebox.showinfo("Info", "Wait for the current process to finish")
             return
-        self.thread = threading.Thread(target=self.buildThread)
-        self.thread.daemon = True
-        self.thread.start()
+        await self.make()
 
-    def buildThread(self, thumbnailOnly=False):
+    async def make(self, thumbnailOnly : bool = False) -> None:
         try:
-            self.gbftmr_state = 0
-            wait = False
+            self.process_running = True
             gbftmr_use = self.pb.settings.get('gbftmr_use', False)
             export = self.pb.clipboardToJSON()
             if export.get('ver', 0) < 1:
-                self.gbftmr_state = 0
                 self.events.append(("Error", "Your bookmark is outdated, please update it!"))
                 self.thread = None
                 return
-            if GBFTMR_instance and gbftmr_use:
-                self.gbftmr_export = export
-                self.gbftmr_state = 1
-                wait = True
-            if not thumbnailOnly:
-                self.pb.make_sub_party(export)
-            while wait and self.gbftmr_state != 3:
-                time.sleep(1)
-            self.gbftmr_state = 0
-            if not thumbnailOnly:
-                self.events.append(("Info", "Image(s) generated with success"))
-            else:
-                self.events.append(("Info", "Thumbnail generated with success"))
-        except:
-            self.gbftmr_state = 0
+            
+            tasks = []
+            async with asyncio.TaskGroup() as tg:
+                if not thumbnailOnly:
+                    tasks.append(tg.create_task(self.pb.make_sub_party(export)))
+                if self.pb.gbftmr and gbftmr_use:
+                    tasks.append(tg.create_task(GBFTMR_Select(self, self.loop, export).run()))
+            result = True
+            for t in tasks:
+                result = t.result() and result
+            if result:
+                if not thumbnailOnly:
+                    self.events.append(("Info", "Image(s) generated with success"))
+                else:
+                    self.events.append(("Info", "Thumbnail generated with success"))
+        except Exception as e:
+            print(self.pb.pexc(e))
             self.events.append(("Error", "An error occured, did you press the bookmark?"))
-        self.thread = None
+        self.process_running = False
 
-    def add_emp(self):
+    def add_emp(self) -> None:
         try:
             self.pb.make_sub_emp(self.pb.clipboardToJSON())
             self.events.append(("Info", "EMP saved with success"))
         except:
             self.events.append(("Error", "An error occured, did you press the bookmark?"))
 
-    def bookmark(self):
+    def bookmark(self) -> None:
         self.pb.cpyBookmark()
         messagebox.showinfo("Info", "Bookmarklet copied!\nTo setup on chrome:\n1) Make a new bookmark (of GBF for example)\n2) Right-click and edit\n3) Change the name if you want\n4) Paste the code in the url field")
 
-    def qual_changed(self, *args):
+    def qual_changed(self, *args) -> None:
         self.pb.settings['quality'] = args[0]
 
-    def toggleCaching(self):
+    def toggleCaching(self) -> None:
         self.pb.settings['caching'] = (self.cache_var.get() != 0)
         
-    def toggleSkin(self):
+    def toggleSkin(self) -> None:
         self.pb.settings['skin'] = (self.skin_var.get() != 0)
 
-    def toggleEMP(self):
+    def toggleEMP(self) -> None:
         self.pb.settings['emp'] = (self.emp_var.get() != 0)
 
-    def toggleUpdate(self):
+    def toggleUpdate(self) -> None:
         self.pb.settings['update'] = (self.update_var.get() != 0)
 
-    def toggleHP(self):
+    def toggleHP(self) -> None:
         self.pb.settings['hp'] = (self.hp_var.get() != 0)
 
-    def toggleCrit(self):
+    def toggleCrit(self) -> None:
         self.pb.settings['crit'] = (self.crit_var.get() != 0)
 
-    def toggleOpus(self):
+    def toggleOpus(self) -> None:
         self.pb.settings['opus'] = (self.opus_var.get() != 0)
 
-    def toggleGBFTMR(self):
+    def toggleGBFTMR(self) -> None:
         self.pb.settings['gbftmr_use'] = (self.gbftmr_var.get() != 0)
 
-    def setserver(self):
+    async def setserver(self) -> None:
         url = simpledialog.askstring("Set Asset Server", "Input the URL of the Asset Server to use\nLeave blank to reset to the default setting.")
         if url is not None:
             if url == '': url = 'prd-game-a-granbluefantasy.akamaized.net/'
@@ -1733,100 +1824,38 @@ class Interface(Tk.Tk): # interface
             tmp = self.pb.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net')
             self.pb.settings['endpoint'] = url
             try:
-                self.pb.retrieveImage("assets_en/img/sp/zenith/assets/ability/1.png", forceDownload=True)
+                await self.pb.retrieveImage("assets_en/img/sp/zenith/assets/ability/1.png", forceDownload=True)
                 messagebox.showinfo("Info", "Asset Server set with success to:\n" + url)
             except:
                 self.pb.settings['endpoint'] = tmp
                 messagebox.showerror("Error", "Failed to find the specified server:\n" + url + "\nCheck if the url is correct")
 
-    def checkUpdate(self):
-        self.autoUpdate(silent=False)
-
-    def setGBFTMR(self):
-        global GBFTMR_instance
+    def setGBFTMR(self) -> None:
         folder_selected = filedialog.askdirectory(title="Select the GBFTMR folder")
         if folder_selected == '': return
         self.pb.settings['gbftmr_path'] = folder_selected + "/"
-        if GBFTMR_instance is not None:
+        if self.pb.gbftmr is not None:
             messagebox.showinfo("Info", "GBFTMR is already loaded, the change will take affect at the next startup")
         else:
-            importGBFTMR(self.pb.settings.get('gbftmr_path', ''))
-            if GBFTMR_instance is not None:
+            self.pb.importGBFTMR(self.pb.settings.get('gbftmr_path', ''))
+            if self.pb.gbftmr is not None:
                 messagebox.showinfo("Info", "Imported GBFTMR with success")
                 self.gbftmr_status.config(text="Imported")
             else:
                 messagebox.showinfo("Error", "Failed to import GBFTMR")
 
-    def runGBFTMR(self):
-        if GBFTMR_instance:
-            if self.thread is not None:
+    async def runGBFTMR(self) -> None:
+        if self.pb.gbftmr:
+            if self.process_running:
                 messagebox.showinfo("Info", "Wait for the current process to finish")
                 return
-            self.thread = threading.Thread(target=self.buildThread, args=(True,))
-            self.thread.daemon = True
-            self.thread.start()
+            await self.make(True)
         else:
             self.events.append(("Error", "GBFTMR isn't loaded"))
 
-    def autoUpdate(self, silent=True):
-        update_started = False
-        try:
-            response = httpx.get("https://raw.githubusercontent.com/MizaGBF/GBFPIB/main/manifest.json")
-            if response.status_code != 200: raise Exception()
-            manifest = response.json()
-            if not cmpVer(SVER, manifest['version']):
-                # python 3.12 check for future v10
-                try:
-                    if int(manifest['version'].split('.')[0]) > 9 and int(platform.python_version().split('.')[1]) < 12:
-                        messagebox.showinfo("Info", "An update is available but it requires Python 3.12.\nPlease update your python installation if you care about future GBFPIB updates.\nYou can disable auto-update otherwise.")
-                        return
-                except:
-                    pass
-                if messagebox.askyesno(title="Update", message="An update is available.\nUpdate now?"):
-                    update_started = True
-                    response = httpx.get("https://github.com/MizaGBF/GBFPIB/archive/refs/heads/main.zip", follow_redirects=True)
-                    if response.status_code != 200:
-                        messagebox.showinfo("Error", "Can't download the new version.\nFeel free to do it manually by going to https://github.com/MizaGBF/GBFPIB")
-                        return
-                    myzip = ZipFile(BytesIO(response.content))
-                    myzip.extractall()
-                    root = os.getcwd()
-                    shutil.rmtree(os.path.join(root, "assets"))
-                    for filename in os.listdir(os.path.join(root, "GBFPIB-main")):
-                        shutil.move(os.path.join(root, "GBFPIB-main", filename), os.path.join(root, filename))
-                    shutil.rmtree(os.path.join(root, "GBFPIB-main"))
-                    if not cmpVer(RVER, manifest['requirements']):
-                        try:
-                            manifestPending(True)
-                            messagebox.showinfo("Info", "Update successful\nThe app will now restart and new requirements will be installed.")
-                        except:
-                            messagebox.showinfo("Info", "Update successful but new requirements couldn't be installed.\nTry to do 'python -m pip install -r requirements.txt' from a command prompt in the same folder.\nThe app will now restart.")
-                    else:
-                        messagebox.showinfo("Info", "Update successful and the app will now restart.")
-                    os.execv(sys.executable, [sys.executable, __file__] + sys.argv)
-                    exit(0)
-            elif not silent:
-                messagebox.showinfo("Info", "You already have the latest version.")
-        except:
-            if update_started:
-                messagebox.showinfo("Error", "An unexpected error occured.")
-                try:
-                    shutil.rmtree(os.path.join(root, "GBFPIB-main"))
-                except:
-                    pass
-            elif not silent:
-                messagebox.showinfo("Error", "An unexpected error occured.\nTry again later or update manually.")
+    async def update_check(self) -> None:
+        if not await self.pb.update_check():
+            messagebox.showinfo("Info", "GBFPIB is up to date")
 
-# entry point
 if __name__ == "__main__":
-    pb = PartyBuilder('-debug' in sys.argv)
-    if '-fast' in sys.argv:
-        pb.make(fast=True)
-        if '-nowait' not in sys.argv:
-            print("Closing in 10 seconds...")
-            time.sleep(10)
-    elif '-cmd' in sys.argv:
-        pb.run()
-    else:
-        ui = Interface(pb)
-        ui.run()
+    asyncio.run(PartyBuilder('-debug' in sys.argv).start())
