@@ -1593,9 +1593,10 @@ class GBFTMR_Select(Tk.Tk):
                 choice = self.optelems[i][1].get()
             else:
                 for j in range(len(self.options["choices"][i][1])):
+                    print(self.options["choices"][i])
                     if self.options["choices"][i][1][j] == self.optelems[i][1].get():
                         break
-                choice = None if self.options["choices"][i][1][j] == "None" else self.options["choices"][i][1][j]
+                choice = self.options["choices"][i][2][j]
             self.options["choices"][i][-1](self.options, self.options["choices"][i][-2], choice)
         self.options["settings"]["gbfpib"] = self.export
         self.destroy()
