@@ -1593,7 +1593,6 @@ class GBFTMR_Select(Tk.Tk):
                 choice = self.optelems[i][1].get()
             else:
                 for j in range(len(self.options["choices"][i][1])):
-                    print(self.options["choices"][i])
                     if self.options["choices"][i][1][j] == self.optelems[i][1].get():
                         break
                 choice = self.options["choices"][i][2][j]
