@@ -1447,15 +1447,14 @@ class PartyBuilder():
                                                 folders.add("/".join(file.split('/')[1:-1]))
                                             # make folders (if missing)
                                             for path in folders:
-                                                #if path == "": continue
-                                                path = "test/" + path
+                                                if path == "": continue
                                                 os.makedirs(os.path.dirname(path if path.endswith("/") else path+"/"), exist_ok=True)
                                             # write files
                                             for file in file_list:
                                                 if ".git" in file: continue
                                                 if file.split("/")[-1] in ["settings.json"] or file.endswith("/"): continue
                                                 path = "/".join(file.split('/')[1:])
-                                                with open("test/"+path, mode="wb") as f:
+                                                with open(path, mode="wb") as f:
                                                     f.write(zip_ref.read(file))
                                 if command_line:
                                     print("Update successful.\nThe application will now restart.\nMake sure to update your Bookmarklet if needed.")
