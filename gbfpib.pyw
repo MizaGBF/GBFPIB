@@ -253,6 +253,7 @@ class PartyBuilder():
                 else:
                     with open(path, "rb") as f:
                         self.cache[path] = f.read()
+                    await asyncio.sleep(0)
         return self.cache[path]
 
     async def pasteImage(self, imgs : list, file : Union[str, BytesIO], offset : tuple, resize : Optional[tuple] = None, transparency : bool = False, start : int = 0, end : int = 99999999, crop : Optional[tuple] = None) -> list: # paste an image onto another
@@ -275,6 +276,7 @@ class PartyBuilder():
                 imgs[i].close()
                 imgs[i] = tmp
             layer.close()
+        await asyncio.sleep(0)
         for buf in buffers: buf.close()
         del buffers
         file.close()
@@ -1208,7 +1210,7 @@ class PartyBuilder():
                 imgs['party'][1] = self.applyAlphaComposite(imgs['party'][1], imgs[k][1])
             self.saveImage(imgs['party'][1], "skin.png", resize)
 
-    async def make_sub_party(self, export : dict) -> None:
+    async def make_sub_party(self, export : dict) -> bool:
         start = time.time()
         do_emp = self.settings.get('emp', False)
         do_skin = self.settings.get('skin', True)
@@ -1274,6 +1276,7 @@ class PartyBuilder():
         end = time.time()
         print("* Task completed with success!")
         print("* Ended in {:.2f} seconds".format(end - start))
+        return True
 
     def make_sub_emp(self, export : dict) -> None:
         if 'emp' not in export or 'id' not in export or 'ring' not in export: raise Exception("Invalid EMP data, check your bookmark")
@@ -1602,7 +1605,7 @@ class GBFTMR_Select(Tk.Tk):
         except Exception as e:
             print(self.interface.pb.pexc(e))
             self.interface.events.append(("Error", "An error occured, impossible to generate the thumbnail"))
-        self.cancel()
+        self.apprunning = False
 
     def cancel(self) -> None:
         self.apprunning = False
@@ -1764,9 +1767,9 @@ class Interface(Tk.Tk): # interface
                     tasks.append(tg.create_task(self.pb.make_sub_party(export)))
                 if self.pb.gbftmr and gbftmr_use:
                     tasks.append(tg.create_task(GBFTMR_Select(self, self.loop, export).run()))
-            result = True
+            result = False
             for t in tasks:
-                result = t.result() and result
+                result = (t.result() is True) or result
             if result:
                 if not thumbnailOnly:
                     self.events.append(("Info", "Image(s) generated with success"))
