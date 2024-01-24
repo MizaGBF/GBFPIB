@@ -28,6 +28,85 @@ from zipfile import ZipFile
 
 
 class PartyBuilder():
+    NULL_CHARACTER = [3030182000, 3020072000] # null character id list (lyria, cat...), need to be hardcoded
+    COLORS = { # color for estimated advantage
+        1:(243, 48, 33),
+        2:(85, 176, 250),
+        3:(227, 124, 32),
+        4:(55, 232, 16),
+        5:(253, 216, 67),
+        6:(176, 84, 251)
+    }
+    COLORS_EN = { # color string
+        1:"Fire",
+        2:"Water",
+        3:"Earth",
+        4:"Wind",
+        5:"Light",
+        6:"Dark"
+    }
+    COLORS_JP = { # color string
+        1:"火",
+        2:"水",
+        3:"土",
+        4:"風",
+        5:"光",
+        6:"闇"
+    }
+    CLASSES = { # class prefix (gotta add them manually, sadly)
+        10: 'sw',
+        11: 'sw',
+        12: 'wa',
+        13: 'wa',
+        14: 'kn',
+        15: 'sw',
+        16: 'me',
+        17: 'bw',
+        18: 'mc',
+        19: 'sp',
+        30: 'sw',
+        41: 'ax',
+        42: 'sp',
+        43: 'me',
+        44: 'bw',
+        45: 'sw',
+        20: 'kn',
+        21: 'kt',
+        22: 'kt',
+        23: 'sw',
+        24: 'gu',
+        25: 'wa',
+        26: 'kn',
+        27: 'mc',
+        28: 'kn',
+        29: 'gu'
+    }
+    AUXILIARY_CLS = [100401, 300301, 300201, 120401, 140401] # aux classes
+    SUPSUMMON_REGEX = [ # regex used for the wiki support summon id search
+        re.compile('(20[0-9]{8}_03)\\.'),
+        re.compile('(20[0-9]{8}_02)\\.'),
+        re.compile('(20[0-9]{8})\\.')
+    ]
+    DARK_OPUS_IDS = [
+        "1040310600","1040310700","1040415000","1040415100","1040809400","1040809500","1040212500","1040212600","1040017000","1040017100","1040911000","1040911100",
+        "1040310600_02","1040310700_02","1040415000_02","1040415100_02","1040809400_02","1040809500_02","1040212500_02","1040212600_02","1040017000_02","1040017100_02","1040911000_02","1040911100_02"
+    ]
+    ULTIMA_OPUS_IDS = [
+        "1040011900","1040012000","1040012100","1040012200","1040012300","1040012400",
+        "1040109700","1040109800","1040109900","1040110000","1040110100","1040110200",
+        "1040208800","1040208900","1040209000","1040209100","1040209200","1040209300",
+        "1040307800","1040307900","1040308000","1040308100","1040308200","1040308300",
+        "1040410800","1040410900","1040411000","1040411100","1040411200","1040411300",
+        "1040507400","1040507500","1040507600","1040507700","1040507800","1040507900",
+        "1040608100","1040608200","1040608300","1040608400","1040608500","1040608600",
+        "1040706900","1040707000","1040707100","1040707200","1040707300","1040707400",
+        "1040807000","1040807100","1040807200","1040807300","1040807400","1040807500",
+        "1040907500","1040907600","1040907700","1040907800","1040907900","1040908000"
+    ]
+    ORIGIN_DRACONIC_IDS = [
+        "1040815900","1040316500","1040712800","1040422200","1040915600","1040516500"
+    ]
+    
     def __init__(self, debug : bool = False) -> None:
         self.debug = debug
         if self.debug: print("DEBUG enabled")
@@ -36,89 +115,12 @@ class PartyBuilder():
         self.babyl = False # True if the data contains more than 5 allies
         self.sandbox = False # True if the data contains more than 10 weapons
         self.cache = {} # memory cache
+        self.emp_cache = {} # emp cache
         self.sumcache = {} # wiki summon cache
         self.fonts = {'small':None, 'medium':None, 'big':None, 'mini':None} # font to use during the processing
         self.quality = 1 # quality ratio in use currently
         self.definition = None # image size
         self.running = False # True if the image building is in progress
-        self.nullchar = [3030182000, 3020072000] # null character id list (lyria, cat...), need to be hardcoded
-        self.colors = { # color for estimated advantage
-            1:(243, 48, 33),
-            2:(85, 176, 250),
-            3:(227, 124, 32),
-            4:(55, 232, 16),
-            5:(253, 216, 67),
-            6:(176, 84, 251)
-        }
-        self.color_strs = { # color string
-            1:"Fire",
-            2:"Water",
-            3:"Earth",
-            4:"Wind",
-            5:"Light",
-            6:"Dark"
-        }
-        self.color_strs_jp = { # color string
-            1:"火",
-            2:"水",
-            3:"土",
-            4:"風",
-            5:"光",
-            6:"闇"
-        }
-        self.classes = { # class prefix (gotta add them manually, sadly)
-            10: 'sw',
-            11: 'sw',
-            12: 'wa',
-            13: 'wa',
-            14: 'kn',
-            15: 'sw',
-            16: 'me',
-            17: 'bw',
-            18: 'mc',
-            19: 'sp',
-            30: 'sw',
-            41: 'ax',
-            42: 'sp',
-            43: 'me',
-            44: 'bw',
-            45: 'sw',
-            20: 'kn',
-            21: 'kt',
-            22: 'kt',
-            23: 'sw',
-            24: 'gu',
-            25: 'wa',
-            26: 'kn',
-            27: 'mc',
-            28: 'kn',
-            29: 'gu'
-        }
-        self.aux_class = [100401, 300301, 300201, 120401, 140401] # aux classes
-        self.supp_summon_re = [ # regex used for the wiki support summon id search
-            re.compile('(20[0-9]{8}_03)\\.'),
-            re.compile('(20[0-9]{8}_02)\\.'),
-            re.compile('(20[0-9]{8})\\.')
-        ]
-        self.dark_opus = [
-            "1040310600","1040310700","1040415000","1040415100","1040809400","1040809500","1040212500","1040212600","1040017000","1040017100","1040911000","1040911100",
-            "1040310600_02","1040310700_02","1040415000_02","1040415100_02","1040809400_02","1040809500_02","1040212500_02","1040212600_02","1040017000_02","1040017100_02","1040911000_02","1040911100_02"
-        ]
-        self.ultima = [
-            "1040011900","1040012000","1040012100","1040012200","1040012300","1040012400",
-            "1040109700","1040109800","1040109900","1040110000","1040110100","1040110200",
-            "1040208800","1040208900","1040209000","1040209100","1040209200","1040209300",
-            "1040307800","1040307900","1040308000","1040308100","1040308200","1040308300",
-            "1040410800","1040410900","1040411000","1040411100","1040411200","1040411300",
-            "1040507400","1040507500","1040507600","1040507700","1040507800","1040507900",
-            "1040608100","1040608200","1040608300","1040608400","1040608500","1040608600",
-            "1040706900","1040707000","1040707100","1040707200","1040707300","1040707400",
-            "1040807000","1040807100","1040807200","1040807300","1040807400","1040807500",
-            "1040907500","1040907600","1040907700","1040907800","1040907900","1040908000"
-        ]
-        self.hexa_draconic = [
-            "1040815900","1040316500","1040712800","1040422200","1040915600","1040516500"
-        ]
         self.settings = {} # settings.json data
         self.manifest = {} # manifest.json data
         self.startup_check()
@@ -246,6 +248,7 @@ class PartyBuilder():
                             try:
                                 with open("cache/" + b64encode(path.encode('utf-8')).decode('utf-8'), "wb") as f:
                                     f.write(self.cache[path])
+                                print("WRITING")
                                 await asyncio.sleep(0)
                             except Exception as e:
                                 print(e)
@@ -329,7 +332,7 @@ class PartyBuilder():
             async with response:
                 if response.status != 200: raise Exception()
                 data = (await response.read()).decode('utf-8')
-                for ss in self.supp_summon_re:
+                for ss in self.SUPSUMMON_REGEX:
                     group = ss.findall(data)
                     if len(group) > 0: break
                 self.sumcache[sps] = group[0]
@@ -436,7 +439,7 @@ class PartyBuilder():
                 case 3710195000: # cidala skin 2
                     if export['ce'][i] == 3: cid = 3040377000 # apply earth cidala
         # SKIN FIX END ##################
-        if cid in self.nullchar: 
+        if cid in self.NULL_CHARACTER: 
             if export['ce'][i] == 99:
                 return "{}_{}{}_0{}".format(cid, uncap, style, export['pce'])
             else:
@@ -446,13 +449,13 @@ class PartyBuilder():
 
     def get_mc_job_look(self, skin : str, job : int) -> str: # get the MC unskined filename based on id
         jid = job // 10000
-        if jid not in self.classes: return skin
-        return "{}_{}_{}".format(job, self.classes[jid], '_'.join(skin.split('_')[2:]))
+        if jid not in self.CLASSES: return skin
+        return "{}_{}_{}".format(job, self.CLASSES[jid], '_'.join(skin.split('_')[2:]))
 
     def process_special_weapon(self, export : dict, i : int, j : int) -> bool:
         if export['wsn'][i][j] is not None and export['wsn'][i][j] == "skill_job_weapon":
             if j == 2: # skill 3, ultima, opus
-                if export['w'][i] in self.dark_opus:
+                if export['w'][i] in self.DARK_OPUS_IDS:
                     bar_gain = 0
                     hp_cut = 0
                     turn_dmg = 0
@@ -491,7 +494,7 @@ class PartyBuilder():
                     elif turn_dmg >= 5: # depravity
                         export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14016.jpg"
                         return True
-                elif export['w'][i] in self.ultima:
+                elif export['w'][i] in self.ULTIMA_OPUS_IDS:
                     seraphic = 0
                     heal_cap = 0
                     bar_gain = 0
@@ -522,7 +525,7 @@ class PartyBuilder():
                         export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17001.jpg"
                         return True
             elif j == 1: # skill 2, hexa draconic
-                if export['w'][i] in self.hexa_draconic:
+                if export['w'][i] in self.ORIGIN_DRACONIC_IDS:
                     seraphic = 0
                     for m in export['mods']:
                         try:
@@ -774,7 +777,7 @@ class PartyBuilder():
                     size = sub_size
                     pos = (offset[0]+bsize[0]+30+size[0]*x, offset[1]+(size[1]+skill_box_height)*y)
                 # dual blade class
-                if i <= 1 and export['p'] in self.aux_class:
+                if i <= 1 and export['p'] in self.AUXILIARY_CLS:
                     await self.pasteImage(imgs, ("assets/mh_dual.png" if i == 0 else "assets/aux_dual.png"), self.add(pos, (-2, -2)), self.add(size, (5, 5+skill_box_height)), transparency=True, start=0, end=1)
                 # portrait
                 if export['w'][i] is None or export['wl'][i] is None:
@@ -793,7 +796,7 @@ class PartyBuilder():
                 # skin
                 has_skin = False
                 if i <= 1 and export['wsm'][i] is not None:
-                    if i == 0 or (i == 1 and export['p'] in self.aux_class): # aux class check for 2nd weapon
+                    if i == 0 or (i == 1 and export['p'] in self.AUXILIARY_CLS): # aux class check for 2nd weapon
                         await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/weapon/{}/{}.jpg".format(wt, export['wsm'][i]), pos, size, start=1, end=2)
                         await self.pasteImage(imgs, "assets/skin.png", self.add(pos, (size[0]-76, 0)), (76, 85), transparency=True, start=1, end=2)
                         has_skin = True
@@ -894,13 +897,13 @@ class PartyBuilder():
                 await asyncio.sleep(0)
                 if i == 0 or mod_crit == 0 or mod_crit == 100:
                     await self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width*i , pos[1]), (est_width-15, 150), transparency=True, start=0, end=1)
-                    self.text(imgs, (pos[0]+9+est_width*i, pos[1]+9), "{}".format(export['est'][i+1]), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=0, end=1)
+                    self.text(imgs, (pos[0]+9+est_width*i, pos[1]+9), "{}".format(export['est'][i+1]), fill=self.COLORS[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=0, end=1)
                     do_crit = False
                 else:
                     await self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width , pos[1]), (est_width-15, 150), transparency=True, start=0, end=2)
-                    self.text(imgs, (pos[0]+9+est_width, pos[1]+9), "{}".format(export['est'][i+1]), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=0, end=1)
+                    self.text(imgs, (pos[0]+9+est_width, pos[1]+9), "{}".format(export['est'][i+1]), fill=self.COLORS[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=0, end=1)
                     # skin.png
-                    self.text(imgs, (pos[0]+9+est_width, pos[1]+9), "{}".format(mod_supp+((export['est'][i+1]-mod_supp)*150)//100), fill=self.colors[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=1, end=2)
+                    self.text(imgs, (pos[0]+9+est_width, pos[1]+9), "{}".format(mod_supp+((export['est'][i+1]-mod_supp)*150)//100), fill=self.COLORS[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=1, end=2)
                     await self.pasteImage(imgs, "assets/critical.png", (pos[0]+size[0]+est_width+70, pos[1]), (100, 100), transparency=True, start=1, end=2)
                     do_crit = True
                 if i == 0:
@@ -910,11 +913,11 @@ class PartyBuilder():
                     else: vs = (int(export['est'][0]) - 5 + 1) % 2 + 5
                     if self.japanese:
                         self.text(imgs, (pos[0]+est_width*i+15 , pos[1]+90), "対", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
-                        self.text(imgs, (pos[0]+est_width*i+54 , pos[1]+90), "{}属性".format(self.color_strs_jp[vs]), fill=self.colors[vs], font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
+                        self.text(imgs, (pos[0]+est_width*i+54 , pos[1]+90), "{}属性".format(self.COLORS_JP[vs]), fill=self.COLORS[vs], font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
                         self.text(imgs, (pos[0]+est_width*i+162 , pos[1]+90), "予測ダメ一ジ", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
                     else:
                         self.text(imgs, (pos[0]+est_width*i+15 , pos[1]+90), "vs", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
-                        self.text(imgs, (pos[0]+est_width*i+66 , pos[1]+90), "{}".format(self.color_strs[vs]), fill=self.colors[vs], font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
+                        self.text(imgs, (pos[0]+est_width*i+66 , pos[1]+90), "{}".format(self.COLORS_EN[vs]), fill=self.COLORS[vs], font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
             # hp gauge
             if do_hp:
                 await asyncio.sleep(0)
@@ -983,10 +986,15 @@ class PartyBuilder():
             imgs[0].close()
             return self.pexc(e)
 
-    def loadEMP(self, id):
+    async def loadEMP(self, id):
         try:
-            with open("emp/{}.json".format(id), mode="r", encoding="utf-8") as f:
-                return json.load(f)
+            if id in self.emp_cache:
+                return self.emp_cache[id]
+            else:
+                with open("emp/{}.json".format(id), mode="r", encoding="utf-8") as f:
+                    self.emp_cache[id] = json.load(f)
+                    await asyncio.sleep(0)
+                    return self.emp_cache[id]
         except:
             return None
 
@@ -1008,6 +1016,13 @@ class PartyBuilder():
             for i in range(0, nchara):
                 if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
                 if i >= len(export['c']) or export['c'][i] is None: continue
+                cid = self.fix_character_look(export, i)
+                data = await self.loadEMP(cid.split('_')[0]) # preload and cache emp
+                if data is None:
+                    print("[EMP] |--> Ally #{}: {}.json can't be loaded".format(i+1, cid.split('_')[0]))
+                    continue
+                elif self.japanese != (data['lang'] == 'ja'):
+                    print("[EMP] |--> Ally #{}: WARNING, language doesn't match".format(i+1))
                 ccount += 1
             # set positions and offsets we'll need
             if ccount > 5:
@@ -1035,9 +1050,11 @@ class PartyBuilder():
                 await asyncio.sleep(0)
                 if self.babyl and i == 0: continue # quirk of babyl party, mc is counted
                 if i < len(export['c']) and export['c'][i] is not None:
+                    cid = self.fix_character_look(export, i)
+                    data = self.emp_cache.get(cid.split('_')[0], None)
+                    if data is None: continue
                     pos = self.add(pos, (0, csize[1]+shift)) # set chara position
                     # portrait
-                    cid = self.fix_character_look(export, i)
                     await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/npc/{}/{}.jpg".format(portrait_type, cid), pos, csize)
                     # rings
                     if export['cwr'][i] == True:
@@ -1049,14 +1066,6 @@ class PartyBuilder():
                         self.text(imgs, self.add(pos, poffset), "+{}".format(export['cp'][i]), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
                     # background
                     await self.pasteImage(imgs, "assets/bg_emp.png", self.add(pos, (csize[0], 0)), bg_size, transparency=True)
-                    # load EMP file
-                    data = self.loadEMP(cid.split('_')[0])
-                    if data is None: # skip if we can't find EMPs OR if the language doesn't match
-                        print("[EMP] |--> Ally #{}: {}.json can't be loaded".format(i+1, cid.split('_')[0]))
-                        self.text(imgs, self.add(pos, (csize[0]+50, csize[1]//3)), "EMP not set", fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
-                        continue
-                    if self.japanese != (data['lang'] == 'ja'):
-                        print("[EMP] |--> Ally #{}: WARNING, language doesn't match".format(i+1))
                     # main EMP
                     nemp = len(data['emp'])
                     print("[EMP] |--> Ally #{}: {} EMPs, {} Ring EMPs, {}, {}".format(i+1, nemp, len(data['ring']), ('{} Lv{}'.format(data['awaktype'], data['awakening'].split('lv')[-1]) if 'awakening' in data else 'Awakening not found'), ('Has Domain' if ('domain' in data and len(data['domain']) > 0) else 'No Domain')))
@@ -1156,6 +1165,18 @@ class PartyBuilder():
     def clipboardToJSON(self):
         return json.loads(pyperclip.paste())
 
+    def clean_memory_caches(self):
+        if len(self.cache.keys()) > 100:
+            print("* Cleaning File Memory Cache...")
+            tmp = {}
+            for k, v in self.cache.items():
+                if '/skill/' in k or '/zenith/' in k or len(k.split('/')) == 2: # keep important files
+                    tmp[k] = v
+            self.cache = tmp
+        if len(self.emp_cache.keys()) > 100:
+            print("* Cleaning EMP Memory Cache...")
+            self.emp_cache = {}
+
     async def make(self, fast : bool = False) -> bool: # main function
         try:
             if not fast:
@@ -1165,12 +1186,15 @@ class PartyBuilder():
                 print("3) Come back here and press Return to continue")
                 input()
             self.running = True
-            export = self.clipboardToJSON() # get the data from clipboard
+            # get the data from clipboard
+            export = self.clipboardToJSON()
             if export.get('ver', 0) < 1:
                 print("Your bookmark is outdated, please update it!")
                 self.running = False
                 return False
-            if 'emp' in export: self.make_sub_emp(export)
+            # start
+            if 'emp' in export:
+                self.make_sub_emp(export)
             else:
                 await self.make_sub_party(export)
                 if self.gbftmr is not None and self.settings.get('gbftmr_use', False):
@@ -1211,6 +1235,7 @@ class PartyBuilder():
             self.saveImage(imgs['party'][1], "skin.png", resize)
 
     async def make_sub_party(self, export : dict) -> bool:
+        self.clean_memory_caches()
         start = time.time()
         do_emp = self.settings.get('emp', False)
         do_skin = self.settings.get('skin', True)
@@ -1292,6 +1317,7 @@ class PartyBuilder():
         else:
             print("* Domain Lvl", len(export['domain']))
         self.checkEMP()
+        self.emp_cache[str(export['id'])] = export
         with open('emp/{}.json'.format(export['id']), mode='w', encoding="utf-8") as outfile:
             json.dump(export, outfile)
         print("* Task completed with success!")
@@ -1307,7 +1333,7 @@ class PartyBuilder():
             print("[4] Set Asset Server ( Current:", self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net'),")")
             print("[5] Show HP bar on skin.png ( Current:", self.settings.get('hp', True),")")
             print("[6] Show critical estimate on skin.png ( Current:", self.settings.get('crit', True),")")
-            print("[7] Guess Opus / Ultima 3rd skill ( Current:", self.settings.get('opus', True),")")
+            print("[7] Guess Opus / ULTIMA_OPUS_IDS 3rd skill ( Current:", self.settings.get('opus', True),")")
             print("[8] Set GBFTMR Path ( Current:", self.settings.get('gbftmr_path', ''),")")
             print("[9] Use GBFTMR if imported ( Current:", self.settings.get('gbftmr_use', False),")")
             print("[10] Empty Asset Cache")
@@ -1689,7 +1715,7 @@ class Interface(Tk.Tk): # interface
         self.to_disable[-1].grid(row=2, column=1)
         
         self.opus_var = Tk.IntVar(value=self.pb.settings.get('opus', False))
-        Tk.Label(tabcontent, text="Guess Opus/Ultima Key").grid(row=3, column=0)
+        Tk.Label(tabcontent, text="Guess Opus/ULTIMA_OPUS_IDS Key").grid(row=3, column=0)
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.opus_var, command=self.toggleOpus))
         self.to_disable[-1].grid(row=3, column=1)
         
