@@ -16,7 +16,6 @@ from base64 import b64decode, b64encode
 import json
 from io import BytesIO
 
-
 import importlib.util
 
 from tkinter import messagebox, filedialog, simpledialog
@@ -248,7 +247,6 @@ class PartyBuilder():
                             try:
                                 with open("cache/" + b64encode(path.encode('utf-8')).decode('utf-8'), "wb") as f:
                                     f.write(self.cache[path])
-                                print("WRITING")
                                 await asyncio.sleep(0)
                             except Exception as e:
                                 print(e)
