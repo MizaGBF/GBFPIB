@@ -80,6 +80,9 @@ class PartyBuilder():
         28: 'kn',
         29: 'gu'
     }
+    OTHER_CLASSES = { # class overrides (only for onmyoji so far)
+        150401: 'kn'
+    }
     AUXILIARY_CLS = [100401, 300301, 300201, 120401, 140401] # aux classes
     SUPSUMMON_REGEX = [ # regex used for the wiki support summon id search
         re.compile('(20[0-9]{8}_03)\\.'),
@@ -241,7 +244,7 @@ class PartyBuilder():
                     print("[GET] *Downloading File", path)
                     response = await self.client.get('https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path, headers={'connection':'keep-alive'})
                     async with response:
-                        if response.status != 200: raise Exception("HTTP Error code {} for url: {}".format(response.status_code, 'https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path))
+                        if response.status != 200: raise Exception("HTTP Error code {} for url: {}".format(response.status, 'https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path))
                         self.cache[path] = await response.read()
                         if self.settings.get('caching', False):
                             try:
@@ -263,7 +266,10 @@ class PartyBuilder():
             file = BytesIO(await self.retrieveImage(file, remote=False))
         buffers = [Image.open(file)]
         if crop is not None:
-            buffers.append(buffers[-1].crop((0, 0, crop[0], crop[1])))
+            if len(crop) == 4:
+                buffers.append(buffers[-1].crop(crop))
+            else:
+                buffers.append(buffers[-1].crop((0, 0, crop[0], crop[1])))
         buffers.append(buffers[-1].convert('RGBA'))
         if resize is not None: buffers.append(buffers[-1].resize(resize, Image.Resampling.LANCZOS))
         if not transparency:
@@ -446,9 +452,9 @@ class PartyBuilder():
             return "{}_{}{}".format(cid, uncap, style)
 
     def get_mc_job_look(self, skin : str, job : int) -> str: # get the MC unskined filename based on id
-        jid = job // 10000
-        if jid not in self.CLASSES: return skin
-        return "{}_{}_{}".format(job, self.CLASSES[jid], '_'.join(skin.split('_')[2:]))
+        jid = self.OTHER_CLASSES.get(job, self.CLASSES.get(job // 10000, None))
+        if jid is None: return skin
+        return "{}_{}_{}".format(job, jid, '_'.join(skin.split('_')[2:]))
 
     def process_special_weapon(self, export : dict, i : int, j : int) -> bool:
         if export['wsn'][i][j] is not None and export['wsn'][i][j] == "skill_job_weapon":
