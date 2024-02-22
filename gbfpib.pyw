@@ -52,37 +52,6 @@ class PartyBuilder():
         5:"光",
         6:"闇"
     }
-    CLASSES = { # class prefix (gotta add them manually, sadly)
-        10: 'sw',
-        11: 'sw',
-        12: 'wa',
-        13: 'wa',
-        14: 'kn',
-        15: 'sw',
-        16: 'me',
-        17: 'bw',
-        18: 'mc',
-        19: 'sp',
-        30: 'sw',
-        41: 'ax',
-        42: 'sp',
-        43: 'me',
-        44: 'bw',
-        45: 'sw',
-        20: 'kn',
-        21: 'kt',
-        22: 'kt',
-        23: 'sw',
-        24: 'gu',
-        25: 'wa',
-        26: 'kn',
-        27: 'mc',
-        28: 'kn',
-        29: 'gu'
-    }
-    OTHER_CLASSES = { # class overrides (only for onmyoji so far)
-        150401: 'kn'
-    }
     AUXILIARY_CLS = [100401, 300301, 300201, 120401, 140401] # aux classes
     SUPSUMMON_REGEX = [ # regex used for the wiki support summon id search
         re.compile('(20[0-9]{8}_03)\\.'),
@@ -91,7 +60,8 @@ class PartyBuilder():
     ]
     DARK_OPUS_IDS = [
         "1040310600","1040310700","1040415000","1040415100","1040809400","1040809500","1040212500","1040212600","1040017000","1040017100","1040911000","1040911100",
-        "1040310600_02","1040310700_02","1040415000_02","1040415100_02","1040809400_02","1040809500_02","1040212500_02","1040212600_02","1040017000_02","1040017100_02","1040911000_02","1040911100_02"
+        "1040310600_02","1040310700_02","1040415000_02","1040415100_02","1040809400_02","1040809500_02","1040212500_02","1040212600_02","1040017000_02","1040017100_02","1040911000_02","1040911100_02",
+        "1040310600_03","1040310700_03","1040415000_03","1040415100_03","1040809400_03","1040809500_03","1040212500_03","1040212600_03","1040017000_03","1040017100_03","1040911000_03","1040911100_03"
     ]
     ULTIMA_OPUS_IDS = [
         "1040011900","1040012000","1040012100","1040012200","1040012300","1040012400",
@@ -113,6 +83,8 @@ class PartyBuilder():
         self.debug = debug
         if self.debug: print("DEBUG enabled")
         self.japanese = False # True if the data is japanese, False if not
+        self.classes = None
+        self.class_modified = False
         self.prev_lang = None # Language used in the previous run
         self.babyl = False # True if the data contains more than 5 allies
         self.sandbox = False # True if the data contains more than 10 weapons
@@ -159,6 +131,22 @@ class PartyBuilder():
         try:
             with open('manifest.json', 'w') as outfile:
                 json.dump(self.manifest, outfile)
+        except:
+            pass
+
+    def loadClasses(self) -> None:
+        try:
+            self.class_modified = False
+            with open("classes.json", mode="r", encoding="utf-8") as f:
+                self.classes = json.load(f)
+        except:
+            self.classes = {}
+
+    def saveClasses(self) -> None:
+        try:
+            if self.class_modified:
+                with open('classes.json', mode='w', encoding='utf-8') as outfile:
+                    json.dump(self.classes, outfile)
         except:
             pass
 
@@ -451,10 +439,27 @@ class PartyBuilder():
         else:
             return "{}_{}{}".format(cid, uncap, style)
 
-    def get_mc_job_look(self, skin : str, job : int) -> str: # get the MC unskined filename based on id
-        jid = self.OTHER_CLASSES.get(job, self.CLASSES.get(job // 10000, None))
-        if jid is None: return skin
-        return "{}_{}_{}".format(job, jid, '_'.join(skin.split('_')[2:]))
+    async def get_mc_job_look(self, skin : str, job : int) -> str: # get the MC unskined filename based on id
+        sjob = str((job//100) * 100 + 1)
+        if sjob in self.classes:
+            return "{}_{}_{}".format(sjob, self.classes[sjob], '_'.join(skin.split('_')[2:]))
+        else:
+            tasks = []
+            for mh in ["sw", "kn", "sp", "ax", "wa", "gu", "me", "bw", "mc", "kr"]:
+                tasks.append(self.get_mc_job_look_sub(sjob, mh))
+            for r in await asyncio.gather(*tasks):
+                if r is not None:
+                    self.class_modified = True
+                    self.classes[sjob] = r
+                    return "{}_{}_{}".format(sjob, self.classes[sjob], '_'.join(skin.split('_')[2:])) 
+        return ""
+
+    async def get_mc_job_look_sub(self, job : str, mh : str) -> Optional[str]:
+        response = await self.client.head("https://prd-game-a5-granbluefantasy.akamaized.net/assets_en/img/sp/assets/leader/s/{}_{}_0_01.jpg".format(job, mh))
+        async with response:
+            if response.status != 200:
+                return None
+            return mh
 
     def process_special_weapon(self, export : dict, i : int, j : int) -> bool:
         if export['wsn'][i][j] is not None and export['wsn'][i][j] == "skill_job_weapon":
@@ -597,7 +602,7 @@ class PartyBuilder():
             print("[CHA] |--> MC Master Level:", export['cml'])
             print("[CHA] |--> MC Proof Level:", export['cbl'])
             # class
-            class_id = self.get_mc_job_look(export['pcjs'], export['p'])
+            class_id = await self.get_mc_job_look(export['pcjs'], export['p'])
             await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/leader/s/{}.jpg".format(class_id), pos, csize, start=0, end=1)
             # job icon
             await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/job/{}.png".format(export['p']), pos, jsize, transparency=True, start=0, end=1)
@@ -1200,7 +1205,10 @@ class PartyBuilder():
             if 'emp' in export:
                 self.make_sub_emp(export)
             else:
+                if self.classes is None:
+                    self.loadClasses()
                 await self.make_sub_party(export)
+                self.saveClasses()
                 if self.gbftmr is not None and self.settings.get('gbftmr_use', False):
                     print("Do you want to make a thumbnail with this party? (Y to confirm)")
                     s = input()
