@@ -91,7 +91,7 @@ class PartyBuilder():
         self.cache = {} # memory cache
         self.emp_cache = {} # emp cache
         self.sumcache = {} # wiki summon cache
-        self.fonts = {'small':None, 'medium':None, 'big':None, 'mini':None} # font to use during the processing
+        self.fonts = {'mini':None, 'small':None, 'medium':None, 'big':None} # font to use during the processing
         self.quality = 1 # quality ratio in use currently
         self.definition = None # image size
         self.running = False # True if the image building is in progress
@@ -662,7 +662,16 @@ class PartyBuilder():
             for i in range(len(export['ps'])):
                 if export['ps'][i] is not None:
                     print("[CHA] |--> MC Skill #{}:".format(i), export['ps'][i])
-                    self.text(imgs, self.add(stoffset, (0, 48*count)), export['ps'][i], fill=(255, 255, 255), font=self.fonts['small'] if (len(export['ps'][i]) > 15) else self.fonts['medium'])
+                    if len(export['ps'][i]) > 20:
+                        f = 'mini'
+                        voff = 5
+                    elif len(export['ps'][i]) > 15:
+                        f = 'small'
+                        voff = 2
+                    else:
+                        f = 'medium'
+                        voff = 0
+                    self.text(imgs, self.add(stoffset, (0, 48*count+voff)), export['ps'][i], fill=(255, 255, 255), font=self.fonts[f])
                     count += 1
             await asyncio.sleep(0)
             # paladin shield/manadiver familiar
