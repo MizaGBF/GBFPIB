@@ -122,14 +122,14 @@ class PartyBuilder():
 
     def loadManifest(self) -> None: # load manifest.json
         try:
-            with open('manifest.json') as f:
+            with open("manifest.json") as f:
                 self.manifest = json.load(f)
         except:
             pass
 
     def saveManifest(self) -> None: # save manifest.json
         try:
-            with open('manifest.json', 'w') as outfile:
+            with open("manifest.json", 'w') as outfile:
                 json.dump(self.manifest, outfile)
         except:
             pass
@@ -145,7 +145,7 @@ class PartyBuilder():
     def saveClasses(self) -> None:
         try:
             if self.class_modified:
-                with open('classes.json', mode='w', encoding='utf-8') as outfile:
+                with open("classes.json", mode='w', encoding='utf-8') as outfile:
                     json.dump(self.classes, outfile)
         except:
             pass
