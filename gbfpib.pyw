@@ -1219,8 +1219,6 @@ class PartyBuilder():
             if 'emp' in export:
                 self.make_sub_emp(export)
             else:
-                if self.classes is None:
-                    self.loadClasses()
                 await self.make_sub_party(export)
                 self.saveClasses()
                 if self.gbftmr is not None and self.settings.get('gbftmr_use', False):
@@ -1261,6 +1259,8 @@ class PartyBuilder():
             self.saveImage(imgs['party'][1], "skin.png", resize)
 
     async def make_sub_party(self, export : dict) -> bool:
+        if self.classes is None:
+            self.loadClasses()
         self.clean_memory_caches()
         start = time.time()
         do_emp = self.settings.get('emp', False)
