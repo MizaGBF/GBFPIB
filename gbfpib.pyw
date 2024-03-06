@@ -279,7 +279,7 @@ class PartyBuilder():
 
     async def dlAndPasteImage(self, imgs : list, path : str, offset : tuple, resize : Optional[tuple] = None, transparency : bool = False, start : int = 0, end : int = 99999999, crop : Optional[tuple] = None) -> list: # dl an image and call pasteImage()
         with BytesIO(await self.retrieveImage(path)) as file_jpgdata:
-            return await self.pasteImage(imgs, file_jpgdata, offset, resize, transparency, start, end)
+            return await self.pasteImage(imgs, file_jpgdata, offset, resize, transparency, start, end, crop)
 
     def add(self, A:tuple, B:tuple):
         return (A[0]+B[0], A[1]+B[1])
@@ -495,7 +495,7 @@ class PartyBuilder():
                         export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14017.jpg"
                         return True
                     elif prog > 0: # progression
-                        export['wsn'][i][j] = "assets_en/img_low/sp/assets/item/skillplus/s/14004.jpg"
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14004.jpg"
                         return True
                     elif ca_dmg >= 100 and ca_dmg_cap >= 30: # forbiddance
                         export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14015.jpg"
@@ -847,7 +847,7 @@ class PartyBuilder():
                             if do_opus and self.process_special_weapon(export, i, j): # 3rd skill guessing
                                 await self.dlAndPasteImage(imgs, export['wsn'][i][j], (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
                             else:
-                                await self.dlAndPasteImage(imgs, "assets_en/img_low/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
+                                await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/skill/{}.png".format(export['wsn'][i][j]), (pos[0]+skill_icon_size*j, pos[1]+size[1]+pos_shift), (skill_icon_size, skill_icon_size), start=0, end=2 if has_skin else 1)
                 pos_shift += skill_icon_size
                 main_ax_icon_size  = int(ax_icon_size * (1.5 if i == 0 else 1) * (0.75 if (has_ax and has_awakening) else 1)) # size of the big AX/Awakening icon
                 # ax skills
@@ -965,40 +965,45 @@ class PartyBuilder():
             print("[MOD] * Drawing Modifiers...")
             if self.babyl:
                 offset = (1560, 10)
-                limit = (25, 20)
+                limit = [29, 25, 20]
             else:
                 offset = (1560, 415)
-                limit = (21, 16)
+                limit = [25, 20, 16]
             print("[MOD] |--> Found", len(export['mods']), "modifier(s)...")
             
             # weapon modifier list
             if len(export['mods']) > 0:
-                mod_font = ['mini', 'small', 'medium']
-                mod_off =[15, 27, 15]
-                mod_bg_size = [(185, 114), (222, 114), (258, 114)]
-                mod_size = [(150, 38), (174, 45), (241, 60)]
-                mod_text_off = [(35, 66), (45, 84), (60, 105)]
+                mod_font = ['mini', 'mini', 'small', 'medium']
+                mod_off =[15, 15, 27, 15]
+                mod_bg_size = [(258, 114), (185, 114), (222, 114), (258, 114)]
+                mod_size = [(80, 40), (150, 38), (174, 45), (241, 60)]
+                mod_img_off = [(-10, 0), (0, 0), (0, 0), (0, 0)]
+                mod_text_off = [(80, 5), (0, 35), (0, 45), (0, 60)]
+                mod_step = [42, 66, 84, 105]
+                mod_crop = [(68, 34), None, None, None]
                 
                 # auto sizing
-                if len(export['mods'])>= limit[0]: idx = 0 # smallest size for more mods
-                elif len(export['mods'])>= limit[1]: idx = 1
-                else: idx = 2 # biggest size
+                if len(export['mods']) >= limit[0]: idx = 0 # compact mode
+                elif len(export['mods']) >= limit[1]: idx = 1 # smallest size
+                elif len(export['mods']) >= limit[2]: idx = 2
+                else: idx = 3 # biggest size
+                print("[MOD] |--> Display mode:", idx)
                 
                 await asyncio.sleep(0)
                 # background
                 await self.pasteImage(imgs, "assets/mod_bg.png", (offset[0]-mod_off[idx], offset[1]-mod_off[idx]//2), mod_bg_size[idx])
                 try:
-                    await self.pasteImage(imgs, "assets/mod_bg_supp.png", (offset[0]-mod_off[idx], offset[1]-mod_off[idx]+mod_bg_size[idx][1]), (mod_bg_size[idx][0], mod_text_off[idx][1] * (len(export['mods'])-1)))
-                    await self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], offset[1]+mod_off[idx]+mod_text_off[idx][1]*(len(export['mods'])-1)), mod_bg_size[idx])
+                    await self.pasteImage(imgs, "assets/mod_bg_supp.png", (offset[0]-mod_off[idx], offset[1]-mod_off[idx]+mod_bg_size[idx][1]), (mod_bg_size[idx][0], mod_step[idx] * (len(export['mods'])-1)))
+                    await self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], offset[1]+mod_step[idx]*(len(export['mods'])-1)), mod_bg_size[idx])
                 except:
-                    await self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], 50+offset[1]+mod_off[idx]+mod_text_off[idx][1]*(len(export['mods'])-1)), mod_bg_size[idx])
+                    await self.pasteImage(imgs, "assets/mod_bg_bot.png", (offset[0]-mod_off[idx], offset[1]+50), mod_bg_size[idx])
                 offset = (offset[0], offset[1])
                 # modifier draw
                 for m in export['mods']:
                     await asyncio.sleep(0)
-                    await self.dlAndPasteImage(imgs, "assets_en/img_low/sp/ui/icon/weapon_skill_label/" + m['icon_img'], offset, mod_size[idx], transparency=True)
-                    self.text(imgs, (offset[0], offset[1]+mod_text_off[idx][0]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.fonts[mod_font[idx]])
-                    offset = (offset[0], offset[1]+mod_text_off[idx][1])
+                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/weapon_skill_label/" + m['icon_img'], self.add(offset, mod_img_off[idx]), mod_size[idx], transparency=True, crop=mod_crop[idx])
+                    self.text(imgs, self.add(offset, mod_text_off[idx]), str(m['value']), fill=((255, 168, 38, 255) if m['is_max'] else (255, 255, 255, 255)), font=self.fonts[mod_font[idx]])
+                    offset = (offset[0], offset[1]+mod_step[idx])
             return ('modifier', imgs)
         except Exception as e:
             imgs[0].close()
