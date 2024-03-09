@@ -759,7 +759,7 @@ class PartyBuilder():
             imgs[1].close()
             return self.pexc(e)
 
-    async def make_weapon(self, export : dict, do_hp : bool, do_crit : bool, do_opus : bool) -> Union[str, tuple]:
+    async def make_weapon(self, export : dict, do_hp : bool, do_opus : bool) -> Union[str, tuple]:
         try:
             imgs = [self.make_canvas(), self.make_canvas()]
             print("[WPN] * Drawing Weapons...")
@@ -878,19 +878,6 @@ class PartyBuilder():
 
             # estimated damage
             pos = (pos[0]+bsize[0]+15, pos[1]+165)
-            # getting grid crit value
-            mod_crit = 0
-            mod_supp = 0
-            for m in export['mods']:
-                match m['icon_img']:
-                    case '01_icon_critical.png':
-                        mod_crit = round(float(m['value'][:-1]))
-                    case '04_icon_dmg_supp.png':
-                        try:
-                            mod_supp = int(str(m['value']).replace('＋', '+').replace('+', ''))
-                        except:
-                            mod_supp = int(str(m['value']).replace('＋', '+').replace('+', ''))
-            if not do_crit: mod_crit = 0 # disable
             if (export['sps'] is not None and export['sps'] != '') or export['spsid'] is not None:
                 await asyncio.sleep(0)
                 # support summon
@@ -913,29 +900,20 @@ class PartyBuilder():
             est_width = ((size[0]*3)//2)
             for i in range(0, 2):
                 await asyncio.sleep(0)
-                if i == 0 or mod_crit == 0 or mod_crit == 100:
-                    await self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width*i , pos[1]), (est_width-15, 150), transparency=True, start=0, end=1)
-                    self.text(imgs, (pos[0]+9+est_width*i, pos[1]+9), "{}".format(export['est'][i+1]), fill=self.COLORS[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=0, end=1)
-                    do_crit = False
-                else:
-                    await self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width , pos[1]), (est_width-15, 150), transparency=True, start=0, end=2)
-                    self.text(imgs, (pos[0]+9+est_width, pos[1]+9), "{}".format(export['est'][i+1]), fill=self.COLORS[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=0, end=1)
-                    # skin.png
-                    self.text(imgs, (pos[0]+9+est_width, pos[1]+9), "{}".format(mod_supp+((export['est'][i+1]-mod_supp)*150)//100), fill=self.COLORS[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=1, end=2)
-                    await self.pasteImage(imgs, "assets/critical.png", (pos[0]+size[0]+est_width+70, pos[1]), (100, 100), transparency=True, start=1, end=2)
-                    do_crit = True
+                await self.pasteImage(imgs, "assets/big_stat.png", (pos[0]+est_width*i , pos[1]), (est_width-15, 150), transparency=True, start=0, end=1)
+                self.text(imgs, (pos[0]+9+est_width*i, pos[1]+9), "{}".format(export['est'][i+1]), fill=self.COLORS[int(export['est'][0])], font=self.fonts['big'], stroke_width=6, stroke_fill=(0, 0, 0), start=0, end=1)
                 if i == 0:
                     self.text(imgs, (pos[0]+est_width*i+15 , pos[1]+90), ("予測ダメ一ジ" if self.japanese else "Estimated"), fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
                 elif i == 1:
                     if int(export['est'][0]) <= 4: vs = (int(export['est'][0]) + 2) % 4 + 1
                     else: vs = (int(export['est'][0]) - 5 + 1) % 2 + 5
                     if self.japanese:
-                        self.text(imgs, (pos[0]+est_width*i+15 , pos[1]+90), "対", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
-                        self.text(imgs, (pos[0]+est_width*i+54 , pos[1]+90), "{}属性".format(self.COLORS_JP[vs]), fill=self.COLORS[vs], font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
-                        self.text(imgs, (pos[0]+est_width*i+162 , pos[1]+90), "予測ダメ一ジ", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
+                        self.text(imgs, (pos[0]+est_width*i+15 , pos[1]+90), "対", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
+                        self.text(imgs, (pos[0]+est_width*i+54 , pos[1]+90), "{}属性".format(self.COLORS_JP[vs]), fill=self.COLORS[vs], font=self.fonts['medium'], start=0, end=1)
+                        self.text(imgs, (pos[0]+est_width*i+162 , pos[1]+90), "予測ダメ一ジ", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
                     else:
-                        self.text(imgs, (pos[0]+est_width*i+15 , pos[1]+90), "vs", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
-                        self.text(imgs, (pos[0]+est_width*i+66 , pos[1]+90), "{}".format(self.COLORS_EN[vs]), fill=self.COLORS[vs], font=self.fonts['medium'], start=0, end=2 if do_crit else 1)
+                        self.text(imgs, (pos[0]+est_width*i+15 , pos[1]+90), "vs", fill=(255, 255, 255), font=self.fonts['medium'], start=0, end=1)
+                        self.text(imgs, (pos[0]+est_width*i+66 , pos[1]+90), "{}".format(self.COLORS_EN[vs]), fill=self.COLORS[vs], font=self.fonts['medium'], start=0, end=1)
             # hp gauge
             if do_hp:
                 await asyncio.sleep(0)
@@ -1266,7 +1244,6 @@ class PartyBuilder():
         do_emp = self.settings.get('emp', False)
         do_skin = self.settings.get('skin', True)
         do_hp = self.settings.get('hp', True)
-        do_crit = self.settings.get('crit', True)
         do_opus = self.settings.get('opus', False)
         if self.settings.get('caching', False):
             self.checkDiskCache()
@@ -1305,7 +1282,7 @@ class PartyBuilder():
                 tasks.append(tg.create_task(self.make_emp(export)))
             tasks.append(tg.create_task(self.make_party(export)))
             tasks.append(tg.create_task(self.make_summon(export)))
-            tasks.append(tg.create_task(self.make_weapon(export, do_hp, do_crit, do_opus)))
+            tasks.append(tg.create_task(self.make_weapon(export, do_hp, do_opus)))
             tasks.append(tg.create_task(self.make_modifier(export)))
         for t in tasks:
             r = t.result()
@@ -1358,12 +1335,11 @@ class PartyBuilder():
             print("[3] Generate emp.png ( Current:", self.settings.get('emp', False),")")
             print("[4] Set Asset Server ( Current:", self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net'),")")
             print("[5] Show HP bar on skin.png ( Current:", self.settings.get('hp', True),")")
-            print("[6] Show critical estimate on skin.png ( Current:", self.settings.get('crit', True),")")
-            print("[7] Guess Opus / ULTIMA_OPUS_IDS 3rd skill ( Current:", self.settings.get('opus', True),")")
-            print("[8] Set GBFTMR Path ( Current:", self.settings.get('gbftmr_path', ''),")")
-            print("[9] Use GBFTMR if imported ( Current:", self.settings.get('gbftmr_use', False),")")
-            print("[10] Empty Asset Cache")
-            print("[11] Empty EMP Cache")
+            print("[6] Guess Opus / ULTIMA_OPUS_IDS 3rd skill ( Current:", self.settings.get('opus', True),")")
+            print("[7] Set GBFTMR Path ( Current:", self.settings.get('gbftmr_path', ''),")")
+            print("[8] Use GBFTMR if imported ( Current:", self.settings.get('gbftmr_use', False),")")
+            print("[9] Empty Asset Cache")
+            print("[10] Empty EMP Cache")
             print("[Any] Back")
             s = input()
             if s == "0":
@@ -1394,10 +1370,8 @@ class PartyBuilder():
             elif s == "5":
                 self.settings['hp'] = not self.settings.get('hp', True)
             elif s == "6":
-                self.settings['crit'] = not self.settings.get('crit', True)
-            elif s == "7":
                 self.settings['opus'] = not self.settings.get('opus', False)
-            elif s == "8":
+            elif s == "7":
                 print("Input the path of the GBFTMR folder (Leave blank to cancel): ")
                 folder = input()
                 if folder != "":
@@ -1410,11 +1384,11 @@ class PartyBuilder():
                         print("GBFTMR is imported with success")
                     else:
                         print("Failed to import GBFTMR")
-            elif s == "9":
+            elif s == "8":
                 self.settings['gbftmr_use'] = not self.settings.get('gbftmr_use', False)
-            elif s == "10":
+            elif s == "9":
                 self.emptyCache()
-            elif s == "11":
+            elif s == "10":
                 self.emptyCache()
             else:
                 return
@@ -1701,47 +1675,42 @@ class Interface(Tk.Tk): # interface
         self.qual_variable = Tk.StringVar(self)
         options = ['720p', '1080p', '4K']
         self.qual_variable.set(self.pb.settings.get('quality', options[-1]))
-        Tk.Label(tabcontent, text="Quality").grid(row=0, column=0)
+        Tk.Label(tabcontent, text="Quality").grid(row=0, column=0, sticky="ws")
         opt = Tk.OptionMenu(tabcontent, self.qual_variable, *options, command=self.qual_changed)
         opt.grid(row=0, column=1)
         self.to_disable.append(opt)
         
         self.skin_var = Tk.IntVar(value=self.pb.settings.get('skin', True))
-        Tk.Label(tabcontent, text="Do Skins").grid(row=2, column=0)
+        Tk.Label(tabcontent, text="Do Skins").grid(row=1, column=0, sticky="ws")
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.skin_var, command=self.toggleSkin))
-        self.to_disable[-1].grid(row=2, column=1)
+        self.to_disable[-1].grid(row=1, column=1)
         
         self.emp_var = Tk.IntVar(value=self.pb.settings.get('emp', False))
-        Tk.Label(tabcontent, text="Do EMP").grid(row=3, column=0)
+        Tk.Label(tabcontent, text="Do EMP").grid(row=2, column=0, sticky="ws")
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.emp_var, command=self.toggleEMP))
-        self.to_disable[-1].grid(row=3, column=1)
+        self.to_disable[-1].grid(row=2, column=1)
         
         self.update_var = Tk.IntVar(value=self.pb.settings.get('update', False))
-        Tk.Label(tabcontent, text="Auto Update").grid(row=4, column=0)
+        Tk.Label(tabcontent, text="Auto Update").grid(row=3, column=0, sticky="ws")
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.update_var, command=self.toggleUpdate))
-        self.to_disable[-1].grid(row=4, column=1)
+        self.to_disable[-1].grid(row=3, column=1)
         
         ### Settings Tab
         tabcontent = Tk.Frame(tabs)
         tabs.add(tabcontent, text="Advanced")
         
         self.cache_var = Tk.IntVar(value=self.pb.settings.get('caching', False))
-        Tk.Label(tabcontent, text="Cache Assets").grid(row=0, column=0)
+        Tk.Label(tabcontent, text="Cache Assets").grid(row=0, column=0, sticky="ws")
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.cache_var, command=self.toggleCaching))
         self.to_disable[-1].grid(row=0, column=1)
         
         self.hp_var = Tk.IntVar(value=self.pb.settings.get('hp', True))
-        Tk.Label(tabcontent, text="HP Bar on skin.png").grid(row=1, column=0)
+        Tk.Label(tabcontent, text="HP Bar on skin.png").grid(row=1, column=0, sticky="ws")
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.hp_var, command=self.toggleHP))
         self.to_disable[-1].grid(row=1, column=1)
         
-        self.crit_var = Tk.IntVar(value=self.pb.settings.get('crit', True))
-        Tk.Label(tabcontent, text="Show crit. on skin.png").grid(row=2, column=0)
-        self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.crit_var, command=self.toggleCrit))
-        self.to_disable[-1].grid(row=2, column=1)
-        
         self.opus_var = Tk.IntVar(value=self.pb.settings.get('opus', False))
-        Tk.Label(tabcontent, text="Guess Opus/ULTIMA_OPUS_IDS Key").grid(row=3, column=0)
+        Tk.Label(tabcontent, text="Guess Opus/Ultima Key").grid(row=3, column=0, sticky="ws")
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.opus_var, command=self.toggleOpus))
         self.to_disable[-1].grid(row=3, column=1)
         
@@ -1752,8 +1721,8 @@ class Interface(Tk.Tk): # interface
         self.to_disable[-1].grid(row=0, column=0, columnspan=2, sticky="we")
         self.gbftmr_var = Tk.IntVar(value=self.pb.settings.get('gbftmr_use', False))
         self.gbftmr_status = Tk.Label(tabcontent, text="Not Imported")
-        self.gbftmr_status.grid(row=1, column=0)
-        Tk.Label(tabcontent, text="Enable").grid(row=2, column=0)
+        self.gbftmr_status.grid(row=1, column=0, sticky="ws")
+        Tk.Label(tabcontent, text="Enable").grid(row=2, column=0, sticky="ws")
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.gbftmr_var, command=self.toggleGBFTMR))
         self.to_disable[-1].grid(row=2, column=1)
         self.to_disable.append(Tk.Button(tabcontent, text="Make Thumbnail", command=lambda: self.loop.create_task(self.runGBFTMR()), width=self.BW, height=self.BH))
@@ -1859,9 +1828,6 @@ class Interface(Tk.Tk): # interface
 
     def toggleHP(self) -> None:
         self.pb.settings['hp'] = (self.hp_var.get() != 0)
-
-    def toggleCrit(self) -> None:
-        self.pb.settings['crit'] = (self.crit_var.get() != 0)
 
     def toggleOpus(self) -> None:
         self.pb.settings['opus'] = (self.opus_var.get() != 0)

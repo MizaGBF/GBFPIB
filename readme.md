@@ -12,7 +12,7 @@ Version 10.0 drops support for multiprocessing and uses [Asyncio](https://docs.p
 It results in the following changes:  
 - Decreased memory usage (around a tenth of before).  
 - Possibly longer time to process the images.  
-- The application is mostly singled threaded. It will cause the GBFTMR window to be a bit laggy as images are made at the same time in the background.  
+- The application is now singled threaded.  
   
 `pip install -r requirements.txt` must be run again with this new version.  
 The previous version is still available [here](https://github.com/MizaGBF/GBFPIB/releases/tag/9.15).  
@@ -46,8 +46,7 @@ Do note, if requirements haven't been installed properly, the script will automa
 ### Advanced Settings  
 1. `Cache Assets`: If enabled, assets will be cached in the `cache` folder to increase speed of future processings.  
 2. `HP Bar on skin.png`: If enabled, your Estimate Damage HP setting will be displayed on `skin.png`. `Do Skins` setting must be enabled for it to work.  
-3. `Show crit. on skin.png`: If enabled and if you have between 0 and 100% critical value, an approximation of your critical estimate damage will be displayed on `skin.png`. Do note it doesn't amount well for damage cap. `Do Skins` setting must be enabled for it to work.  
-4. `Guess Opus/Ultima Key`: If enabled, it will attempt to guess your Dark Opus and Ultima third skill to display the key image instead of the generic skill icon. Not 100% accurate.  
+3. `Guess Opus/Ultima Key`: If enabled, it will attempt to guess your Dark Opus and Ultima third skill to display the key image instead of the generic skill icon. Not 100% accurate.  
   
 ### Command Line  
 For advanced users:  
@@ -79,11 +78,6 @@ Keep in mind:
 (Only if the `HP Bar on skin.png` setting is enabled)  
 If you click the bookmarklet with the Estimated Damage calculator open, it will grab the current HP percentage and display it on `skin.png`, instead of the off-element estimated damage.  
 If you don't open the calculator, it will assume your current HP is set to 100%.  
-  
-### Critical Estimate Damage  
-(Only if the `Show crit. on skin.png` setting is enabled)  
-If your weapon grid has a critical modifier inferior to 100%, it will display the critical estimated damage on `skin.png`, instead of the on-element estimated damage.  
-Do note the calcul isn't perfect: It won't account for cap up or craft skills (or other critical supplementals).  
   
 ### Support Summon  
 By default, the game doesn't provide you the ID of the support summon set in your damage calculator.  
