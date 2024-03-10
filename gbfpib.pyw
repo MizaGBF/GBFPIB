@@ -54,6 +54,7 @@ class PartyBuilder():
     }
     AUXILIARY_CLS = [100401, 300301, 300201, 120401, 140401] # aux classes
     SUPSUMMON_REGEX = [ # regex used for the wiki support summon id search
+        re.compile('(20[0-9]{8}_04)\\.'),
         re.compile('(20[0-9]{8}_03)\\.'),
         re.compile('(20[0-9]{8}_02)\\.'),
         re.compile('(20[0-9]{8})\\.')
