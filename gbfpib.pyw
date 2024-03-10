@@ -78,6 +78,7 @@ class PartyBuilder():
     ORIGIN_DRACONIC_IDS = [
         "1040815900","1040316500","1040712800","1040422200","1040915600","1040516500"
     ]
+    USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36'
     
     def __init__(self, debug : bool = False) -> None:
         self.debug = debug
@@ -320,7 +321,7 @@ class PartyBuilder():
     async def get_support_summon(self, sps : str) -> Optional[str]: # search on gbf.wiki to match a summon name to its id
         try:
             if sps in self.sumcache: return self.sumcache[sps]
-            response = await self.client.get("https://gbf.wiki/" + quote(self.fixCase(sps)), headers={'connection':'keep-alive'})
+            response = await self.client.get("https://gbf.wiki/" + quote(self.fixCase(sps)), headers={'connection':'keep-alive', 'User-Agent':self.USER_AGENT})
             async with response:
                 if response.status != 200: raise Exception()
                 data = (await response.read()).decode('utf-8')
@@ -341,7 +342,7 @@ class PartyBuilder():
 
     async def advanced_support_summon_search(self, summon_name : str) -> Optional[str]: # advanced search on gbf.wiki to match a summon name to its id
         try:
-            response = await self.client.get("https://gbf.wiki/index.php?title=Special:Search&search=" + quote(summon_name), headers={'connection':'keep-alive'})
+            response = await self.client.get("https://gbf.wiki/index.php?title=Special:Search&search=" + quote(summon_name), headers={'connection':'keep-alive', 'User-Agent':self.USER_AGENT})
             async with response:
                 if response.statu != 200: raise Exception()
                 data = (await response.read()).decode('utf-8')
