@@ -945,10 +945,10 @@ class PartyBuilder():
             print("[MOD] * Drawing Modifiers...")
             if self.babyl:
                 offset = (1560, 10)
-                limit = [29, 25, 20]
+                limit = [32, 25, 20]
             else:
-                offset = (1560, 415)
-                limit = [25, 20, 16]
+                offset = (1560, 410)
+                limit = [27, 20, 16]
             print("[MOD] |--> Found", len(export['mods']), "modifier(s)...")
             
             # weapon modifier list
