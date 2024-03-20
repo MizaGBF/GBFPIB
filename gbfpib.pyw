@@ -473,6 +473,9 @@ class PartyBuilder():
                     prog = 0
                     ca_dmg = 0
                     ca_dmg_cap = 0
+                    auto_amp_sp = 0
+                    skill_amp_sp = 0
+                    ca_amp_sp = 0
                     for m in export['mods']:
                         try:
                             match m['icon_img']:
@@ -488,6 +491,12 @@ class PartyBuilder():
                                     ca_dmg = float(m['value'].replace('%', ''))
                                 case '04_icon_ca_dmg_cap.png':
                                     ca_dmg_cap = float(m['value'].replace('%', ''))
+                                case '04_icon_normal_dmg_amp_other.png':
+                                    auto_amp_sp = float(m['value'].replace('%', ''))
+                                case '04_icon_ability_dmg_amplify_other.png':
+                                    skill_amp_sp = float(m['value'].replace('%', ''))
+                                case '04_icon_ca_dmg_amplify_other.png':
+                                    ca_amp_sp = float(m['value'].replace('%', ''))
                         except:
                             pass
                     if hp_cut >= 30: # temptation
@@ -504,6 +513,15 @@ class PartyBuilder():
                         return True
                     elif turn_dmg >= 5: # depravity
                         export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14016.jpg"
+                        return True
+                    elif auto_amp_sp >= 10: # extremity
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14005.jpg"
+                        return True
+                    elif skill_amp_sp >= 10: # sagacity
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14006.jpg"
+                        return True
+                    elif ca_amp_sp >= 10: # supremacy
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14007.jpg"
                         return True
                 elif export['w'][i] in self.ULTIMA_OPUS_IDS:
                     seraphic = 0
@@ -1337,7 +1355,7 @@ class PartyBuilder():
             print("[3] Generate emp.png ( Current:", self.settings.get('emp', False),")")
             print("[4] Set Asset Server ( Current:", self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net'),")")
             print("[5] Show HP bar on skin.png ( Current:", self.settings.get('hp', True),")")
-            print("[6] Guess Opus / ULTIMA_OPUS_IDS 3rd skill ( Current:", self.settings.get('opus', True),")")
+            print("[6] Guess Opus / Draco / Ultima 3rd skill ( Current:", self.settings.get('opus', True),")")
             print("[7] Set GBFTMR Path ( Current:", self.settings.get('gbftmr_path', ''),")")
             print("[8] Use GBFTMR if imported ( Current:", self.settings.get('gbftmr_use', False),")")
             print("[9] Empty Asset Cache")
@@ -1712,7 +1730,7 @@ class Interface(Tk.Tk): # interface
         self.to_disable[-1].grid(row=1, column=1)
         
         self.opus_var = Tk.IntVar(value=self.pb.settings.get('opus', False))
-        Tk.Label(tabcontent, text="Guess Opus/Ultima Key").grid(row=3, column=0, sticky="ws")
+        Tk.Label(tabcontent, text="Guess Opus/Draco/Ultima Key").grid(row=3, column=0, sticky="ws")
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.opus_var, command=self.toggleOpus))
         self.to_disable[-1].grid(row=3, column=1)
         
