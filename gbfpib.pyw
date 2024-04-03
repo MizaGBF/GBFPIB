@@ -544,6 +544,17 @@ class PartyBuilder():
                     if seraphic >= 25: # tria
                         export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17003.jpg"
                         return True
+                    elif heal_cap >= 50 and bar_gain >= 10: # dio / tessera better guess (EXPERIMENTAL)
+                        count = 0
+                        for a in export['wsn']:
+                            for b in a:
+                                if b is None: continue
+                                elif "heal_limit_m" in b: count += 1
+                                elif "heal_limit" in b: count += 1
+                        if count >= 3: export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17004.jpg"
+                        elif count == 2: return False # unsure
+                        else: export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17002.jpg"
+                        return True
                     elif heal_cap >= 50: # dio
                         export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17002.jpg"
                         return True
