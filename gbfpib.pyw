@@ -502,6 +502,15 @@ class PartyBuilder():
                     if hp_cut >= 30: # temptation
                         export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14014.jpg"
                         return True
+                    elif auto_amp_sp >= 10: # extremity
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14005.jpg"
+                        return True
+                    elif skill_amp_sp >= 10: # sagacity
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14006.jpg"
+                        return True
+                    elif ca_amp_sp >= 10: # supremacy
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14007.jpg"
+                        return True
                     elif bar_gain <= -50 and bar_gain > -200: # falsehood
                         export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14017.jpg"
                         return True
@@ -513,15 +522,6 @@ class PartyBuilder():
                         return True
                     elif turn_dmg >= 5: # depravity
                         export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14016.jpg"
-                        return True
-                    elif auto_amp_sp >= 10: # extremity
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14005.jpg"
-                        return True
-                    elif skill_amp_sp >= 10: # sagacity
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14006.jpg"
-                        return True
-                    elif ca_amp_sp >= 10: # supremacy
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14007.jpg"
                         return True
                 elif export['w'][i] in self.ULTIMA_OPUS_IDS:
                     seraphic = 0
