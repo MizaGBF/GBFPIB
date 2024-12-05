@@ -53,12 +53,6 @@ class PartyBuilder():
         6:"闇"
     }
     AUXILIARY_CLS = [100401, 300301, 300201, 120401, 140401] # aux classes
-    SUPSUMMON_REGEX = [ # regex used for the wiki support summon id search
-        re.compile('(20[0-9]{8}_04)\\.'),
-        re.compile('(20[0-9]{8}_03)\\.'),
-        re.compile('(20[0-9]{8}_02)\\.'),
-        re.compile('(20[0-9]{8})\\.')
-    ]
     DARK_OPUS_IDS = [
         "1040310600","1040310700","1040415000","1040415100","1040809400","1040809500","1040212500","1040212600","1040017000","1040017100","1040911000","1040911100",
         "1040310600_02","1040310700_02","1040415000_02","1040415100_02","1040809400_02","1040809500_02","1040212500_02","1040212600_02","1040017000_02","1040017100_02","1040911000_02","1040911100_02",
@@ -79,7 +73,7 @@ class PartyBuilder():
     ORIGIN_DRACONIC_IDS = [
         "1040815900","1040316500","1040712800","1040422200","1040915600","1040516500"
     ]
-    USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36'
+    USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Rosetta/Dev'
     
     def __init__(self, debug : bool = False) -> None:
         self.debug = debug
@@ -319,42 +313,18 @@ class PartyBuilder():
             fixeds.append(fixed)
         return "_".join(fixeds) # return the result
 
-    async def get_support_summon(self, sps : str) -> Optional[str]: # search on gbf.wiki to match a summon name to its id
+    async def get_support_summon_from_wiki(self, name : str) -> Optional[str]: # search on gbf.wiki to match a summon name to its id
         try:
-            if sps in self.sumcache: return self.sumcache[sps]
-            response = await self.client.get("https://gbf.wiki/" + quote(self.fixCase(sps)), headers={'connection':'keep-alive', 'User-Agent':self.USER_AGENT})
+            name = name.lower()
+            if name in self.sumcache: return self.sumcache[name]
+            response = await self.client.get("https://gbf.wiki/index.php?title=Special:CargoExport&tables=summons&fields=id,name&format=json&limit=20000", headers={'connection':'close', 'User-Agent':self.USER_AGENT})
             async with response:
                 if response.status != 200: raise Exception()
-                data = (await response.read()).decode('utf-8')
-                for ss in self.SUPSUMMON_REGEX:
-                    group = ss.findall(data)
-                    if len(group) > 0: break
-                self.sumcache[sps] = group[0]
-            return group[0]
-        except:
-            if "(summon)" not in sps.lower():
-                return await self.get_support_summon(sps + ' (Summon)')
-            else:
-                try:
-                    return await self.advanced_support_summon_search(sps.replace(' (Summon)', ''))
-                except:
-                    pass
-            return None
-
-    async def advanced_support_summon_search(self, summon_name : str) -> Optional[str]: # advanced search on gbf.wiki to match a summon name to its id
-        try:
-            response = await self.client.get("https://gbf.wiki/index.php?title=Special:Search&search=" + quote(summon_name), headers={'connection':'keep-alive', 'User-Agent':self.USER_AGENT})
-            async with response:
-                if response.statu != 200: raise Exception()
-                data = (await response.read()).decode('utf-8')
-                cur = 0
-                while True: # iterate search results for an id
-                    x = data.find("<div class='searchresult'>ID ", cur)
-                    if x == -1: break
-                    x += len("<div class='searchresult'>ID ")
-                    if 'title="Demi ' not in data[cur:x]: # skip demi optimus
-                        return data[x:x+10]
-                    cur = x
+                data = await response.json()
+                for summon in data:
+                    if summon["name"].lower() == name:
+                        self.sumcache[name] = summon["id"]
+                        return summon["id"]
             return None
         except:
             return None
@@ -916,7 +886,7 @@ class PartyBuilder():
                     supp = export['spsid']
                 else:
                     print("[WPN] |--> Looking up summon ID of", export['sps'], "on the wiki")
-                    supp = await self.get_support_summon(export['sps'])
+                    supp = await self.get_support_summon_from_wiki(export['sps'])
                 if supp is None:
                     print("[WPN] |--> Support summon is", export['sps'], "(Note: searching its ID on gbf.wiki failed)")
                     await self.pasteImage(imgs, "assets/big_stat.png", (pos[0]-bsize[0]-15, pos[1]+9*2-15), (bsize[0], 150), transparency=True, start=0, end=1)
@@ -1100,7 +1070,11 @@ class PartyBuilder():
                     await self.pasteImage(imgs, "assets/bg_emp.png", self.add(pos, (csize[0], 0)), bg_size, transparency=True)
                     # main EMP
                     nemp = len(data['emp'])
-                    print("[EMP] |--> Ally #{}: {} EMPs, {} Ring EMPs, {}, {}".format(i+1, nemp, len(data['ring']), ('{} Lv{}'.format(data['awaktype'], data['awakening'].split('lv')[-1]) if 'awakening' in data else 'Awakening not found'), ('Has Domain' if ('domain' in data and len(data['domain']) > 0) else 'No Domain')))
+                    extra_lb = ""
+                    if 'domain' in data and len(data['domain']) > 0: extra_lb = ", Has Domain"
+                    elif 'saint' in data and len(data['saint']) > 0: extra_lb = ", Has Yupei"
+                    elif 'extra' in data and len(data['extra']) > 0: extra_lb = ", Has Extra EMP"
+                    print("[EMP] |--> Ally #{}: {} EMPs, {} Ring EMPs, {}{}".format(i+1, nemp, len(data['ring']), ('{} Lv{}'.format(data['awaktype'], data['awakening'].split('lv')[-1]) if 'awakening' in data else 'Awakening not found'), extra_lb))
                     if nemp > 15: # transcended eternal only (for now)
                         idx = 1
                         off = ((esizes[0][0] - esizes[1][0]) * 5) // 2
@@ -1137,33 +1111,70 @@ class PartyBuilder():
                             self.text(imgs, self.add(epos, eroffset), ring['type']['name'] + " " + ring['param']['disp_total_param'], fill=(255, 255, 95), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
                     if compact != 2:
                         await asyncio.sleep(0)
+                        icon_size = (65, 65)
+                        icon_index = 1
                         # calc pos
                         if compact:
                             apos1 = (pos[0] + csize[0] + 25, pos[1] + csize[1])
-                            apos2 = (pos[0] + csize[0] + 425, pos[1] + csize[1])
+                            apos2 = (pos[0] + csize[0] + 225, pos[1] + csize[1])
                         else:
-                            apos1 = (imgs[0].size[0] - 400, pos[1]+20)
-                            apos2 = (imgs[0].size[0] - 400, pos[1]+85)
+                            apos1 = (imgs[0].size[0] - 420, pos[1]+20)
+                            apos2 = (imgs[0].size[0] - 420, pos[1]+85)
                         # awakening
                         if data.get('awakening', None) is not None:
                             match data['awaktype']:
                                 case "Attack"|"攻撃":
-                                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/item/npcarousal/s/1.jpg", apos1, (65, 65))
+                                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/item/npcarousal/s/1.jpg", apos1, icon_size)
                                 case "Defense"|"防御":
-                                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/item/npcarousal/s/2.jpg", apos1, (65, 65))
+                                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/item/npcarousal/s/2.jpg", apos1, icon_size)
                                 case "Multiattack"|"連続攻撃":
-                                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/item/npcarousal/s/3.jpg", apos1, (65, 65))
+                                    await self.dlAndPasteImage(imgs, "assets_en/img/sp/assets/item/npcarousal/s/3.jpg", apos1, icon_size)
                                 case _: # "Balanced"|"バランス"or others
-                                    await self.pasteImage(imgs, "assets/bal_awakening.png", apos1, (65, 65), transparency=True)
+                                    await self.pasteImage(imgs, "assets/bal_awakening.png", apos1, icon_size, transparency=True)
                             self.text(imgs, self.add(apos1, (75, 10)), "Lv" + data['awakening'].split('lv')[-1], fill=(198, 170, 240), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
-                        # domain
-                        if data.get('domain', None) is not None:
-                            if len(data['domain']) > 0:
-                                await self.dlAndPasteImage(imgs, "assets_en/img/sp/ui/icon/ability/m/1426_3.png", apos2, (65, 65))
-                                dlv = 0
-                                for d in data['domain']:
-                                    if d[2] is not None: dlv += 1
-                                self.text(imgs, self.add(apos2, (75, 10)),"Lv" + str(dlv), fill=(100, 210, 255), font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
+                        # domain and other extra upgrades
+                        for key in ['domain', 'saint', 'extra']:
+                            if key in data and len(data[key]) > 0:
+                                extra_txt = ""
+                                # set txt, icon and color according to specifics
+                                match key:
+                                    case 'domain':
+                                        icon_path = "assets_en/img/sp/ui/icon/ability/m/1426_3.png"
+                                        text_color = (100, 210, 255)
+                                        lv = 0
+                                        for el in data[key]:
+                                            if el[2] is not None: lv += 1
+                                        extra_txt = "Lv" + str(lv)
+                                    case 'extra':
+                                        icon_path = "assets_en/img/sp/ui/icon/ability/m/2487_3.png"
+                                        text_color = (75, 113, 255)
+                                        extra_txt = "Lv" + str(len(data[key])) # placeholder
+                                    case 'saint':
+                                        icon_path = "assets_en/img/sp/ui/icon/skill/skill_job_weapon.png"
+                                        text_color = (207, 145, 64)
+                                        lv = [0, 0]
+                                        for el in data[key]:
+                                            if el[0].startswith("ico-progress-gauge"):
+                                                if el[0].endswith(" on"): lv[0] += 1
+                                                lv[1] += 1
+                                        extra_txt = "{}/{}".format(lv[0], lv[1])
+                                    case _:
+                                        icon_path = "assets_en/img/sp/ui/icon/skill/skill_job_weapon.png"
+                                        text_color = (207, 145, 64)
+                                        extra_txt = "Lv" + str(len(data[key]))
+                                # add to image
+                                await self.dlAndPasteImage(imgs, icon_path, apos2, icon_size)
+                                self.text(imgs, self.add(apos2, (75, 10)), extra_txt, fill=text_color, font=self.fonts['medium'], stroke_width=6, stroke_fill=(0, 0, 0))
+                                # increase index and move position accordingly
+                                # NOTE: Should be unused for now, it's in case they add multiple in the future
+                                icon_index += 1
+                                if compact:
+                                    apos2 = self.add(apos2, (200, 0))
+                                else:
+                                    if icon_index % 2 == 0:
+                                        apos2 = self.add(apos2, (200, -icon_size[1]))
+                                    else:
+                                        apos2 = self.add(apos2, (0, icon_size[1]))
             return ('emp', imgs)
         except Exception as e:
             imgs[0].close()
@@ -1349,7 +1360,15 @@ class PartyBuilder():
         if 'domain' not in export:
             print("* No Domain Data found, please update your bookmark")
         else:
-            print("* Domain Lvl", len(export['domain']))
+            print("* Domain #", len(export['domain']))
+        if 'saint' not in export:
+            print("* No Saint Data found, please update your bookmark")
+        else:
+            print("* Saint #", len(export['saint']))
+        if 'extra' not in export:
+            print("* No Extra Data found, please update your bookmark")
+        else:
+            print("* Extra #", len(export['extra']))
         self.checkEMP()
         self.emp_cache[str(export['id'])] = export
         with open('emp/{}.json'.format(export['id']), mode='w', encoding="utf-8") as outfile:
@@ -1449,7 +1468,7 @@ class PartyBuilder():
     def cpyBookmark(self) -> None:
         # check bookmarklet.txt for a more readable version
         # note: when updating it in this piece of code, you need to double the \
-        pyperclip.copy("javascript:(function(){if(window.location.hash.startsWith(\"#party/index/\")||window.location.hash.startsWith(\"#party/expectancy_damage/index\")||window.location.hash.startsWith(\"#tower/party/index/\")||(window.location.hash.startsWith(\"#event/sequenceraid\")&&window.location.hash.indexOf(\"/party/index/\")>0)&&!window.location.hash.startsWith(\"#tower/party/expectancy_damage/index/\")){let obj={ver:1,lang:window.Game.lang,p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],pce:window.Game.view.deck_model.attributes.deck.pc.param.attribute,c:[],ce:[],ci:[],cb:[window.Game.view.deck_model.attributes.deck.pc.skill.count],cst:[],cn:[],cl:[],cs:[],cp:[],cwr:[],cpl:[window.Game.view.deck_model.attributes.deck.pc.shield_id, window.Game.view.deck_model.attributes.deck.pc.skin_shield_id],fpl:[window.Game.view.deck_model.attributes.deck.pc.familiar_id, window.Game.view.deck_model.attributes.deck.pc.skin_familiar_id],qs:null,cml:window.Game.view.deck_model.attributes.deck.pc.job.param.master_level,cbl:window.Game.view.deck_model.attributes.deck.pc.job.param.perfection_proof_level,s:[],sl:[],ss:[],se:[],sp:[],ssm:window.Game.view.deck_model.attributes.deck.pc.skin_summon_id,w:[],wsm:[window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id, window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id_2],wl:[],wsn:[],wll:[],wp:[],wakn:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage],estx:[],mods:window.Game.view.deck_model.attributes.deck.pc.damage_info.effect_value_info,sps:(window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name?window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name:null),spsid:(Game.view.expectancyDamageData?(Game.view.expectancyDamageData.imageId?Game.view.expectancyDamageData.imageId:null):null)};let qid = JSON.stringify(Game.view.deck_model.attributes.deck.pc.quick_user_summon_id);if(qid != null){for(const i in Game.view.deck_model.attributes.deck.pc.summons){if(Game.view.deck_model.attributes.deck.pc.summons[i].param != null && Game.view.deck_model.attributes.deck.pc.summons[i].param['id'] == qid){obj.qs = parseInt(i)-1;break;}}};;try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cb.push(e.param?e.skill.count:null);obj.cst.push(e.param?e.param.style:1);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cb.push(e.param?e.skill.count:null);obj.cst.push(e.param?e.param.style:1);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.sub_summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?e.param.image_id:null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.wakn.push(e.param?e.param.arousal:null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});Array.from(document.getElementsByClassName(\"txt-gauge-num\")).forEach(x=>{obj.estx.push([x.classList[1], x.textContent])});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");} else if(window.location.hash.startsWith(\"#zenith/npc\")||window.location.hash.startsWith(\"#tower/zenith/npc\")||/^#event\/sequenceraid\d+\/zenith\/npc/.test(window.location.hash)){let obj={ver:1,lang:window.Game.lang,id:parseInt(window.Game.view.npcId,10),emp:window.Game.view.bonusListModel.attributes.bonus_list,ring:window.Game.view.npcaugmentData.param_data,awakening:null,awaktype:null,domain:[]};try{obj.awakening=document.getElementsByClassName(\"prt-current-awakening-lv\")[0].firstChild.className;obj.awaktype=document.getElementsByClassName(\"prt-arousal-form-info\")[0].children[1].textContent;domains = document.getElementById(\"prt-domain-evoker-list\").getElementsByClassName(\"prt-bonus-detail\");for(let i=0;i<domains.length;++i){obj.domain.push([domains[i].children[0].className, domains[i].children[1].textContent, domains[i].children[2]?domains[i].children[2].textContent:null]);}}catch(error){};let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,true);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,true);document.execCommand(\"copy\");}else{alert('Please go to a GBF Party or EMP screen');}}())")
+        pyperclip.copy("javascript:(function(){if(window.location.hash.startsWith(\"#party/index/\")||window.location.hash.startsWith(\"#party/expectancy_damage/index\")||window.location.hash.startsWith(\"#tower/party/index/\")||(window.location.hash.startsWith(\"#event/sequenceraid\")&&window.location.hash.indexOf(\"/party/index/\")>0)&&!window.location.hash.startsWith(\"#tower/party/expectancy_damage/index/\")){let obj={ver:1,lang:window.Game.lang,p:parseInt(window.Game.view.deck_model.attributes.deck.pc.job.master.id,10),pcjs:window.Game.view.deck_model.attributes.deck.pc.param.image,ps:[],pce:window.Game.view.deck_model.attributes.deck.pc.param.attribute,c:[],ce:[],ci:[],cb:[window.Game.view.deck_model.attributes.deck.pc.skill.count],cst:[],cn:[],cl:[],cs:[],cp:[],cwr:[],cpl:[window.Game.view.deck_model.attributes.deck.pc.shield_id,window.Game.view.deck_model.attributes.deck.pc.skin_shield_id],fpl:[window.Game.view.deck_model.attributes.deck.pc.familiar_id,window.Game.view.deck_model.attributes.deck.pc.skin_familiar_id],qs:null,cml:window.Game.view.deck_model.attributes.deck.pc.job.param.master_level,cbl:window.Game.view.deck_model.attributes.deck.pc.job.param.perfection_proof_level,s:[],sl:[],ss:[],se:[],sp:[],ssm:window.Game.view.deck_model.attributes.deck.pc.skin_summon_id,w:[],wsm:[window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id,window.Game.view.deck_model.attributes.deck.pc.skin_weapon_id_2],wl:[],wsn:[],wll:[],wp:[],wakn:[],wax:[],waxi:[],waxt:[],watk:window.Game.view.deck_model.attributes.deck.pc.weapons_attack,whp:window.Game.view.deck_model.attributes.deck.pc.weapons_hp,satk:window.Game.view.deck_model.attributes.deck.pc.summons_attack,shp:window.Game.view.deck_model.attributes.deck.pc.summons_hp,est:[window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage_attribute,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_normal_damage,window.Game.view.deck_model.attributes.deck.pc.damage_info.assumed_advantage_damage],estx:[],mods:window.Game.view.deck_model.attributes.deck.pc.damage_info.effect_value_info,sps:(window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name?window.Game.view.deck_model.attributes.deck.pc.damage_info.summon_name:null),spsid:(Game.view.expectancyDamageData?(Game.view.expectancyDamageData.imageId?Game.view.expectancyDamageData.imageId:null):null)};let qid=JSON.stringify(Game.view.deck_model.attributes.deck.pc.quick_user_summon_id);if(qid!=null){for(const i in Game.view.deck_model.attributes.deck.pc.summons){if(Game.view.deck_model.attributes.deck.pc.summons[i].param!=null&&Game.view.deck_model.attributes.deck.pc.summons[i].param.id==qid){obj.qs=parseInt(i)-1;break}}};try{for(let i=0;i<4-window.Game.view.deck_model.attributes.deck.pc.set_action.length;i++){obj.ps.push(null)}Object.values(window.Game.view.deck_model.attributes.deck.pc.set_action).forEach(e=>{obj.ps.push(e.name?e.name.trim():null)})}catch(error){obj.ps=[null,null,null,null]};if(window.location.hash.startsWith(\"#tower/party/index/\")){Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(x=>{Object.values(x).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cb.push(e.param?e.skill.count:null);obj.cst.push(e.param?e.param.style:1);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})})}else{Object.values(window.Game.view.deck_model.attributes.deck.npc).forEach(e=>{obj.c.push(e.master?parseInt(e.master.id,10):null);obj.ce.push(e.master?parseInt(e.master.attribute,10):null);obj.ci.push(e.param?e.param.image_id_3:null);obj.cb.push(e.param?e.skill.count:null);obj.cst.push(e.param?e.param.style:1);obj.cl.push(e.param?parseInt(e.param.level,10):null);obj.cs.push(e.param?parseInt(e.param.evolution,10):null);obj.cp.push(e.param?parseInt(e.param.quality,10):null);obj.cwr.push(e.param?e.param.has_npcaugment_constant:null);obj.cn.push(e.master?e.master.short_name:null)})}Object.values(window.Game.view.deck_model.attributes.deck.pc.summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.sub_summons).forEach(e=>{obj.s.push(e.master?parseInt(e.master.id.slice(0,-3),10):null);obj.sl.push(e.param?parseInt(e.param.level,10):null);obj.ss.push(e.param?e.param.image_id:null);obj.se.push(e.param?parseInt(e.param.evolution,10):null);obj.sp.push(e.param?parseInt(e.param.quality,10):null)});Object.values(window.Game.view.deck_model.attributes.deck.pc.weapons).forEach(e=>{obj.w.push(e.master?e.param.image_id:null);obj.wl.push(e.param?parseInt(e.param.skill_level,10):null);obj.wsn.push(e.param?[e.skill1?e.skill1.image:null,e.skill2?e.skill2.image:null,e.skill3?e.skill3.image:null]:null);obj.wll.push(e.param?parseInt(e.param.level,10):null);obj.wp.push(e.param?parseInt(e.param.quality,10):null);obj.wakn.push(e.param?e.param.arousal:null);obj.waxt.push(e.param?e.param.augment_image:null);obj.waxi.push(e.param?e.param.augment_skill_icon_image:null);obj.wax.push(e.param?e.param.augment_skill_info:null)});Array.from(document.getElementsByClassName(\"txt-gauge-num\")).forEach(x=>{obj.estx.push([x.classList[1],x.textContent])});let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,!0);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,!0);document.execCommand(\"copy\")}else if(window.location.hash.startsWith(\"#zenith/npc\")||window.location.hash.startsWith(\"#tower/zenith/npc\")||/^#event\/[a-zA-Z0-9]+\/zenith\/npc/.test(window.location.hash)){let obj={ver:1,lang:window.Game.lang,id:parseInt(window.Game.view.npcId,10),emp:window.Game.view.bonusListModel.attributes.bonus_list,ring:window.Game.view.npcaugmentData.param_data,awakening:null,awaktype:null,domain:[],saint:[],extra:[]};try{obj.awakening=document.getElementsByClassName(\"prt-current-awakening-lv\")[0].firstChild.className;obj.awaktype=document.getElementsByClassName(\"prt-arousal-form-info\")[0].children[1].textContent;let domains=document.getElementById(\"prt-domain-evoker-list\").getElementsByClassName(\"prt-bonus-detail\");for(let i=0;i<domains.length;++i){obj.domain.push([domains[i].children[0].className,domains[i].children[1].textContent,domains[i].children[2]?domains[i].children[2].textContent:null])}if(document.getElementById(\"prt-shisei-wrapper\").getElementsByClassName(\"prt-progress-gauge\").length>0){let saints=document.getElementById(\"prt-shisei-wrapper\").getElementsByClassName(\"prt-progress-gauge\")[0].getElementsByClassName(\"ico-progress-gauge\");for(let i=0;i<saints.length;++i){obj.saint.push([saints[i].className,null,null])}saints=document.getElementById(\"prt-shisei-wrapper\").getElementsByClassName(\"prt-bonus-detail\");for(let i=0;i<saints.length;++i){obj.saint.push([saints[i].children[0].className,saints[i].children[1].textContent,saints[i].children[2]?saints[i].children[2].textContent:null])}}let extras=document.getElementById(\"cnt-extra-lb\").getElementsByClassName(\"prt-bonus-detail\");for(let i=0;i<extras.length;++i){obj.extra.push([extras[i].children[0].className,extras[i].children[1].textContent,extras[i].children[2]?extras[i].children[2].textContent:null])}}catch(error){};let copyListener=event=>{document.removeEventListener(\"copy\",copyListener,!0);event.preventDefault();let clipboardData=event.clipboardData;clipboardData.clearData();clipboardData.setData(\"text/plain\",JSON.stringify(obj))};document.addEventListener(\"copy\",copyListener,!0);document.execCommand(\"copy\")}else{alert('Please go to a GBF Party or EMP screen')}}())")
 
     def importGBFTMR(self, path : str) -> bool:
         try:
