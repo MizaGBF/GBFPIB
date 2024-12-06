@@ -1147,7 +1147,7 @@ class PartyBuilder():
                                         extra_txt = "Lv" + str(lv)
                                     case 'extra':
                                         icon_path = "assets_en/img/sp/ui/icon/ability/m/2487_3.png"
-                                        text_color = (75, 113, 255)
+                                        text_color = (110, 140, 250)
                                         extra_txt = "Lv" + str(len(data[key]))
                                     case 'saint':
                                         icon_path = "assets_en/img/sp/ui/icon/skill/skill_job_weapon.png"
