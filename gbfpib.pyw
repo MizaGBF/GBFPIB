@@ -77,6 +77,8 @@ class PartyBuilder():
     
     def __init__(self, debug : bool = False) -> None:
         self.debug = debug
+        self.gbftmr = None
+        self.gbftmr_2 = False
         if self.debug: print("DEBUG enabled")
         self.japanese = False # True if the data is japanese, False if not
         self.classes = None
@@ -96,9 +98,6 @@ class PartyBuilder():
         self.startup_check()
         self.load() # loading settings.json
         self.dummy_layer = self.make_canvas()
-        self.gbftmr = None
-        if self.importGBFTMR(self.settings.get('gbftmr_path', '')):
-            print("GBFTMR imported with success")
         self.wtm = b64decode("TWl6YSdzIEdCRlBJQiA=").decode('utf-8')+self.manifest.get('version', '')
         self.client = None
         if self.manifest.get('pending', False):
@@ -1246,7 +1245,10 @@ class PartyBuilder():
                     s = input()
                     if s.lower() == "y":
                         try:
-                            self.gbftmr.makeThumbnailManual(export)
+                            if self.gbftmr_2:
+                                await self.gbftmr.makeThumbnailManual(export)
+                            else:
+                                self.gbftmr.makeThumbnailManual(export)
                         except Exception as xe:
                             print(self.parent.pb.pexc(xe))
                             print("The above exception occured while trying to generate the thumbnail")
@@ -1472,19 +1474,27 @@ class PartyBuilder():
 
     def importGBFTMR(self, path : str) -> bool:
         try:
-            if self.gbftmr is not None: return True
+            if self.gbftmr is not None:
+                return True
             module_name = "gbftmr.py"
 
             spec = importlib.util.spec_from_file_location("GBFTMR.gbftmr", path + module_name)
             module = importlib.util.module_from_spec(spec)
             sys.modules["GBFTMR.gbftmr"] = module
             spec.loader.exec_module(module)
-            self.gbftmr = module.GBFTMR(path)
-            if self.gbftmr.version[0] >= 1 and self.gbftmr.version[1] >= 25:
-                return True
+            try:
+                self.gbftmr = module.GBFTMR(path)
+                if self.gbftmr.version[0] >= 1 and self.gbftmr.version[1] >= 25:
+                    print("Versions of GBFTMR lesser than 2.0 are deprecated")
+                    return True
+            except: # GBFTMR v2
+                self.gbftmr = module.GBFTMR(path, self.client)
+                if self.gbftmr.VERSION[0] >= 2 and self.gbftmr.VERSION[1] >= 0:
+                    self.gbftmr_2 = True
+                    return True
             self.gbftmr = None
             return False
-        except:
+        except Exception as e:
             self.gbftmr = None
             return False
 
@@ -1594,6 +1604,8 @@ class PartyBuilder():
 
     async def start(self) -> None:
         async with self.init_client():
+            if self.importGBFTMR(self.settings.get('gbftmr_path', '')):
+                print("GBFTMR imported with success")
             if '-fast' in sys.argv:
                 await self.make(fast=True)
                 if '-nowait' not in sys.argv:
@@ -1675,7 +1687,10 @@ class GBFTMR_Select(Tk.Tk):
         self.options["settings"]["gbfpib"] = self.export
         self.destroy()
         try:
-            await asyncio.to_thread(self.interface.pb.gbftmr.makeThumbnail, self.options["settings"], self.options["template"])
+            if self.interface.pb.gbftmr_2:
+                await self.interface.pb.gbftmr.makeThumbnail(self.options["settings"], self.options["template"])
+            else:
+                await asyncio.to_thread(self.interface.pb.gbftmr.makeThumbnail, self.options["settings"], self.options["template"])
             self.result = True
         except Exception as e:
             print(self.interface.pb.pexc(e))
@@ -1783,6 +1798,9 @@ class Interface(Tk.Tk): # interface
         # other
         self.status = Tk.Label(self, text="Starting")
         self.status.grid(row=0, column=0, sticky="w")
+        
+        if sys.version_info.major < 3 or (sys.version_info.major == 3 and sys.version_info.minor < 13):
+            Tk.Label(self, text="Note: The next GBFPIB version might work on your\nPython version, but will be tested on Python 3.13").grid(row=4, column=0, columnspan=10, sticky="we")
         
         self.process_running = False
         self.events = []
