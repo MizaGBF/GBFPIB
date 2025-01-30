@@ -1,21 +1,17 @@
 # Granblue Fantasy Party Image Builder  
 * Tool to generate an image from one of your in-game party in just a few clicks, to use for Videos or anything else.  
 ### Requirements  
-* Tested on Python 3.11.  
+* Tested on Python 3.13.  
 * [pyperclip](https://pypi.org/project/pyperclip/) to read/write the clipboard.  
 * [Pillow](https://pillow.readthedocs.io/en/stable/) for image processing.  
 * [aiohttp](https://docs.aiohttp.org/en/stable/) for asset downloads.  
 * `pip install -r requirements.txt` to install all the modules.  
   
 ### What's new?  
-Version 10.0 drops support for multiprocessing and uses [Asyncio](https://docs.python.org/3/library/asyncio.html) instead.  
-It results in the following changes:  
-- Decreased memory usage (around a tenth of before).  
-- Possibly longer time to process the images.  
-- The application is now singled threaded.  
+Version 11.0 is a cleaned up version of 10.0, tested on Python 3.13.  
+It might still work on older Python versions but consider those unsupported.  
   
-`pip install -r requirements.txt` must be run again with this new version.  
-The previous version is still available [here](https://github.com/MizaGBF/GBFPIB/releases/tag/9.15).  
+Older versions can be found [here](https://github.com/MizaGBF/GBFPIB/releases).  
   
 ### Setup  
 1. Install the requirements with the command above.  
@@ -27,7 +23,11 @@ The previous version is still available [here](https://github.com/MizaGBF/GBFPIB
 7. Change the bookmark name if you want to.  
   
 You are done.  
-Do note, if requirements haven't been installed properly, the script will automatically try to install them. It might ask for administrator rights, if required.  
+  
+> [!NOTE]  
+> If requirements haven't been installed properly, the script will automatically attempt to install them.  
+> On Windows, it might ask for administrator rights, if required.  
+  
 ### How-to  
 1. Go on the party screen you want to export.  
 2. Click the bookmarklet. If nothing happens, everything went well.  
@@ -50,10 +50,21 @@ Do note, if requirements haven't been installed properly, the script will automa
   
 ### Command Line  
 For advanced users:  
-1. `-fast`: Automatically start the image building process. Be sure to have the party data ready in your clipboard. If EMP datas are found instead, it will be saved in the `emp` folder.  
-2. `-nowait`: Skip the 10 seconds waiting time at the end when using `-fast`.  
-3. `-cmd`: Let you access the command line menu. Can't be used with `-fast`.  
-4. `-debug`: For debugging purpose.  
+```
+usage: gbfpib2.pyw [-h] [-c] [-f] [-w]
+
+Granblue Fantasy Party Image Builder v11.0 https://github.com/MizaGBF/GBFPIB
+
+options:
+  -h, --help  show this help message and exit
+
+settings:
+  commands to alter the update behavior.
+
+  -c, --cli   invoke the CLI.
+  -f, --fast  directly call the generate function. The party or EMP data must be in your clipboard beforehand.
+  -w, --wait  wait 10 seconds after the generation using -f/--fast
+```  
   
 ### Cache  
 Images from the GBF asset servers can be saved for later uses.  
@@ -76,7 +87,7 @@ Keep in mind:
   
 ### Current HP setting  
 (Only if the `HP Bar on skin.png` setting is enabled)  
-If you click the bookmarklet with the Estimated Damage calculator open, it will grab the current HP percentage and display it on `skin.png`, instead of the off-element estimated damage.  
+If you click the Bookmarklet with the Estimated Damage calculator open, it will grab the current HP percentage and display it on `skin.png`, instead of the off-element estimated damage.  
 If you don't open the calculator, it will assume your current HP is set to 100%.  
   
 ### Support Summon  
@@ -86,15 +97,18 @@ There are a few ways to go around this issue:
 2. Alternatively, the bookmarklet will fetch the name of the support summon and search its ID on [gbf.wiki](https://gbf.wiki/). However, be warned this method isn't perfect, especially if you are playing in japanese or if you switch between parties.  
 3. If the above two methods don't work, the name of the support summon will simply be written instead.  
   
-### GBFTM  
-Following the Twitter debacle, and GBFTM relying on Twitter assets, I reworked it into a new project.  
-As a result, support for the existing GBFTM project has been discontinued.  
+### Bookmarklet  
+You can retrieve the Bookmarklet to export your party/EMP data from the built-in interface or CLI.  
+Alternatively, you can copy it from the `bookmarklet.txt` file.  
+  
+> [!IMPORTANT]  
+> Do **NOT** delete `bookmarklet.txt`, as the script retrieves the Bookmarklet from here.  
   
 ### GBFTMR  
 [GBFTMR](https://github.com/MizaGBF/GBFTM) can be imported to also generate a thumbnail.  
 Simply click `Set Path` and select the folder where GBFTMR is located.  
 GBFTMR must have been set beforehand or it might not work properly.  
-It's currently compatible with version 1.25 and higher (Ideally, always use the latest version to have the latest bugfixes).  
+It's currently compatible with version 2.0 and higher (Ideally, always use the latest version to have the latest bugfixes).  
   
 ### Updating  
 The script has a built-in auto updater.  
@@ -105,7 +119,7 @@ If you can't or don't want to use it, simply download the latest version and red
 Like the licence specifies, you are free to use this software as you want, free of charge.  
 Do note:  
 1. If you want to credit me, you can link this page or name me (Mizako or Miza).  
-2. If you want to report a bug, open an issue or contact me on [Twitter](https://twitter.com/mizak0), as long as I continue to develop and improve it.  
+2. If you want to report a bug, open an issue or contact me on [X](https://x.com/mizak0), as long as I continue to develop and improve it.  
 3. I DON'T take feature requests. This tool is developped for my own use first and foremost. This is why I don't advertise it.  
   
 ### Inner Workings  
@@ -115,10 +129,6 @@ Some insights on how the image processing works:
 3. For memory usage and speed reasons, `skin.png` is also composed of some simple layers, which are added on top of a copy of `party.png`. This way, we don't "redraw" `party.png` twice. Do note, however, the `skin.png` processing takes place even when the setting is disabled.  
   
 ### Known Issues  
-The app will crash when using some alternate portrait from some skins such as Cidala's. A workaround is applied in the function `fix_character_look()`. I'll add more if I find more but you can add it yourself here or report them to me.  
+The app will crash when using some alternate portrait from some skins, such as Cidala's. A workaround is applied in the function `get_character_look()`.  
+I'll add more if I find more but you can add it yourself here or report them to me.  
   
-### Result  
-Here's what the resulting images look like:  
-(Screenshots taken on version 8.3)  
-![Party and Skin Example](https://cdn.discordapp.com/attachments/614716155646705676/1010681871425880074/result.gif)  
-![EMP Example](https://cdn.discordapp.com/attachments/614716155646705676/1010681871732068444/emp.png)  

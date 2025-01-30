@@ -1,1 +1,1 @@
-python gbfpib.pyw -fast
+python gbfpib.pyw -f
