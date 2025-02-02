@@ -91,8 +91,7 @@ class IMG():
     image : Image = None
     buffer : BytesIO = None
     
-    def __init__(self : IMG, parent : PartyBuilder, src : str|bytes|IMG|Image) -> None:
-        self.parent = parent
+    def __init__(self : IMG, src : str|bytes|IMG|Image) -> None:
         self.image = None
         self.buffer = None
         match src: # possible types
@@ -120,7 +119,7 @@ class IMG():
         tmp.close()
 
     def copy(self : IMG) -> IMG:
-        return IMG(self.parent, self)
+        return IMG(self)
 
     def paste(self : IMG, other : IMG, offset : tuple[int, int]) -> None:
         self.image.paste(other.image, offset, other.image)
@@ -128,21 +127,21 @@ class IMG():
     def crop(self : IMG, size : tuple[int, int]|tuple[int, int, int, int]) -> IMG:
         # depending on the tuple size
         if len(size) == 4:
-            return IMG(self.parent, self.image.crop(size))
+            return IMG(self.image.crop(size))
         elif len(size) == 2:
-            return IMG(self.parent, self.image.crop((0, 0, *size)))
+            return IMG(self.image.crop((0, 0, *size)))
         raise ValueError("Invalid size of the tuple passed to IMG.crop(). Expected 2 or 4, received {}.".format(len(size)))
 
     def resize(self : IMG, size : v2|tuple[int, int]) -> IMG:
         match size:
             case v2():
-                return IMG(self.parent, self.image.resize(size.i, Image.Resampling.LANCZOS))
+                return IMG(self.image.resize(size.i, Image.Resampling.LANCZOS))
             case tuple():
-                return IMG(self.parent, self.image.resize(size, Image.Resampling.LANCZOS))
+                return IMG(self.image.resize(size, Image.Resampling.LANCZOS))
         raise TypeError("Invalid type passed to IMG.resize(). Expected v2 or tuple[int, int], received {}.".format(type(size)))
 
     def alpha(self : IMG, layer : IMG) -> IMG:
-        return IMG(self.parent, Image.alpha_composite(self.image, layer.image))
+        return IMG(Image.alpha_composite(self.image, layer.image))
 
 # Main class
 class PartyBuilder():
@@ -363,7 +362,7 @@ class PartyBuilder():
                         raise Exception() # go to exception/download block
                     if self.settings.get('caching', False):
                         with open("cache/" + b64encode(path.encode('utf-8')).decode('utf-8'), "rb") as f:
-                            self.cache[path] = IMG(self, f.read())
+                            self.cache[path] = IMG(f.read())
                         await asyncio.sleep(0)
                     else:
                         raise Exception()
@@ -375,7 +374,7 @@ class PartyBuilder():
                             if response.status != 200:
                                 raise Exception("HTTP Error code {} for url: {}".format(response.status, 'https://' + self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net/') + path))
                             io : bytes = await response.read()
-                            self.cache[path] = IMG(self, io)
+                            self.cache[path] = IMG(io)
                             if self.settings.get('caching', False):
                                 try:
                                     with open("cache/" + b64encode(path.encode('utf-8')).decode('utf-8'), "wb") as f:
@@ -386,7 +385,7 @@ class PartyBuilder():
                                     pass
                     else:
                         with open(path, "rb") as f:
-                            self.cache[path] = IMG(self, f.read())
+                            self.cache[path] = IMG(f.read())
                         await asyncio.sleep(0)
             # end
             self.pending.remove(path)
@@ -705,7 +704,7 @@ class PartyBuilder():
         im_a = Image.new("L", size, "black")
         i.putalpha(im_a)
         im_a.close()
-        return IMG(self, i)
+        return IMG(i)
 
     async def make_party(self : PartyBuilder, export : dict) -> str|tuple[str, list[IMG]]:
         try:
