@@ -87,7 +87,6 @@ class v2():
 # handle the close() calls on destruction
 dataclass(slots=True)
 class IMG():
-    parent : PartyBuilder = None
     image : Image = None
     buffer : BytesIO = None
     
@@ -970,7 +969,7 @@ class PartyBuilder():
                     pos = offset + (bsize.x + 30, 0) + (size + (0, skill_box_height)) * ((i - 1) % 3, (i - 1) // 3)
                 # dual blade class
                 if i <= 1 and export['p'] in self.AUXILIARY_CLS:
-                    await self.paste(imgs, range(1), ("assets/mh_dual.png" if i == 0 else "assets/aux_dual.png"), (pos, (-2, -2)).i, resize=(size, (5, 5+skill_box_height)).i, transparency=True)
+                    await self.paste(imgs, range(1), ("assets/mh_dual.png" if i == 0 else "assets/aux_dual.png"), (pos + (-2, -2)).i, resize=(size + (5, 5+skill_box_height)).i, transparency=True)
                 # portrait
                 if export['w'][i] is None or export['wl'][i] is None:
                     if i >= 10:
