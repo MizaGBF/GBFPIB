@@ -33,7 +33,7 @@ You are done.
 2. Click the bookmarklet. If nothing happens, everything went well.  
 3. Open `gbfpib.pyw` again.  
 4. This time, click on the `Build Images` button.  
-5. If everything went well, the image should appear beside `gbfpib.pyw` under the name `party.png`. Note: if you enabled the corresponding settings, it will also generate `skin.png` and/or `emp.png`.  
+5. If everything went well, the image should appear beside `gbfpib.pyw` under the name `party.png`. Note: if you enabled the corresponding settings, it will also generate `skin.png` `emp.png` and/or `artifact.png`.  
 6. If it didn't, something went wrong, probably at the step 2.  
   
 ### Settings  
@@ -41,13 +41,13 @@ You are done.
 2. `Caching`: If enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  
 3. `Do Skins`: If enabled, it will also generate `skin.png`.  
 4. `Do EMP`: If enabled, it will also generate `emp.png`.  
-5. `Auto Update`: If enabled, will check if an update is available on app startup.  
+5. `Do Artifact`: If enabled, it will also generate `artifact.png`.  
+6. `Auto Update`: If enabled, will check if an update is available on app startup.  
   
 ### Advanced Settings  
 1. `Cache Assets`: If enabled, assets will be cached in the `cache` folder to increase speed of future processings.  
 2. `HP Bar on skin.png`: If enabled, your Estimate Damage HP setting will be displayed on `skin.png`. `Do Skins` setting must be enabled for it to work.  
 3. `Guess Opus/Ultima Key`: If enabled, it will attempt to guess your Dark Opus and Ultima third skill to display the key image instead of the generic skill icon. Not 100% accurate.  
-  
 ### Command Line  
 For advanced users:  
 ```
@@ -62,7 +62,7 @@ settings:
   commands to alter the update behavior.
 
   -c, --cli   invoke the CLI.
-  -f, --fast  directly call the generate function. The party or EMP data must be in your clipboard beforehand.
+  -f, --fast  directly call the generate function. The party, EMP or Artifact data must be in your clipboard beforehand.
   -w, --wait  wait 10 seconds after the generation using -f/--fast
 ```  
   
@@ -72,18 +72,20 @@ You only need to enable the option to make it work.
 If some of those images are updated in game, all you need is to delete the cache folder so they are redownloaded later.  
 You can also delete the folder if it gets too big.  
   
-### EMP  
+### EMP and Artifact  
 No additional setup is required, it uses the same bookmark.  
-1. Go to character EMP page.  
+1. Go to character EMP (for EMPs) or character detail (for Artifacts) page.  
 2. Click the bookmarklet. If nothing happens, everything went well.  
-3. In `gbfpib.pyw`, click on the `Add EMP` button.  
+3. In `gbfpib.pyw`, click on the `Add EMP` (for EMPs) or `Add Artifact` (for Artifact) button.  
   
 This Character's EMP will be saved in the `emp` folder, as a `.json` file.  
+In the same way, this Character's Artifact will be saved in the `artifact` folder, as a `.json` file.  
 To update it, simply repeat the process.  
   
 Keep in mind:
 1. The `Do EMP` setting must be enabled or `emp.png` won't be generated when clicking `Build Images`.  
-2. If game language differ at the time you saved the EMP and when generating a Party image, EMPs will display in the original language.  
+2. Same thing for the `Do Artifact` setting.  
+2. If game language differ at the time you saved the EMP/Artifact and when generating a Party image, it will display in the original language.  
   
 ### Current HP setting  
 (Only if the `HP Bar on skin.png` setting is enabled)  
@@ -98,7 +100,7 @@ There are a few ways to go around this issue:
 3. If the above two methods don't work, the name of the support summon will simply be written instead.  
   
 ### Bookmarklet  
-You can retrieve the Bookmarklet to export your party/EMP data from the built-in interface or CLI.  
+You can retrieve the Bookmarklet to export your party/EMP/Artifact data from the built-in interface or CLI.  
 Alternatively, you can copy it from the `bookmarklet.txt` file.  
   
 > [!IMPORTANT]  
@@ -125,8 +127,7 @@ Do note:
 ### Inner Workings  
 Some insights on how the image processing works:
 1. Upon starting, it reads your clipboard and check if there is any valid data exported with the bookmark.  
-2. Because Python multithreading is terribly slow, it relies on multiprocessing instead: Up to 6 new proccesses are created. One purely for the party, one for the summons, one for the weapon grid, one for the weapon modifiers and one for EMPs. Each process returns the images, which are then assembled in another process as simple layers, by putting them one on top of each other.  
-3. For memory usage and speed reasons, `skin.png` is also composed of some simple layers, which are added on top of a copy of `party.png`. This way, we don't "redraw" `party.png` twice. Do note, however, the `skin.png` processing takes place even when the setting is disabled.  
+2. For memory usage and speed reasons, `skin.png` is also composed of some simple layers, which are added on top of a copy of `party.png`. This way, we don't "redraw" `party.png` twice. Do note, however, the `skin.png` processing takes place even when the setting is disabled.  
   
 ### Known Issues  
 The app will crash when using some alternate portrait from some skins, such as Cidala's. A workaround is applied in the function `get_character_look()`.  

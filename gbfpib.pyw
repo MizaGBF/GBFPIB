@@ -206,6 +206,7 @@ class PartyBuilder():
         self.pending : set[str] = set() # pending download
         self.cache : dict[str, IMG] = {} # memory cache
         self.emp_cache : dict[str, dict] = {} # emp cache
+        self.artifact_cache : dict[str, dict] = {} # artifact cache
         self.sumcache : dict[str, str] = {} # wiki summon cache
         self.fonts : dict[str, ImageFont] = {'mini':None, 'small':None, 'medium':None, 'big':None} # font to use during the processing
         self.quality : float = 1 # quality ratio in use currently
@@ -1210,6 +1211,18 @@ class PartyBuilder():
         except:
             return None
 
+    async def loadArtifact(self : PartyBuilder, id : str) -> dict|None:
+        try:
+            if id in self.artifact_cache:
+                return self.artifact_cache[id]
+            else:
+                with open("artifact/{}.json".format(id), mode="r", encoding="utf-8") as f:
+                    self.artifact_cache[id] = json.load(f)
+                    await asyncio.sleep(0)
+                    return self.artifact_cache[id]
+        except:
+            return None
+
     async def make_emp(self : PartyBuilder, export : dict) -> str|tuple:
         try:
             imgs : list[IMG] = [self.blank_image()]
@@ -1236,10 +1249,10 @@ class PartyBuilder():
                 cid : str = self.get_character_look(export, i)
                 data : dict|None = await self.loadEMP(cid.split('_')[0]) # preload and cache emp
                 if data is None:
-                    print("[EMP] |--> Ally #{}: {}.json can't be loaded".format(i+1, cid.split('_')[0]))
+                    print("[EMP] |--> Ally #{}: emp/{}.json can't be loaded".format(i+1, cid.split('_')[0]))
                     continue
                 elif self.japanese != (data['lang'] == 'ja'):
-                    print("[EMP] |--> Ally #{}: WARNING, language doesn't match".format(i+1))
+                    print("[EMP] |--> Ally #{}: WARNING, emp language doesn't match".format(i+1))
                 ccount += 1
             # next
             # set positions and offsets we'll need
@@ -1415,6 +1428,108 @@ class PartyBuilder():
         except Exception as e:
             return self.pexc(e)
 
+    async def make_artifact(self : PartyBuilder, export : dict) -> str|tuple:
+        try:
+            imgs : list[IMG] = [self.blank_image()]
+            print("[ART] * Drawing Artifacts...")
+            # setting offsets
+            offset : v2 = v2(15, 0)
+            ersize : v2 = v2(80, 80)
+            # first, we attempt to load emp files
+            # get chara count
+            ccount : int = 0
+            nchara : int
+            if self.babyl:
+                nchara = 12 # max number for babyl (mc included)
+            else:
+                nchara = 5 # max number of allies
+            for i in range(0, nchara):
+                if self.babyl and i == 0:
+                    continue # quirk of babyl party, mc is at index 0
+                if i >= len(export['c']) or export['c'][i] is None: # no charater in this spot
+                    continue
+                cid : str = self.get_character_look(export, i)
+                data : dict|None = await self.loadArtifact(cid.split('_')[0]) # preload and cache emp
+                if data is None:
+                    print("[ART] |--> Ally #{}: artifact/{}.json can't be loaded".format(i+1, cid.split('_')[0]))
+                    continue
+                elif self.japanese != (data['lang'] == 'ja'):
+                    print("[ART] |--> Ally #{}: WARNING, artifact language doesn't match".format(i+1))
+                ccount += 1
+            # next
+            # set positions and offsets we'll need
+            compact : int
+            portrait_type : str
+            vsize : int
+            csize : v2
+            ptoffset : v2
+            valoffset : v2
+            descoffset : v2
+            eroffset : v2
+            char_limit : int
+            ccount = 5
+            if ccount > 5:
+                if ccount > 8:
+                    compact = 2
+                else:
+                    compact = 1
+                portrait_type = 'm' if compact == 1 else 's'
+                vsize = 270 if compact == 1 else 196
+                csize = v2(236, 135) if compact == 1 else v2(196, 196)
+                ptoffset = v2(0, 2)
+                valoffset = v2(120, 0)
+                descoffset = v2(210, 0)
+                eroffset = v2(100, 25)
+                char_limit = 11
+            else:
+                compact = 0
+                portrait_type = 's'
+                vsize = 432
+                csize = v2(207, 207)
+                ptoffset = v2(0, 7)
+                valoffset = v2(120, 0)
+                descoffset = v2(210, 0)
+                eroffset = v2(100, 15)
+                char_limit = 55
+            bg_size : v2 = v2(imgs[0].image.size[0] - csize.x - offset.x, vsize)
+            pos : v2 = offset
+
+            # allies
+            for i in range(0, nchara):
+                await asyncio.sleep(0)
+                if self.babyl and i == 0:
+                    continue # quirk of babyl party, mc is at index 0
+                if i < len(export['c']) and export['c'][i] is not None:
+                    cid : str = self.get_character_look(export, i)
+                    data : dict|None = self.artifact_cache.get(cid.split('_')[0], None)
+                    if data is None or "img" not in data["artifact"] or "skills" not in data["artifact"]:
+                        continue
+                    # background
+                    await self.paste(imgs, range(1), "assets/bg_emp.png", (pos + (csize.x, 0)).i, resize=bg_size.i, transparency=True)
+                    # portrait
+                    await self.pasteDL(imgs, range(1), "assets_en/img/sp/assets/npc/{}/{}.jpg".format(portrait_type, cid), (pos+ptoffset).i, resize=csize.i)
+                    if compact < 2:
+                        await self.pasteDL(imgs, range(1), "assets_en/img/sp/assets/artifact/{}/{}".format(portrait_type, data["artifact"]["img"]), (pos+ptoffset+(0, csize[1])).i, resize=csize.i)
+                    # skills
+                    for j, skill in enumerate(data['artifact']['skills']):
+                        await asyncio.sleep(0)
+                        epos : v2
+                        if compact == 0:
+                            epos = pos + (csize.x + 50, 15 + ersize.y * j)
+                        else:
+                            epos = pos + (csize.x + 50 + j // 2 * bg_size[0] / 2, 15 + ersize.y * (j % 2))
+                        await self.pasteDL(imgs, range(1), "assets_en/img/sp/ui/icon/bonus/{}".format(skill['icon']), epos.i, resize=ersize.i, transparency=True)
+                        self.text(imgs, range(1), (epos + eroffset).i, "Lv "+skill['lvl'], fill=(255, 255, 255), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
+                        self.text(imgs, range(1), (epos + eroffset + valoffset).i, skill['value'], fill=(255, 255, 95), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
+                        desc = skill['desc'].replace(': ', '')
+                        if len(desc) > char_limit:
+                            desc = desc[:char_limit] + "..."
+                        self.text(imgs, range(1), (epos + eroffset + valoffset + descoffset).i, desc, fill=(255, 255, 255), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
+                    pos = pos + (0, vsize) # set chara position
+            return ('artifact', imgs)
+        except Exception as e:
+            return self.pexc(e)
+
     def saveImage(self : PartyBuilder, img : IMG, filename : str, resize : tuple|None = None) -> str|None:
         try:
             if resize is not None:
@@ -1437,9 +1552,12 @@ class PartyBuilder():
                 if '/skill/' in k or '/zenith/' in k or len(k.split('/')) == 2: # keep important files
                     tmp[k] = v
             self.cache = tmp
-        if len(self.emp_cache.keys()) > 100:
+        if len(self.emp_cache.keys()) > 80:
             print("* Cleaning EMP Memory Cache...")
             self.emp_cache = {}
+        if len(self.artifact_cache.keys()) > 80:
+            print("* Cleaning Artifact Memory Cache...")
+            self.artifact_cache = {}
 
     async def generate(self : PartyBuilder, fast : bool = False) -> bool: # main function
         try:
@@ -1459,6 +1577,8 @@ class PartyBuilder():
             # start
             if 'emp' in export:
                 self.generate_emp(export)
+            elif 'artifact' in export:
+                self.generate_artifact(export)
             else:
                 await self.generate_party(export)
                 self.saveClasses()
@@ -1498,6 +1618,7 @@ class PartyBuilder():
         self.clean_memory_caches()
         start : float = time.time()
         do_emp = self.settings.get('emp', False)
+        do_artifact = self.settings.get('artifact', False)
         do_skin = self.settings.get('skin', True)
         do_hp = self.settings.get('hp', True)
         do_opus = self.settings.get('opus', False)
@@ -1536,6 +1657,8 @@ class PartyBuilder():
             print("* Starting...")
             if do_emp: # only start if enabled
                 tasks.append(tg.create_task(self.make_emp(export)))
+            if do_artifact: # only start if enabled
+                tasks.append(tg.create_task(self.make_artifact(export)))
             tasks.append(tg.create_task(self.make_party(export)))
             tasks.append(tg.create_task(self.make_summon(export)))
             tasks.append(tg.create_task(self.make_weapon(export, do_hp, do_opus)))
@@ -1551,6 +1674,8 @@ class PartyBuilder():
             tasks.append(tg.create_task(asyncio.to_thread(self.completeBaseImages, imgs, do_skin, resize)))
             if do_emp:
                 tasks.append(tg.create_task(asyncio.to_thread(self.saveImage, imgs['emp'][0], "emp.png", resize)))
+            if do_artifact:
+                tasks.append(tg.create_task(asyncio.to_thread(self.saveImage, imgs['artifact'][0], "artifact.png", resize)))
         for t in tasks:
             r = t.result()
         for k, v in imgs.items():
@@ -1590,6 +1715,26 @@ class PartyBuilder():
             json.dump(export, outfile)
         print("* Task completed with success!")
 
+    def generate_artifact(self : PartyBuilder, export : dict) -> None:
+        if 'artifact' not in export:
+            raise Exception("Invalid Artifact data, check your bookmark")
+        print("* Saving Current Artifact for Character", export['id'], "...")
+        if 'img' not in export["artifact"] or 'skills' not in export["artifact"]:
+            print("* No Artifact equipped")
+        else:
+            export["artifact"]['img'] = export["artifact"]['img'].split('/')[-1]
+            print("*", "Image is", export["artifact"]['img'])
+            print("*", len(export["artifact"]['skills']), "skills")
+            for i in range(len(export["artifact"]['skills'])):
+                export["artifact"]['skills'][i]['icon'] = export["artifact"]['skills'][i]['icon'].split('/')[-1]
+                export["artifact"]['skills'][i]['lvl'] = export["artifact"]['skills'][i]['lvl'].split(' ')[-1]
+                print("*", "Skill", i+1, export["artifact"]['skills'][i]['icon'], export["artifact"]['skills'][i]['lvl'], export["artifact"]['skills'][i]['desc'], export["artifact"]['skills'][i]['value'])
+        self.checkArtifact()
+        self.artifact_cache[str(export['id'])] = export
+        with open('artifact/{}.json'.format(export['id']), mode='w', encoding="utf-8") as outfile:
+            json.dump(export, outfile)
+        print("* Task completed with success!")
+
     async def settings_menu(self : PartyBuilder) -> None:
         while True:
             print("")
@@ -1598,13 +1743,14 @@ class PartyBuilder():
             print("[1] Enable Disk Caching ( Current:", self.settings.get('caching', False),")")
             print("[2] Generate skin.png ( Current:", self.settings.get('skin', True),")")
             print("[3] Generate emp.png ( Current:", self.settings.get('emp', False),")")
-            print("[4] Set Asset Server ( Current:", self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net'),")")
-            print("[5] Show HP bar on skin.png ( Current:", self.settings.get('hp', True),")")
-            print("[6] Guess Opus / Draco / Ultima 3rd skill ( Current:", self.settings.get('opus', True),")")
-            print("[7] Set GBFTMR Path ( Current:", self.settings.get('gbftmr_path', ''),")")
-            print("[8] Use GBFTMR if imported ( Current:", self.settings.get('gbftmr_use', False),")")
-            print("[9] Empty Asset Cache")
-            print("[10] Empty EMP Cache")
+            print("[4] Generate artifact.png ( Current:", self.settings.get('artifact', False),")")
+            print("[5] Set Asset Server ( Current:", self.settings.get('endpoint', 'prd-game-a-granbluefantasy.akamaized.net'),")")
+            print("[6] Show HP bar on skin.png ( Current:", self.settings.get('hp', True),")")
+            print("[7] Guess Opus / Draco / Ultima 3rd skill ( Current:", self.settings.get('opus', True),")")
+            print("[8] Set GBFTMR Path ( Current:", self.settings.get('gbftmr_path', ''),")")
+            print("[9] Use GBFTMR if imported ( Current:", self.settings.get('gbftmr_use', False),")")
+            print("[10] Empty Asset Cache")
+            print("[11] Empty EMP Cache")
             print("[Any] Back")
             match input():
                 case "0":
@@ -1617,6 +1763,8 @@ class PartyBuilder():
                 case "3":
                     self.settings['emp'] = not self.settings.get('emp', False)
                 case "4":
+                    self.settings['artifact'] = not self.settings.get('artifact', False)
+                case "5":
                     print("Input the url of the asset server to use (Leave blank to cancel): ")
                     url : str = input()
                     if url != "":
@@ -1633,11 +1781,11 @@ class PartyBuilder():
                             self.settings['endpoint'] = tmp
                             print("Asset Server test: Failed")
                             print("Did you input the right url?")
-                case "5":
-                    self.settings['hp'] = not self.settings.get('hp', True)
                 case "6":
-                    self.settings['opus'] = not self.settings.get('opus', False)
+                    self.settings['hp'] = not self.settings.get('hp', True)
                 case "7":
+                    self.settings['opus'] = not self.settings.get('opus', False)
+                case "8":
                     print("Input the path of the GBFTMR folder (Leave blank to cancel): ")
                     folder : str = input()
                     if folder != "":
@@ -1650,11 +1798,11 @@ class PartyBuilder():
                             print("GBFTMR is imported with success")
                         else:
                             print("Failed to import GBFTMR")
-                case "8":
-                    self.settings['gbftmr_use'] = not self.settings.get('gbftmr_use', False)
                 case "9":
-                    self.emptyCache()
+                    self.settings['gbftmr_use'] = not self.settings.get('gbftmr_use', False)
                 case "10":
+                    self.emptyCache()
+                case "11":
                     self.emptyCache()
                 case _:
                     return
@@ -1662,6 +1810,10 @@ class PartyBuilder():
     def checkEMP(self : PartyBuilder) -> None: # check if emp folder exists (and create it if needed)
         if not os.path.isdir('emp'):
             os.mkdir('emp')
+
+    def checkArtifact(self : PartyBuilder) -> None: # check if emp folder exists (and create it if needed)
+        if not os.path.isdir('artifact'):
+            os.mkdir('artifact')
 
     def emptyEMP(self : PartyBuilder) -> None: # delete the emp folder
         try:
@@ -1951,12 +2103,14 @@ class Interface(Tk.Tk): # interface
         self.to_disable[-1].grid(row=0, column=0, sticky="we")
         self.to_disable.append(Tk.Button(tabcontent, text="Add EMP", command=self.add_emp, width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=1, column=0, sticky="we")
-        self.to_disable.append(Tk.Button(tabcontent, text="Bookmark", command=self.bookmark, width=self.BW, height=self.BH))
+        self.to_disable.append(Tk.Button(tabcontent, text="Add Artifact", command=self.add_artifact, width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=2, column=0, sticky="we")
-        self.to_disable.append(Tk.Button(tabcontent, text="Set Server", command=lambda: self.loop.create_task(self.setserver()), width=self.BW, height=self.BH))
+        self.to_disable.append(Tk.Button(tabcontent, text="Bookmark", command=self.bookmark, width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=3, column=0, sticky="we")
-        self.to_disable.append(Tk.Button(tabcontent, text="Check Update", command=lambda: self.loop.create_task(self.update_check()), width=self.BW, height=self.BH))
+        self.to_disable.append(Tk.Button(tabcontent, text="Set Server", command=lambda: self.loop.create_task(self.setserver()), width=self.BW, height=self.BH))
         self.to_disable[-1].grid(row=4, column=0, sticky="we")
+        self.to_disable.append(Tk.Button(tabcontent, text="Check Update", command=lambda: self.loop.create_task(self.update_check()), width=self.BW, height=self.BH))
+        self.to_disable[-1].grid(row=5, column=0, sticky="we")
         
         # setting part
         tabs = ttk.Notebook(self)
@@ -1982,10 +2136,15 @@ class Interface(Tk.Tk): # interface
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.emp_var, command=self.toggleEMP))
         self.to_disable[-1].grid(row=2, column=1)
         
+        self.artifact_var = Tk.IntVar(value=self.pb.settings.get('artifact', False))
+        Tk.Label(tabcontent, text="Do Artifact").grid(row=2, column=0, sticky="ws")
+        self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.artifact_var, command=self.toggleArtifact))
+        self.to_disable[-1].grid(row=3, column=1)
+        
         self.update_var = Tk.IntVar(value=self.pb.settings.get('update', False))
         Tk.Label(tabcontent, text="Auto Update").grid(row=3, column=0, sticky="ws")
         self.to_disable.append(Tk.Checkbutton(tabcontent, variable=self.update_var, command=self.toggleUpdate))
-        self.to_disable[-1].grid(row=3, column=1)
+        self.to_disable[-1].grid(row=4, column=1)
         
         ### Settings Tab
         tabcontent = Tk.Frame(tabs)
@@ -2099,6 +2258,13 @@ class Interface(Tk.Tk): # interface
         except:
             self.events.append(("Error", "An error occured, did you press the bookmark?"))
 
+    def add_artifact(self : Interface) -> None:
+        try:
+            self.pb.generate_artifact(self.pb.clipboardToJSON())
+            self.events.append(("Info", "Artifact saved with success"))
+        except:
+            self.events.append(("Error", "An error occured, did you press the bookmark?"))
+
     def bookmark(self : Interface) -> None:
         self.pb.cpyBookmark()
         messagebox.showinfo("Info", "Bookmarklet copied!\nTo setup on chrome:\n1) Make a new bookmark (of GBF for example)\n2) Right-click and edit\n3) Change the name if you want\n4) Paste the code in the url field")
@@ -2114,6 +2280,9 @@ class Interface(Tk.Tk): # interface
 
     def toggleEMP(self : Interface) -> None:
         self.pb.settings['emp'] = (self.emp_var.get() != 0)
+
+    def toggleArtifact(self : Interface) -> None:
+        self.pb.settings['artifact'] = (self.artifact_var.get() != 0)
 
     def toggleUpdate(self : Interface) -> None:
         self.pb.settings['update'] = (self.update_var.get() != 0)
