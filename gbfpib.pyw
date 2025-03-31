@@ -1520,7 +1520,7 @@ class PartyBuilder():
                             epos = pos + (csize.x + 50 + j // 2 * bg_size[0] / 2, 15 + ersize.y * (j % 2))
                         await self.pasteDL(imgs, range(1), "assets_en/img/sp/ui/icon/bonus/{}".format(skill['icon']), epos.i, resize=ersize.i, transparency=True)
                         self.text(imgs, range(1), (epos + eroffset).i, "Lv "+skill['lvl'], fill=(255, 255, 255), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
-                        self.text(imgs, range(1), (epos + eroffset + valoffset).i, skill['value'], fill=(255, 255, 95), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
+                        self.text(imgs, range(1), (epos + eroffset + valoffset).i, (skill['value'] if len(skill['value']) <= 8 else skill['value'][:7] + "..."), fill=(255, 255, 95), font=self.fonts['small'], stroke_width=6, stroke_fill=(0, 0, 0))
                         desc = skill['desc'].replace(': ', ' ')
                         if len(desc) > char_limit:
                             desc = desc[:char_limit] + "..."
