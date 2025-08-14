@@ -106,11 +106,11 @@ class IMG():
         match src: # possible types
             case str(): # path to a local file
                 self.image = Image.open(src)
-                self.convert('RGBA')
+                self.convert("RGBA")
             case bytes(): # bytes (usually received from a network request)
                 self.buffer = BytesIO(src) # need a readable buffer for it, and it must stays alive
                 self.image = Image.open(self.buffer)
-                self.convert('RGBA')
+                self.convert("RGBA")
             case IMG(): # another IMG wrapper
                 self.image = src.image.copy()
             case _: # an Image instance. NOTE: I use 'case _' because of how import Pillow, the type isn't loaded at this point
@@ -2337,13 +2337,22 @@ class GBFPIB():
                                     url = "assets_en/img/sp/assets/item/npcarousal/s/3.jpg"
                                 case _: # "Balanced"|"バランス"or others
                                     url = "assets/bal_awakening.png"
-                            await self.paste(
-                                imgs, range(1),
-                                url,
-                                apos1.i,
-                                resize=self.layout.emp.awk_size.i,
-                                transparency=True
-                            )
+                            if url == "assets/bal_awakening.png":
+                                await self.paste(
+                                    imgs, range(1),
+                                    url,
+                                    apos1.i,
+                                    resize=self.layout.emp.awk_size.i,
+                                    transparency=True
+                                )
+                            else:
+                                await self.pasteDL(
+                                    imgs, range(1),
+                                    url,
+                                    apos1.i,
+                                    resize=self.layout.emp.awk_size.i,
+                                    transparency=True
+                                )
                             self.text(
                                 imgs, range(1),
                                 (apos1 + (75, 10)).i,
