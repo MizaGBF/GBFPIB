@@ -1,5 +1,7 @@
 # Granblue Fantasy Party Image Builder  
-* Tool to generate an image from one of your in-game party in just a few clicks, to use for Videos or anything else.  
+Script to generate an image from one of your in-game party in just a few clicks, to use for Videos or anything else.  
+It support standard, extended and Tower of Babyl parties, extra grids and more.  
+  
 ### Requirements  
 * Tested on Python 3.13.  
 * [pyperclip](https://pypi.org/project/pyperclip/) to read/write the clipboard.  
@@ -8,121 +10,102 @@
 * `pip install -r requirements.txt` to install all the modules.  
   
 ### What's new?  
-Version 11.0 is a cleaned up version of 10.0, tested on Python 3.13.  
-It might still work on older Python versions but consider those unsupported.  
+Version 12.0 is a revamp for maintainability purpose.  
+The core should be more readable and maintainable.  
+It now works purely in command lines.  
+Unused features have been removed.  
   
 Older versions can be found [here](https://github.com/MizaGBF/GBFPIB/releases).  
   
 ### Setup  
 1. Install the requirements with the command above.  
-2. Double click on `gbfpib.pyw`.  
-3. Click on the `Bookmark` button. A javascript code will be copied to your clipboard.  
-4. On the Chrome (or equivalent) browser you are using, make a new bookmark.  
-5. Right click that bookmark, select `edit`.  
-6. Paste the javascript code into the url field.  
-7. Change the bookmark name if you want to.  
+2. Make a new bookmark in your browser.  
+3. Open `bookmarklet.txt`, copy the content and past it into the bookmark field.  
   
 You are done.  
   
-> [!NOTE]  
-> If requirements haven't been installed properly, the script will automatically attempt to install them.  
-> On Windows, it might ask for administrator rights, if required.  
-  
 ### How-to  
 1. Go on the party screen you want to export.  
-2. Click the bookmarklet. If nothing happens, everything went well.  
-3. Open `gbfpib.pyw` again.  
-4. This time, click on the `Build Images` button.  
-5. If everything went well, the image should appear beside `gbfpib.pyw` under the name `party.png`. Note: if you enabled the corresponding settings, it will also generate `skin.png` `emp.png` and/or `artifact.png`.  
-6. If it didn't, something went wrong, probably at the step 2.  
+2. (Optional but recommended) Click the `i` near the Estimate Damage. The game will load your support summon and HP setting in memory.
+3. Click the bookmarklet you made during the setup.  
+4. Run `python gbfpib.py` to generate a party from the data in your clipboard.  
+5. If everything went well, party images should have been generated in the folder.  
   
-### Settings  
-1. `Quality`: Let you control the output size (maximum and default recommended setting is 4K, minimum is 720p).  
-2. `Caching`: If enabled, downloaded images will be saved on disk (in the cache folder) for later uses. Delete the folder to reset its content.  
-3. `Do Skins`: If enabled, it will also generate `skin.png`.  
-4. `Do EMP`: If enabled, it will also generate `emp.png`.  
-5. `Do Artifact`: If enabled, it will also generate `artifact.png`.  
-6. `Auto Update`: If enabled, will check if an update is available on app startup.  
-  
-### Advanced Settings  
-1. `Cache Assets`: If enabled, assets will be cached in the `cache` folder to increase speed of future processings.  
-2. `HP Bar on skin.png`: If enabled, your Estimate Damage HP setting will be displayed on `skin.png`. `Do Skins` setting must be enabled for it to work.  
-3. `Guess Opus/Ultima Key`: If enabled, it will attempt to guess your Dark Opus and Ultima third skill to display the key image instead of the generic skill icon. Not 100% accurate.  
-### Command Line  
-For advanced users:  
-```
-usage: gbfpib2.pyw [-h] [-c] [-f] [-w]
+### Usage  
+```console
+usage: gbfpib.py [-h] [-q {1080p,720p,4k}] [-nd] [-nps] [-npe] [-npa] [-ep [URL]] [-hp] [-sk]
+                 [-tm [GBFTMR]] [-w]
 
-Granblue Fantasy Party Image Builder v11.0 https://github.com/MizaGBF/GBFPIB
+Granblue Fantasy Party Image Builder v12.0 https://github.com/MizaGBF/GBFPIB
 
 options:
-  -h, --help  show this help message and exit
+  -h, --help            show this help message and exit
 
 settings:
-  commands to alter the update behavior.
+  commands to alter the script behavior.
 
-  -c, --cli   invoke the CLI.
-  -f, --fast  directly call the generate function. The party, EMP or Artifact data must be in your clipboard beforehand.
-  -w, --wait  wait 10 seconds after the generation using -f/--fast
-```  
+  -q, --quality {1080p,720p,4k}
+                        set the image size. Default is 4k
+  -nd, --nodiskcache    disable the use of the disk cache.
+  -nps, --nopartyskin   disable the generation of skin.png.
+  -npe, --nopartyemp    disable the generation of emp.png.
+  -npa, --nopartyartifact
+                        disable the generation of artifact.png.
+  -ep, --endpoint [URL]
+                        set the GBF CDN endpoint.
+  -hp, --showhp         draw the HP slider on skin.png.
+  -sk, --skillguess     Guess the skill icon to use for Opus, Ultima, Draconic, etc...
+  -tm, --gbftmr [GBFTMR]
+                        set the GBFMTR path.
+  -w, --wait            add a 10 seconds wait after the generation.
+```
   
 ### Cache  
-Images from the GBF asset servers can be saved for later uses.  
-You only need to enable the option to make it work.  
-If some of those images are updated in game, all you need is to delete the cache folder so they are redownloaded later.  
+Images from the GBF asset servers are saved for later uses in the `cache` folder.  
 You can also delete the folder if it gets too big.  
   
 ### EMP and Artifact  
-No additional setup is required, it uses the same bookmark.  
+No additional setup is required, it uses the same bookmarklet.  
 1. Go to character EMP (for EMPs) or character detail (for Artifacts) page.  
 2. Click the bookmarklet. If nothing happens, everything went well.  
-3. In `gbfpib.pyw`, click on the `Add EMP` (for EMPs) or `Add Artifact` (for Artifact) button.  
+3. Simply run `python gbfpib.py` and the data in your clipboard will be saved.  
   
 This Character's EMP will be saved in the `emp` folder, as a `.json` file.  
 In the same way, this Character's Artifact will be saved in the `artifact` folder, as a `.json` file.  
 To update it, simply repeat the process.  
   
 Keep in mind:
-1. The `Do EMP` setting must be enabled or `emp.png` won't be generated when clicking `Build Images`.  
-2. Same thing for the `Do Artifact` setting.  
-2. If game language differ at the time you saved the EMP/Artifact and when generating a Party image, it will display in the original language.  
+If game language differ at the time you saved the EMP/Artifact and when generating a Party image, it will display in the original language.  
+  
+### 
   
 ### Current HP setting  
-(Only if the `HP Bar on skin.png` setting is enabled)  
-If you click the Bookmarklet with the Estimated Damage calculator open, it will grab the current HP percentage and display it on `skin.png`, instead of the off-element estimated damage.  
-If you don't open the calculator, it will assume your current HP is set to 100%.  
+If you used the `-hp/--showhp` argument and your Estimated Damage calculator was opened when using the bookmarklet, your HP percentage will be displayed on `skin.png`, instead of the off-element estimated damage.  
+If the calculator wasn't opened, it will assume your current HP is set to 100%.  
   
 ### Support Summon  
-By default, the game doesn't provide you the ID of the support summon set in your damage calculator.  
+By default, the game doesn't provide you the ID of the support summon set in your Estimated Damage calculator.  
 There are a few ways to go around this issue:  
-1. If you open the damage calculator BEFORE clicking the bookmarklet, the ID will be fetched properly. You need to open it again if you change the party without reloading the page or the last loaded one will stay.  
-2. Alternatively, the bookmarklet will fetch the name of the support summon and search its ID on [gbf.wiki](https://gbf.wiki/). However, be warned this method isn't perfect, especially if you are playing in japanese or if you switch between parties.  
+1. Open the Estimated Damage calculator before clicking the bookmarklet, the ID will be then loaded properly. You need to open it again if you change the party without reloading the page or the last loaded one will stay.  
+2. Alternatively, the bookmarklet will fetch the name of the support summon and search its ID on the [gbf.wiki](https://gbf.wiki/). However, be warned this method isn't perfect, especially if you are playing in japanese or if you switch between parties.  
 3. If the above two methods don't work, the name of the support summon will simply be written instead.  
   
 ### Bookmarklet  
-You can retrieve the Bookmarklet to export your party/EMP/Artifact data from the built-in interface or CLI.  
-Alternatively, you can copy it from the `bookmarklet.txt` file.  
-  
-> [!IMPORTANT]  
-> Do **NOT** delete `bookmarklet.txt`, as the script retrieves the Bookmarklet from here.  
+Simply copy the content of the `bookmarklet.txt` file.  
+If you wish to look at the non-minified code, the whole thing is available in `assets/bookmarklet.js`.  
   
 ### GBFTMR  
-[GBFTMR](https://github.com/MizaGBF/GBFTM) can be imported to also generate a thumbnail.  
-Simply click `Set Path` and select the folder where GBFTMR is located.  
-GBFTMR must have been set beforehand or it might not work properly.  
+[GBFTMR](https://github.com/MizaGBF/GBFTMR) can be imported to also generate a thumbnail.  
+Simply add the folder path with the argument. Example: `python gbfpib.py -tm ../GBFTMR`.  
+The path can be relative or absolute and supports symlinks.
 It's currently compatible with version 2.0 and higher (Ideally, always use the latest version to have the latest bugfixes).  
   
-### Updating  
-The script has a built-in auto updater.  
-I recommend using it, for ease of use.  
-If you can't or don't want to use it, simply download the latest version and redo the Setup steps.  
+After generation, a prompt will ask you if you wish to generate a thumbnail.
   
-### Using it in your videos  
-Like the licence specifies, you are free to use this software as you want, free of charge.  
-Do note:  
-1. If you want to credit me, you can link this page or name me (Mizako or Miza).  
-2. If you want to report a bug, open an issue or contact me on [X](https://x.com/mizak0), as long as I continue to develop and improve it.  
-3. I DON'T take feature requests. This tool is developped for my own use first and foremost. This is why I don't advertise it.  
+### Updating  
+Simply redownload the project.  
+Make sure to keep your `emp` and `artifact` folders.  
+If needed, update the requirements and the bookmarklet.  
   
 ### Inner Workings  
 Some insights on how the image processing works:
@@ -133,3 +116,14 @@ Some insights on how the image processing works:
 The app will crash when using some alternate portrait from some skins, such as Cidala's. A workaround is applied in the function `get_character_look()`.  
 I'll add more if I find more but you can add it yourself here or report them to me.  
   
+### Others  
+Like the licence specifies, you are free to use this software as you want, free of charge.  
+You aren't forced to do anything else.
+If you wish to thank/support me:  
+1. If you want to credit me, you can link this page or name me (Mizako or Miza).  
+2. If you want to report a bug, open an issue or contact me on [X](https://x.com/mizak0), as long as I continue to develop and improve it.  
+  
+I DON'T take feature requests. This tool is developped for my own use first and foremost.  
+  
+### Example  
+<img src="./assets/github_demo.png">  

@@ -1,0 +1,12 @@
+/artifact.png
+/emp.png
+/party.png
+/skin.png
+/thumbnail.png
+artifact/
+artifact/*
+emp/
+emp/*
+cache/
+cache/*
+/gbfpib_quick.bat
