@@ -335,8 +335,10 @@ class LayoutSummon():
     def get_asset_folder(self : LayoutSummon, index : int) -> tuple[str, str]:
         if index == 0:
             return self.main_asset, self.main_empty
-        else:
+        elif index < 5:
             return self.other_asset, self.other_empty
+        else:
+            return self.other_empty, self.other_empty
 
 dataclass(slots=True, frozen=True)
 class LayoutWeaponBase():
@@ -678,7 +680,7 @@ class GBFPIBLayout():
 
 # Main class
 class GBFPIB():
-    VERSION = "12.1"
+    VERSION = "12.2"
     NULL_CHARACTER = [3030182000, 3020072000] # null character id list (lyria, cat...), need to be hardcoded
     # colors
     BLACK = (0, 0, 0)
