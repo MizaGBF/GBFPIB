@@ -680,7 +680,7 @@ class GBFPIBLayout():
 
 # Main class
 class GBFPIB():
-    VERSION = "12.2"
+    VERSION = "12.3"
     NULL_CHARACTER = [3030182000, 3020072000] # null character id list (lyria, cat...), need to be hardcoded
     # colors
     BLACK = (0, 0, 0)
@@ -715,14 +715,16 @@ class GBFPIB():
         5:"光",
         6:"闇"
     }
-    AUXILIARY_CLS = [100401, 300301, 300201, 120401, 140401, 180401] # aux classes
+    AUXILIARY_CLS = {
+        100401, 300301, 300201, 120401, 140401, 180401
+    }
     # IDs for special weapons
-    DARK_OPUS_IDS = [
+    DARK_OPUS_IDS = {
         "1040310600","1040310700","1040415000","1040415100","1040809400","1040809500","1040212500","1040212600","1040017000","1040017100","1040911000","1040911100",
         "1040310600_02","1040310700_02","1040415000_02","1040415100_02","1040809400_02","1040809500_02","1040212500_02","1040212600_02","1040017000_02","1040017100_02","1040911000_02","1040911100_02",
         "1040310600_03","1040310700_03","1040415000_03","1040415100_03","1040809400_03","1040809500_03","1040212500_03","1040212600_03","1040017000_03","1040017100_03","1040911000_03","1040911100_03"
-    ]
-    ULTIMA_IDS = [
+    }
+    ULTIMA_IDS = {
         "1040011900","1040012000","1040012100","1040012200","1040012300","1040012400",
         "1040109700","1040109800","1040109900","1040110000","1040110100","1040110200",
         "1040208800","1040208900","1040209000","1040209100","1040209200","1040209300",
@@ -733,10 +735,13 @@ class GBFPIB():
         "1040706900","1040707000","1040707100","1040707200","1040707300","1040707400",
         "1040807000","1040807100","1040807200","1040807300","1040807400","1040807500",
         "1040907500","1040907600","1040907700","1040907800","1040907900","1040908000"
-    ]
-    ORIGIN_DRACONIC_IDS = [
+    }
+    ORIGIN_DRACONIC_IDS = {
         "1040815900","1040316500","1040712800","1040422200","1040915600","1040516500"
-    ]
+    }
+    DESTRUCTION_IDS = {
+        "1040028900","1040122300","1040220300","1040621200","1040714700","1040817900"
+    }
     # User Agent (required for the wiki)
     USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Rosetta/GBFPIB'
     
@@ -1161,6 +1166,40 @@ class GBFPIB():
                         return True
                     elif cap_up >= 10: # ena
                         export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17001.jpg"
+                        return True
+                elif export['w'][i] in self.DESTRUCTION_IDS:
+                    skill_supp = 0
+                    skill_cap = 0
+                    ca_supp = 0
+                    ca_cap = 0
+                    auto_supp = 0
+                    auto_cap = 0
+                    for m in export['mods']:
+                        try:
+                            match m['icon_img']:
+                                case '04_icon_skill_dmg_supp_other.png':
+                                    skill_supp = int(m['value'].replace('+', ''))
+                                case '04_icon_ca_supp_other.png':
+                                    ca_supp = int(m['value'].replace('+', ''))
+                                case '04_icon_normal_dmg_supp_other.png':
+                                    auto_supp = int(m['value'].replace('+', ''))
+                                case "04_icon_skill_dmg_cap.png":
+                                    skill_cap = float(m['value'].replace('%', ''))
+                                case "04_icon_ca_dmg_cap.png":
+                                    ca_cap = float(m['value'].replace('%', ''))
+                                case "04_icon_na_dmg_cap.png":
+                                    auto_cap = float(m['value'].replace('%', ''))
+                        except:
+                            pass
+                    if skill_supp >= 30000 and skill_cap >= 50:
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/19002.jpg"
+                        return True
+                    if ca_supp >= 100000 and ca_cap >= 50:
+                        print("WARNING: Destruction CA supplemental needs to be verified")
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/19003.jpg"
+                        return True
+                    if auto_supp >= 20000 and auto_cap >= 10:
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/19001.jpg"
                         return True
             elif j == 1: # skill 2, hexa draconic
                 if export['w'][i] in self.ORIGIN_DRACONIC_IDS:
