@@ -680,7 +680,7 @@ class GBFPIBLayout():
 
 # Main class
 class GBFPIB():
-    VERSION = "12.3"
+    VERSION = "12.4"
     NULL_CHARACTER = [3030182000, 3020072000] # null character id list (lyria, cat...), need to be hardcoded
     # colors
     BLACK = (0, 0, 0)
@@ -1144,7 +1144,7 @@ class GBFPIB():
                                     heal_cap = float(m['value'].replace('%', ''))
                         except:
                             pass
-                    if seraphic >= 25: # tria
+                    if seraphic == 25: # tria
                         export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17003.jpg"
                         return True
                     elif heal_cap >= 50 and bar_gain >= 10: # dio / tessera better guess (EXPERIMENTAL)
