@@ -680,7 +680,7 @@ class GBFPIBLayout():
 
 # Main class
 class GBFPIB():
-    VERSION = "12.4"
+    VERSION = "12.5"
     NULL_CHARACTER = [3030182000, 3020072000] # null character id list (lyria, cat...), need to be hardcoded
     # colors
     BLACK = (0, 0, 0)
@@ -1066,152 +1066,57 @@ class GBFPIB():
                 return None
             return mh
 
-    def process_special_weapon(self : GBFPIB, export : dict, i : int, j : int) -> bool:
-        if export['wsn'][i][j] is not None and export['wsn'][i][j] == "skill_job_weapon":
-            if j == 2: # skill 3, ultima, opus
-                if export['w'][i] in self.DARK_OPUS_IDS:
-                    bar_gain = 0
-                    hp_cut = 0
-                    turn_dmg = 0
-                    prog = 0
-                    ca_dmg = 0
-                    ca_dmg_cap = 0
-                    auto_amp_sp = 0
-                    skill_amp_sp = 0
-                    ca_amp_sp = 0
-                    for m in export['mods']:
-                        try:
-                            match m['icon_img']:
-                                case '04_icon_ca_gage.png':
-                                    bar_gain = float(m['value'].replace('%', ''))
-                                case '03_icon_hp_cut.png':
-                                    hp_cut = float(m['value'].replace('%', ''))
-                                case '03_icon_turn_dmg.png':
-                                    turn_dmg = float(m['value'].replace('%', ''))
-                                case '01_icon_e_atk_01.png':
-                                    prog = float(m['value'].replace('%', ''))
-                                case '04_icon_ca_dmg.png':
-                                    ca_dmg = float(m['value'].replace('%', ''))
-                                case '04_icon_ca_dmg_cap.png':
-                                    ca_dmg_cap = float(m['value'].replace('%', ''))
-                                case '04_icon_normal_dmg_amp_other.png':
-                                    auto_amp_sp = float(m['value'].replace('%', ''))
-                                case '04_icon_ability_dmg_amplify_other.png':
-                                    skill_amp_sp = float(m['value'].replace('%', ''))
-                                case '04_icon_ca_dmg_amplify_other.png':
-                                    ca_amp_sp = float(m['value'].replace('%', ''))
-                        except:
-                            pass
-                    if hp_cut >= 30: # temptation
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14014.jpg"
-                        return True
-                    elif auto_amp_sp >= 10: # extremity
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14005.jpg"
-                        return True
-                    elif skill_amp_sp >= 10: # sagacity
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14006.jpg"
-                        return True
-                    elif ca_amp_sp >= 10: # supremacy
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14007.jpg"
-                        return True
-                    elif bar_gain <= -50 and bar_gain > -200: # falsehood
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14017.jpg"
-                        return True
-                    elif prog > 0: # progression
+    def process_weapon_key(self : GBFPIB, export : dict, i : int, j : int) -> bool:
+        sk_name = export['wkey'].get(export['w'][i].split("_")[0], {}).get("sk{}".format(j+1), None)
+        if sk_name is not None:
+            match sk_name:
+                case "Cunning Temptation"|"狡知の誘惑": # temptation chain
+                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14014.jpg"
+                    return True
+                case "Forbidden Fruit"|"禁忌の果実": # forbiddance chain
+                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14015.jpg"
+                    return True
+                case "Wicked Conduct"|"邪悪と罪": # depravity chain
+                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14016.jpg"
+                    return True
+                case "Deceitful Fallacy"|"虚偽と詐術": # falsehood chain
+                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14017.jpg"
+                    return True
+                case "Fulgor Fortis"|"フルゴル・フォルティス": # gauph ena
+                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/17001.jpg"
+                    return True
+                case "Fulgor Sanatio"|"フルゴル・サーナーティオ": # gauph dio
+                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/17002.jpg"
+                    return True
+                case "Fulgor Impetus"|"フルゴル・インペトゥス": # gauph tria
+                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/17003.jpg"
+                    return True
+                case "Fulgor Elatio"|"フルゴル・エーラーティオ": # gauph tessera
+                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/17004.jpg"
+                    return True
+                case "Strife's Godstrike I"|"Strife's Godstrike II"|"闘争の神撃I"|"闘争の神撃II": # oblivion anklet
+                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/19001.jpg"
+                    return True
+                case "Strife's Godflair I"|"Strife's Godflair II"|"闘争の神技I"|"闘争の神技II": # ascendance anklet
+                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/19002.jpg"
+                    return True
+                case "Strife's Godheart I"|"Strife's Godheart II"|"闘争の神奥I"|"闘争の神奥II": # maximality anklet
+                    export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/19003.jpg"
+                    return True
+                case _:
+                    if sk_name.endswith(("Progression III", "の進境")): # progression chain
                         export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14004.jpg"
                         return True
-                    elif ca_dmg >= 100 and ca_dmg_cap >= 30: # forbiddance
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14015.jpg"
+                    elif sk_name.endswith(("Ruination", "の極破")): # extremity pendulum
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14005.jpg"
                         return True
-                    elif turn_dmg >= 5: # depravity
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14016.jpg"
+                    elif sk_name.endswith(("Honing", "の極技")): # sagacity pendulum
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14006.jpg"
                         return True
-                elif export['w'][i] in self.ULTIMA_IDS:
-                    seraphic = 0
-                    heal_cap = 0
-                    bar_gain = 0
-                    cap_up = 0
-                    for m in export['mods']:
-                        try:
-                            match m['icon_img']:
-                                case '04_icon_elem_amplify.png':
-                                    seraphic = float(m['value'].replace('%', ''))
-                                case '04_icon_dmg_cap.png':
-                                    cap_up = float(m['value'].replace('%', ''))
-                                case '04_icon_ca_gage.png':
-                                    bar_gain = float(m['value'].replace('%', ''))
-                                case '03_icon_heal_cap.png':
-                                    heal_cap = float(m['value'].replace('%', ''))
-                        except:
-                            pass
-                    if seraphic == 25: # tria
-                        export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17003.jpg"
+                    elif sk_name.endswith(("Fathoms", "の極奥")): # supremacy pendulum
+                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/14007.jpg"
                         return True
-                    elif heal_cap >= 50 and bar_gain >= 10: # dio / tessera better guess (EXPERIMENTAL)
-                        count = 0
-                        for a in export['wsn']:
-                            for b in a:
-                                if b is None: continue
-                                elif "heal_limit_m" in b: count += 1
-                                elif "heal_limit" in b: count += 1
-                        if count >= 3: export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17004.jpg"
-                        elif count == 2: return False # unsure
-                        else: export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17002.jpg"
-                        return True
-                    elif heal_cap >= 50: # dio
-                        export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17002.jpg"
-                        return True
-                    elif bar_gain >= 10: # tessera
-                        export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17004.jpg"
-                        return True
-                    elif cap_up >= 10: # ena
-                        export['wsn'][i][2] = "assets_en/img/sp/assets/item/skillplus/s/17001.jpg"
-                        return True
-                elif export['w'][i] in self.DESTRUCTION_IDS:
-                    skill_supp = 0
-                    skill_cap = 0
-                    ca_supp = 0
-                    ca_cap = 0
-                    auto_supp = 0
-                    auto_cap = 0
-                    for m in export['mods']:
-                        try:
-                            match m['icon_img']:
-                                case '04_icon_skill_dmg_supp_other.png':
-                                    skill_supp = int(m['value'].replace('+', ''))
-                                case '04_icon_ca_supp_other.png':
-                                    ca_supp = int(m['value'].replace('+', ''))
-                                case '04_icon_normal_dmg_supp_other.png':
-                                    auto_supp = int(m['value'].replace('+', ''))
-                                case "04_icon_skill_dmg_cap.png":
-                                    skill_cap = float(m['value'].replace('%', ''))
-                                case "04_icon_ca_dmg_cap.png":
-                                    ca_cap = float(m['value'].replace('%', ''))
-                                case "04_icon_na_dmg_cap.png":
-                                    auto_cap = float(m['value'].replace('%', ''))
-                        except:
-                            pass
-                    if skill_supp >= 30000 and skill_cap >= 50:
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/19002.jpg"
-                        return True
-                    if ca_supp >= 100000 and ca_cap >= 50:
-                        print("WARNING: Destruction CA supplemental needs to be verified")
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/19003.jpg"
-                        return True
-                    if auto_supp >= 20000 and auto_cap >= 10:
-                        export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/19001.jpg"
-                        return True
-            elif j == 1: # skill 2, hexa draconic
-                if export['w'][i] in self.ORIGIN_DRACONIC_IDS:
-                    seraphic = 0
-                    for m in export['mods']:
-                        try:
-                            match m['icon_img']:
-                                case '04_icon_plain_amplify.png':
-                                    seraphic = float(m['value'].replace('%', ''))
-                        except:
-                            pass
-                    if seraphic >= 10: # oblivion teluma
+                    elif sk_name.endswith(("Magnitude", "の威烈")): # oblivion teluma
                         export['wsn'][i][j] = "assets_en/img/sp/assets/item/skillplus/s/15009.jpg"
                         return True
         return False
@@ -1748,7 +1653,7 @@ class GBFPIB():
                     # skill icon
                     for j in range(3):
                         if export['wsn'][i][j] is not None:
-                            if self.settings.get('opus', False) and self.process_special_weapon(export, i, j): # 3rd skill guessing
+                            if self.process_weapon_key(export, i, j): # 3rd skill guessing
                                 await self.pasteDL(
                                     imgs, range(2 if has_skin else 1),
                                     export['wsn'][i][j],
@@ -2613,7 +2518,7 @@ class GBFPIB():
             self.running = True
             # get the data from clipboard
             export : dict = self.clipboardToJSON()
-            if export.get('ver', 0) < 1:
+            if export.get('ver', 0) < 2:
                 print("Your bookmark is outdated, please update it!")
                 self.running = False
                 return False
@@ -2850,7 +2755,6 @@ class GBFPIB():
             settings.add_argument('-npa', '--nopartyartifact', help="disable the generation of artifact.png.", action='store_const', const=True, default=False, metavar='')
             settings.add_argument('-ep', '--endpoint', help="set the GBF CDN endpoint.", nargs='?', const=".", metavar='URL')
             settings.add_argument('-hp', '--showhp', help="draw the HP slider on skin.png.", action='store_const', const=True, default=False, metavar='')
-            settings.add_argument('-sk', '--skillguess', help="Guess the skill icon to use for Opus, Ultima, Draconic, etc...", action='store_const', const=True, default=False, metavar='')
             settings.add_argument('-tm', '--gbftmr', help="set the GBFMTR path.", nargs='?', const=".", metavar='GBFTMR')
             settings.add_argument('-w', '--wait', help="add a 10 seconds wait after the generation.", action='store_const', const=True, default=False, metavar='')
             args : argparse.Namespace = parser.parse_args()
@@ -2865,7 +2769,6 @@ class GBFPIB():
             self.settings["skin"] = not args.nopartyskin
             self.settings["emp"] = not args.nopartyemp
             self.settings["artifact"] = not args.nopartyartifact
-            self.settings["opus"] = args.skillguess
             self.settings["hp"] = args.showhp
             print("Granblue Fantasy Party Image Builder", self.VERSION)
             await self.generate()

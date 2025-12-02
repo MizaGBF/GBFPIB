@@ -36,7 +36,7 @@ You are done.
 usage: gbfpib.py [-h] [-q {1080p,720p,4k}] [-nd] [-nps] [-npe] [-npa] [-ep [URL]] [-hp] [-sk]
                  [-tm [GBFTMR]] [-w]
 
-Granblue Fantasy Party Image Builder v12.0 https://github.com/MizaGBF/GBFPIB
+Granblue Fantasy Party Image Builder v12.5 https://github.com/MizaGBF/GBFPIB
 
 options:
   -h, --help            show this help message and exit
@@ -54,7 +54,6 @@ settings:
   -ep, --endpoint [URL]
                         set the GBF CDN endpoint.
   -hp, --showhp         draw the HP slider on skin.png.
-  -sk, --skillguess     Guess the skill icon to use for Opus, Ultima, Draconic, etc...
   -tm, --gbftmr [GBFTMR]
                         set the GBFMTR path.
   -w, --wait            add a 10 seconds wait after the generation.

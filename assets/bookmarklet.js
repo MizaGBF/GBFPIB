@@ -1,3 +1,4 @@
+// un-minified version of the bookmarklet
 javascript: (function() {
     function copyJsonToClipboard(data)
 	{
@@ -22,8 +23,32 @@ javascript: (function() {
 		!hash.startsWith("#tower/party/expectancy_damage/index/")
 	)
 	{
+		const BOOKMARK_VERSION = 2;
+		const DARK_OPUS_IDS = [
+			"1040310600","1040310700","1040415000","1040415100","1040809400","1040809500","1040212500","1040212600","1040017000","1040017100","1040911000","1040911100",
+			"1040310600_02","1040310700_02","1040415000_02","1040415100_02","1040809400_02","1040809500_02","1040212500_02","1040212600_02","1040017000_02","1040017100_02","1040911000_02","1040911100_02",
+			"1040310600_03","1040310700_03","1040415000_03","1040415100_03","1040809400_03","1040809500_03","1040212500_03","1040212600_03","1040017000_03","1040017100_03","1040911000_03","1040911100_03"
+		];
+		const ULTIMA_IDS = [
+			"1040011900","1040012000","1040012100","1040012200","1040012300","1040012400",
+			"1040109700","1040109800","1040109900","1040110000","1040110100","1040110200",
+			"1040208800","1040208900","1040209000","1040209100","1040209200","1040209300",
+			"1040307800","1040307900","1040308000","1040308100","1040308200","1040308300",
+			"1040410800","1040410900","1040411000","1040411100","1040411200","1040411300",
+			"1040507400","1040507500","1040507600","1040507700","1040507800","1040507900",
+			"1040608100","1040608200","1040608300","1040608400","1040608500","1040608600",
+			"1040706900","1040707000","1040707100","1040707200","1040707300","1040707400",
+			"1040807000","1040807100","1040807200","1040807300","1040807400","1040807500",
+			"1040907500","1040907600","1040907700","1040907800","1040907900","1040908000"
+		];
+		const ORIGIN_DRACONIC_IDS = [
+			"1040815900","1040316500","1040712800","1040422200","1040915600","1040516500"
+		];
+		const DESTRUCTION_IDS = [
+			"1040028900","1040122300","1040220300","1040621200","1040714700","1040817900"
+		];
 		let obj = {
-            ver: 1,
+            ver: BOOKMARK_VERSION,
             lang: Game.lang,
             p: parseInt(Game.view.deck_model.attributes.deck.pc.job.master.id, 10),
             pcjs: Game.view.deck_model.attributes.deck.pc.param.image,
@@ -51,6 +76,7 @@ javascript: (function() {
             sp: [],
             ssm: Game.view.deck_model.attributes.deck.pc.skin_summon_id,
             w: [],
+			wkey: {},
             wsm: [Game.view.deck_model.attributes.deck.pc.skin_weapon_id, Game.view.deck_model.attributes.deck.pc.skin_weapon_id_2],
             wl: [],
             wsn: [],
@@ -142,6 +168,22 @@ javascript: (function() {
             obj.waxt.push(e.param ? e.param.augment_image : null);
             obj.waxi.push(e.param ? e.param.augment_skill_icon_image : null);
             obj.wax.push(e.param ? e.param.augment_skill_info : null);
+			if(e.master && e.param.image_id)
+			{
+				let wid = e.param.image_id.split("_")[0];
+				if(DARK_OPUS_IDS.includes(wid) || ULTIMA_IDS.includes(wid) || DESTRUCTION_IDS.includes(wid))
+				{
+					obj.wkey[wid] = {};
+					if(e.skill3)
+						obj.wkey[wid].sk3 = e.skill3.name;
+				}
+				else if(ORIGIN_DRACONIC_IDS.includes(wid))
+				{
+					obj.wkey[wid] = {};
+					if(e.skill2)
+						obj.wkey[wid].sk2 = e.skill2.name;
+				}
+			}
         });
         Array.from(document.getElementsByClassName("txt-gauge-num")).forEach(x => {
             obj.estx.push([x.classList[1], x.textContent]);
