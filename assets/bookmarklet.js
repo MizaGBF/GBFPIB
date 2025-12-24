@@ -11,7 +11,8 @@ javascript: (function() {
         document.removeEventListener("copy", listener);
     }
 
-    let hash = window.location.hash;
+    const hash = window.location.hash;
+	const BOOKMARK_VERSION = 2;
 	
 	if(
 		(
@@ -23,7 +24,6 @@ javascript: (function() {
 		!hash.startsWith("#tower/party/expectancy_damage/index/")
 	)
 	{
-		const BOOKMARK_VERSION = 2;
 		const DARK_OPUS_IDS = [
 			"1040310600","1040310700","1040415000","1040415100","1040809400","1040809500","1040212500","1040212600","1040017000","1040017100","1040911000","1040911100",
 			"1040310600_02","1040310700_02","1040415000_02","1040415100_02","1040809400_02","1040809500_02","1040212500_02","1040212600_02","1040017000_02","1040017100_02","1040911000_02","1040911100_02",
@@ -195,7 +195,7 @@ javascript: (function() {
 		/^#event\/[a-zA-Z0-9]+\/zenith\/npc/.test(hash)
 	) {
         let obj = {
-            ver: 1,
+            ver: BOOKMARK_VERSION,
             lang: Game.lang,
             id: parseInt(Game.view.npcId, 10),
             emp: Game.view.bonusListModel.attributes.bonus_list,
@@ -240,7 +240,7 @@ javascript: (function() {
 		/^#event\/[a-zA-Z0-9]+\/list\/detail_npc/.test(hash)
 	) {
         let obj = {
-            ver: 1,
+            ver: BOOKMARK_VERSION,
             lang: Game.lang,
             id: parseInt(Game.view.npcId, 10),
             artifact: {}
@@ -269,4 +269,4 @@ javascript: (function() {
     } else {
         alert('Please go to a GBF Party, Character or EMP screen')
     }
-}())
+})()
