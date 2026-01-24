@@ -207,7 +207,13 @@ javascript: (function() {
             extra: []
         };
         try {
-            obj.awakening = document.getElementsByClassName("prt-current-awakening-lv")[0].firstChild.className;
+			let l = document.getElementsByClassName("prt-current-awakening-lv")[0].children;
+			let n = l.length - 1;
+			obj.awakening = 0;
+			for(let i = 0; i <= n; ++i)
+			{
+				obj.awakening += parseInt(l[i].className[l[i].className.length - 1]) * Math.pow(10, n - i);
+			}
             obj.awaktype = document.getElementsByClassName("prt-arousal-form-info")[0].children[1].textContent;
             let domains = document.getElementById("prt-domain-evoker-list").getElementsByClassName("prt-bonus-detail");
             for (let i = 0; i < domains.length; ++i) {
