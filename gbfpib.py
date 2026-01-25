@@ -680,7 +680,7 @@ class GBFPIBLayout():
 
 # Main class
 class GBFPIB():
-    VERSION = "12.7"
+    VERSION = "12.8"
     NULL_CHARACTER = [3030182000, 3020072000] # null character id list (lyria, cat...), need to be hardcoded
     # colors
     BLACK = (0, 0, 0)
@@ -2148,7 +2148,7 @@ class GBFPIB():
                         extra_lb = ", Has Yupei"
                     elif 'extra' in data and len(data['extra']) > 0:
                         extra_lb = ", Has Extra EMP"
-                    print("[EMP] |--> Ally #{}: {} EMPs, {} Ring EMPs, {}{}".format(i+1, nemp, len(data['ring']), ('{} Lv{}'.format(data['awaktype'], data['awakening'].split('lv')[-1]) if 'awakening' in data else 'Awakening not found'), extra_lb))
+                    print("[EMP] |--> Ally #{}: {} EMPs, {} Ring EMPs, {}{}".format(i+1, nemp, len(data['ring']), ('{} Lv{}'.format(data['awaktype'], str(data['awakening']).split('lv')[-1]) if 'awakening' in data else 'Awakening not found'), extra_lb))
                     idx : int = int(nemp > 15) # check if 15 emp like transcended eternals
                     for j, emp in enumerate(data['emp']):
                         await asyncio.sleep(0)
@@ -2302,7 +2302,7 @@ class GBFPIB():
                             self.text(
                                 imgs, range(1),
                                 (apos1 + (75, 10)).i,
-                                "Lv" + data['awakening'].split('lv')[-1],
+                                "Lv" + str(data['awakening']).split('lv')[-1],
                                 fill=self.AWK_COLOR,
                                 font=self.fonts['medium'],
                                 stroke_width=6, stroke_fill=self.BLACK
