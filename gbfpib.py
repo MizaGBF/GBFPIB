@@ -680,7 +680,7 @@ class GBFPIBLayout():
 
 # Main class
 class GBFPIB():
-    VERSION = "12.8"
+    VERSION = "12.9"
     NULL_CHARACTER = [3030182000, 3020072000] # null character id list (lyria, cat...), need to be hardcoded
     # colors
     BLACK = (0, 0, 0)
@@ -1060,7 +1060,7 @@ class GBFPIB():
 
     # subroutine of get_mc_job_look
     async def get_mc_job_look_sub(self : GBFPIB, job : str, mh : str) -> str|None:
-        response : aiohttp.Response = await self.client.head("https://prd-game-a5-granbluefantasy.akamaized.net/assets_en/img/sp/assets/leader/s/{}_{}_0_01.jpg".format(job, mh))
+        response : aiohttp.Response = await self.client.head("https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/leader/s/{}_{}_0_01.jpg".format(job, mh))
         async with response:
             if response.status != 200:
                 return None
