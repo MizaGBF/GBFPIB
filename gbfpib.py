@@ -680,8 +680,8 @@ class GBFPIBLayout():
 
 # Main class
 class GBFPIB():
-    VERSION = "12.9"
-    NULL_CHARACTER = [3030182000, 3020072000] # null character id list (lyria, cat...), need to be hardcoded
+    VERSION = "12.10"
+    NULL_CHARACTER = [3030182000, 3020072000, 3040643000] # null character id list (lyria, cat...), need to be hardcoded
     # colors
     BLACK = (0, 0, 0)
     WHITE = (255, 255, 255)
