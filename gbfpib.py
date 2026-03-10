@@ -680,7 +680,7 @@ class GBFPIBLayout():
 
 # Main class
 class GBFPIB():
-    VERSION = "12.10"
+    VERSION = "12.11"
     NULL_CHARACTER = [3030182000, 3020072000, 3040643000] # null character id list (lyria, cat...), need to be hardcoded
     # colors
     BLACK = (0, 0, 0)
@@ -2440,9 +2440,14 @@ class GBFPIB():
                                 self.layout.artifact.portrait_size.x + 50 + j // 2 * self.layout.artifact.background_size.x / 2,
                                 15 + self.layout.artifact.skill_offset.y * (j % 2)
                             )
+                        icon_url : str = (
+                            skill['icon'] 
+                            if skill['icon'].startswith('assets')
+                            else "assets_en/img/sp/ui/icon/bonus/{}".format(skill['icon'])
+                        )
                         await self.pasteDL(
                             imgs, range(1),
-                            "assets_en/img/sp/ui/icon/bonus/{}".format(skill['icon']),
+                            icon_url,
                             epos.i,
                             resize=self.layout.artifact.skill_offset.i,
                             transparency=True
@@ -2684,7 +2689,7 @@ class GBFPIB():
             print("*", "Image is", export["artifact"]['img'])
             print("*", len(export["artifact"]['skills']), "skills")
             for i in range(len(export["artifact"]['skills'])):
-                export["artifact"]['skills'][i]['icon'] = export["artifact"]['skills'][i]['icon'].split('/')[-1]
+                export["artifact"]['skills'][i]['icon'] = "assets" + export["artifact"]['skills'][i]['icon'].split('/assets', 1)[1]
                 export["artifact"]['skills'][i]['lvl'] = export["artifact"]['skills'][i]['lvl'].split(' ')[-1]
                 print("*", "Skill", i+1, export["artifact"]['skills'][i]['icon'], export["artifact"]['skills'][i]['lvl'], export["artifact"]['skills'][i]['desc'], export["artifact"]['skills'][i]['value'])
         self.checkArtifact()

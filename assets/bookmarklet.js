@@ -260,7 +260,7 @@ javascript: (function() {
                 for (let i = 0; i < elems.length; ++i) {
                     skills.push({
                         lvl: elems[i].getElementsByClassName("artifact-skill-level")[0].textContent,
-                        icon: elems[i].getElementsByClassName("artifact-skill-icon")[0].getElementsByTagName("img")[0].src,
+                        icon: elems[i].getElementsByClassName("artifact-score-icon")[0].getElementsByTagName("img")[0].src,
                         desc: elems[i].getElementsByClassName("artifact-skill-desc")[0].textContent,
                         value: elems[i].getElementsByClassName("artifact-skill-value")[0].textContent
                     });
